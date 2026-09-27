@@ -203,7 +203,7 @@ test("no JavaScript explains the age gate and keeps the interface inert", async 
     viewport: { width: 390, height: 844 },
   });
   const page = await context.newPage();
-  await page.goto("/");
+  await page.goto("/design-system");
   expect(await page.locator("noscript").textContent()).toContain(
     "включите JavaScript",
   );

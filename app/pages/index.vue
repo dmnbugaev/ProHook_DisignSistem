@@ -1,22 +1,28 @@
 <script setup lang="ts">
-definePageMeta({ alias: ["/design-system"] });
-useSeoMeta({
-  title: "Прохук — дизайн-система",
-  description:
-    "Визуальный язык Прохук: айдентика, типографика, компоненты и движение.",
-  ogTitle: "Прохук — дизайн-система",
-  ogDescription:
-    "Утверждённая визуальная система Прохук и интерактивные примеры компонентов.",
-  ogImage: "/brand/lockup.webp",
-});
+const { data: meta, error, refresh } = await useCatalogMeta();
+const categories = computed(
+  () =>
+    meta.value?.categories.filter((item) => !item.parentId).slice(0, 6) ?? [],
+);
+usePageSeo(
+  "Каталог товаров",
+  "Товары Прохук: категории, цены и наличие в выбранном магазине.",
+);
 </script>
 <template>
   <div>
-    <DesignHero />
-    <DesignIdentity />
-    <DesignTypography />
-    <DesignComponents />
-    <DesignStates />
-    <DesignMotion />
+    <HeroSection /><CategoriesSection
+      v-if="meta"
+      :categories="categories"
+    /><UiContainer v-else-if="error" class="section"
+      ><UiEmptyState title="Не удалось загрузить категории"
+        >Попробуйте ещё раз.<template #action
+          ><UiButton @click="refresh()">Повторить</UiButton></template
+        ></UiEmptyState
+      ></UiContainer
+    ><PopularProductsSection /><BrandsSection
+      v-if="meta"
+      :categories="categories"
+    /><AboutSection /><StoresSection /><ContactsSection />
   </div>
 </template>

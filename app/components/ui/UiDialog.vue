@@ -1,6 +1,11 @@
 <script setup lang="ts">
 const props = withDefaults(
-  defineProps<{ title: string; menu?: boolean; dismissible?: boolean }>(),
+  defineProps<{
+    title: string;
+    menu?: boolean;
+    drawer?: boolean;
+    dismissible?: boolean;
+  }>(),
   { dismissible: true },
 );
 const open = defineModel<boolean>({ default: false });
@@ -74,7 +79,7 @@ function trapFocus(event: KeyboardEvent) {
   <dialog
     ref="element"
     class="dialog"
-    :class="{ 'dialog--menu': menu }"
+    :class="{ 'dialog--menu': menu, 'dialog--drawer': drawer }"
     :aria-labelledby="`${id}-title`"
     @keydown="trapFocus"
     @cancel.prevent="close"

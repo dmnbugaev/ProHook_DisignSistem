@@ -1,0 +1,193 @@
+{
+  "updatedAt": 4102444800000,
+  "stockUpdatedAt": 4102444800000,
+  "meta": {
+    "cities": [
+      { "id": "saratov", "name": "Саратов" },
+      { "id": "moscow", "name": "Москва" }
+    ],
+    "stores": [
+      {
+        "id": "store-1",
+        "cityId": "saratov",
+        "name": "Студия · Центр",
+        "description": "Тестовая точка"
+      },
+      {
+        "id": "store-2",
+        "cityId": "saratov",
+        "name": "Студия · Север",
+        "description": "Тестовая точка"
+      },
+      {
+        "id": "store-3",
+        "cityId": "moscow",
+        "name": "МСК. Боброво - Крымская, 1",
+        "description": "Тестовая точка"
+      }
+    ],
+    "categories": [
+      {
+        "id": "objects",
+        "slug": "objects",
+        "name": "Объекты",
+        "description": "Тестовая категория",
+        "parentId": null
+      },
+      {
+        "id": "stands",
+        "slug": "stands",
+        "name": "Подставки",
+        "description": "Тестовая категория",
+        "parentId": "objects"
+      },
+      {
+        "id": "stationery",
+        "slug": "stationery",
+        "name": "Канцелярия",
+        "description": "Тестовая категория",
+        "parentId": null
+      },
+      {
+        "id": "notebooks",
+        "slug": "notebooks",
+        "name": "Блокноты",
+        "description": "Тестовая категория",
+        "parentId": "stationery"
+      }
+    ],
+    "brands": [],
+    "materials": []
+  },
+  "products": [
+    {
+      "id": "p1",
+      "slug": "stands-01",
+      "sku": "001",
+      "name": "Подставка 01",
+      "categoryId": "stands",
+      "categoryName": "Подставки",
+      "images": [
+        { "id": "main", "src": "/demo/object.svg", "alt": "Подставка" },
+        { "id": "detail", "src": "/demo/detail.svg", "alt": "Деталь" }
+      ],
+      "description": "Описание подставки.",
+      "attributes": [],
+      "offers": [
+        {
+          "storeId": "store-1",
+          "price": 120000,
+          "currency": "RUB",
+          "availability": "unavailable"
+        },
+        {
+          "storeId": "store-2",
+          "price": 120000,
+          "currency": "RUB",
+          "availability": "available"
+        },
+        {
+          "storeId": "store-3",
+          "price": 135000,
+          "currency": "RUB",
+          "availability": "low"
+        }
+      ],
+      "isPopular": false,
+      "isNew": false,
+      "publishedAt": "2026-09-25T12:00:00Z"
+    },
+    {
+      "id": "p2",
+      "slug": "stands-02",
+      "sku": "002",
+      "name": "Подставка 02",
+      "categoryId": "stands",
+      "categoryName": "Подставки",
+      "images": [],
+      "description": "Описание подставки.",
+      "attributes": [],
+      "offers": [
+        {
+          "storeId": "store-1",
+          "price": 180000,
+          "currency": "RUB",
+          "availability": "available"
+        },
+        {
+          "storeId": "store-2",
+          "price": 180000,
+          "currency": "RUB",
+          "availability": "low"
+        }
+      ],
+      "isPopular": false,
+      "isNew": false,
+      "publishedAt": "2026-09-24T12:00:00Z"
+    },
+    {
+      "id": "p3",
+      "slug": "notebooks-01",
+      "sku": "003",
+      "name": "Блокнот 01",
+      "categoryId": "notebooks",
+      "categoryName": "Блокноты",
+      "images": [
+        { "id": "main", "src": "/demo/notebook.svg", "alt": "Блокнот" }
+      ],
+      "description": "Описание блокнота.",
+      "attributes": [],
+      "offers": [
+        {
+          "storeId": "store-1",
+          "price": 60000,
+          "currency": "RUB",
+          "availability": "available"
+        },
+        {
+          "storeId": "store-2",
+          "price": 60000,
+          "currency": "RUB",
+          "availability": "available"
+        },
+        {
+          "storeId": "store-3",
+          "price": 75000,
+          "currency": "RUB",
+          "availability": "unavailable"
+        }
+      ],
+      "isPopular": false,
+      "isNew": false,
+      "publishedAt": "2026-09-23T12:00:00Z"
+    },
+    {
+      "id": "p4",
+      "slug": "notebooks-02",
+      "sku": "004",
+      "name": "Блокнот 02",
+      "categoryId": "notebooks",
+      "categoryName": "Блокноты",
+      "images": [],
+      "description": "Описание блокнота.",
+      "attributes": [],
+      "offers": [
+        {
+          "storeId": "store-1",
+          "price": 80000,
+          "currency": "RUB",
+          "availability": "low"
+        },
+        {
+          "storeId": "store-2",
+          "price": 80000,
+          "currency": "RUB",
+          "availability": "available"
+        }
+      ],
+      "isPopular": false,
+      "isNew": false,
+      "publishedAt": "2026-09-22T12:00:00Z"
+    }
+  ]
+}

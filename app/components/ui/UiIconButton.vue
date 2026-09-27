@@ -8,6 +8,9 @@ defineProps<{ label: string; disabled?: boolean }>();
     class="icon-button"
     :aria-label="label"
     :disabled="disabled"
+    @click="
+      ($event.currentTarget as HTMLButtonElement).focus({ preventScroll: true })
+    "
   >
     <slot />
   </button>
