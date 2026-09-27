@@ -39,9 +39,9 @@ onBeforeUnmount(() => {
         link.label
       }}</a>
     </nav>
-    <button
-      class="icon-button menu-toggle"
-      aria-label="Открыть меню"
+    <UiIconButton
+      class="menu-toggle"
+      label="Открыть меню"
       :aria-expanded="menuOpen"
       @click="
         ($event.currentTarget as HTMLButtonElement).focus({
@@ -59,7 +59,7 @@ onBeforeUnmount(() => {
       >
         <path d="M3 8h18M3 16h18" stroke="currentColor" stroke-width="2" />
       </svg>
-    </button>
+    </UiIconButton>
   </header>
   <UiDialog v-model="menuOpen" title="Разделы" menu>
     <nav class="mobile-nav" aria-label="Мобильная навигация">

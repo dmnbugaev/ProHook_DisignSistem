@@ -1,5 +1,8 @@
 <script setup lang="ts">
-defineProps<{ title: string; menu?: boolean }>();
+const props = withDefaults(
+  defineProps<{ title: string; menu?: boolean; dismissible?: boolean }>(),
+  { dismissible: true },
+);
 const open = defineModel<boolean>({ default: false });
 const element = ref<HTMLDialogElement>();
 const id = useId();
@@ -33,6 +36,7 @@ watch(open, sync, { flush: "post" });
 onMounted(sync);
 onBeforeUnmount(unlock);
 function close() {
+  if (!props.dismissible) return;
   open.value = false;
 }
 function closed() {
@@ -80,14 +84,14 @@ function trapFocus(event: KeyboardEvent) {
     <div class="dialog__content">
       <div class="dialog__header">
         <h2 :id="`${id}-title`">{{ title }}</h2>
-        <button
-          class="icon-button"
-          aria-label="Закрыть"
+        <UiIconButton
+          v-if="dismissible"
+          label="Закрыть"
           autofocus
           @click="close"
         >
           <span aria-hidden="true">×</span>
-        </button>
+        </UiIconButton>
       </div>
       <slot :close="close" />
     </div>

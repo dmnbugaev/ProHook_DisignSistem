@@ -1,0 +1,10 @@
+node_modules
+.nuxt
+.output
+test-results
+playwright-report
+package-lock.json
+.agents
+.idea
+public
+docs/screenshots

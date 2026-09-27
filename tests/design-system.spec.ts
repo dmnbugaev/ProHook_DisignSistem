@@ -1,13 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 
 async function openReady(page: Page) {
-  await page.goto("/");
+  await page.goto("/design-system");
   await page.waitForFunction(
     () =>
-      !!(
-        document.querySelector("#__nuxt") as Element & { __vue_app__?: unknown }
-      )?.__vue_app__,
+      (
+        document.querySelector("#__nuxt") as Element & {
+          __vue_app__?: { $nuxt?: { isHydrating: boolean } };
+        }
+      )?.__vue_app__?.$nuxt?.isHydrating === false,
   );
+  await page.getByRole("button", { name: "Мне 18 лет или больше" }).click();
 }
 
 test("dialog isolates focus, closes with Escape and restores its trigger", async ({
@@ -38,6 +41,29 @@ test("dialog isolates focus, closes with Escape and restores its trigger", async
   await trigger.click();
   await dialog.getByRole("button", { name: "Понятно" }).click();
   await expect(trigger).toBeFocused();
+});
+
+test("age gate blocks dismissal, handles refusal and asks again on reload", async ({
+  page,
+}) => {
+  await page.goto("/design-system");
+  const dialog = page.getByRole("dialog", {
+    name: "Вам уже исполнилось 18 лет?",
+  });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Мне нет 18 лет" }).click();
+  await expect(dialog.getByRole("status")).toContainText("от 18 лет");
+  await expect(page.locator("#top")).toHaveAttribute("inert", "");
+  await dialog
+    .getByRole("button", { name: "Вернуться к подтверждению" })
+    .click();
+  await dialog.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator("#top")).not.toHaveAttribute("inert");
+  await page.reload();
+  await expect(dialog).toBeVisible();
 });
 
 test("mobile navigation supports keyboard, anchors and focus restoration", async ({
@@ -169,7 +195,7 @@ test("layout fits all target sizes and images load", async ({ page }) => {
   }
 });
 
-test("no JavaScript retains readable content and final decorative composition", async ({
+test("no JavaScript explains the age gate and keeps the interface inert", async ({
   browser,
 }) => {
   const context = await browser.newContext({
@@ -178,7 +204,10 @@ test("no JavaScript retains readable content and final decorative composition", 
   });
   const page = await context.newPage();
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  expect(await page.locator("noscript").textContent()).toContain(
+    "включите JavaScript",
+  );
+  await expect(page.locator("#top")).toHaveAttribute("inert", "");
   await expect(page.locator(".motion-shape--black")).toHaveCSS(
     "transform",
     "matrix(1, 0, 0, 1, 0, 0)",
@@ -231,7 +260,11 @@ test("scroll composition reverses and static override returns the final frame", 
     )
     .toBeGreaterThan(0);
   await expect
-    .poll(() => scene.evaluate((el) => parseFloat(getComputedStyle(el).getPropertyValue("--remaining"))))
+    .poll(() =>
+      scene.evaluate((el) =>
+        parseFloat(getComputedStyle(el).getPropertyValue("--remaining")),
+      ),
+    )
     .toBeLessThan(1);
   const initial = await scene.evaluate((el) =>
     getComputedStyle(el).getPropertyValue("--remaining"),

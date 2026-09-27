@@ -65,10 +65,11 @@ onBeforeUnmount(() => {
       <span class="motion-scene__baseline" />
     </div>
     <div class="motion-controls">
-      <label class="choice"
-        ><input v-model="still" type="checkbox" :disabled="reduced" />Статичная
-        композиция</label
-      ><span class="caption">{{
+      <UiCheckbox
+        v-model="still"
+        :disabled="reduced"
+        label="Статичная композиция"
+      /><span class="caption">{{
         reduced
           ? "Уменьшение движения включено в системе"
           : "Движение следует за прокруткой"

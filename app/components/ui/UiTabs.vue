@@ -16,9 +16,9 @@ function navigate(event: KeyboardEvent, index: number) {
   else return;
   event.preventDefault();
   model.value = props.tabs[next]!.value;
-  tablist.value
-    ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
-    [next]?.focus();
+  const buttons =
+    tablist.value?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+  buttons?.[next]?.focus();
 }
 </script>
 <template>
