@@ -1,0 +1,12 @@
+node_modules/
+.nuxt/
+.output/
+.cache/
+test-results/
+playwright-report/
+.DS_Store
+.env
+.idea/
+.agents/
+референсы/
+skills-lock.json
