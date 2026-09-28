@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { prohookContacts, relocationNotice } from "~~/shared/content/prohook";
+
 const { data: meta, error, refresh } = await useCatalogMeta();
 const { store, select, pickerOpen } = useStoreSelection();
 usePageSeo(
@@ -15,10 +17,25 @@ usePageSeo(
       <p class="eyebrow">Прохук / Пространства</p>
       <h1>Ваш город.<br />Ваш магазин.</h1>
       <p>
-        Выберите точку для просмотра цены и наличия. Названия точек получены из
-        МойСклад; адрес указан там, где он заполнен.
+        Выберите точку для просмотра цены и наличия. Список доступных магазинов
+        обновляется из учётной системы.
       </p>
     </div>
+    <aside class="store-notice" aria-label="Изменение адреса магазина">
+      <strong>Переезд магазина на Чапаева</strong>
+      <p>
+        По сообщению Прохук от {{ relocationNotice.date }}, точка по адресу
+        {{ relocationNotice.from }} закрыта. Техническое открытие по адресу
+        {{ relocationNotice.to }} запланировано на
+        {{ relocationNotice.opening }}.
+        <a
+          :href="relocationNotice.source"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Источник ↗</a
+        >
+      </p>
+    </aside>
     <UiButton variant="secondary" @click="pickerOpen = true"
       >Выбрать город и магазин</UiButton
     ><UiEmptyState v-if="error" title="Не удалось загрузить магазины"
@@ -40,9 +57,8 @@ usePageSeo(
           <h3>{{ item.name }}</h3>
           <p>{{ item.description }}</p>
           <p class="caption">
-            {{ item.address ?? "Адрес появится позже" }}<br />{{
-              item.hours ?? "Время работы уточняется"
-            }}
+            <template v-if="item.address">{{ item.address }}<br /></template>
+            {{ item.hours ?? `Общий режим сети: ${prohookContacts.hours}` }}
           </p>
           <UiButton
             variant="secondary"

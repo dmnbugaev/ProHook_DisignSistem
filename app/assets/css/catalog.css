@@ -502,7 +502,10 @@ button.text-link {
   border-top: 1px solid var(--ink);
   padding-top: var(--space-12);
 }
-.contact-section .text-link {
+.contact-section__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
   margin-top: var(--space-4);
 }
 .app-footer {
@@ -540,7 +543,13 @@ button.text-link {
   object-fit: contain;
   margin-bottom: var(--space-4);
 }
-.footer-note .text-link {
+.footer-grid .footer-socials {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  column-gap: var(--space-4);
+}
+.footer-socials .text-link {
   margin-top: var(--space-3);
 }
 .footer-bottom {
@@ -675,6 +684,18 @@ button.text-link {
 }
 .store-city {
   margin-top: var(--space-16);
+}
+.store-notice {
+  margin-top: var(--space-8);
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--separator);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-card);
+  background: var(--surface-subtle);
+}
+.store-notice p {
+  margin-top: var(--space-2);
+  color: var(--text-secondary);
 }
 .store-grid {
   display: grid;

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { prohookContacts } from "~~/shared/content/prohook";
+
 const { data } = await useCatalogMeta();
 const categories = computed(
   () =>
@@ -16,11 +18,11 @@ const categories = computed(
           alt="Прохук"
           loading="lazy"
         />
-        <p class="caption">Простая форма.<br />Внимание к деталям.</p>
+        <p class="caption">Прохук · Магазины для взрослых 18+</p>
       </div>
       <nav aria-label="Навигация в подвале">
-        <h2>Проект</h2>
-        <NuxtLink to="/about">О проекте</NuxtLink
+        <h2>Прохук</h2>
+        <NuxtLink to="/about">О нас</NuxtLink
         ><NuxtLink to="/stores">Магазины</NuxtLink
         ><NuxtLink to="/contacts">Контакты</NuxtLink>
       </nav>
@@ -35,19 +37,41 @@ const categories = computed(
         ><NuxtLink to="/search">Поиск</NuxtLink>
       </nav>
       <div class="footer-note">
-        <h2>Каталог Прохук</h2>
+        <h2>На связи</h2>
         <p class="caption">
-          Товары и наличие обновляются из МойСклад. Выберите магазин для
-          проверки наличия.
+          <a :href="prohookContacts.phoneHref">{{ prohookContacts.phone }}</a
+          ><br />
+          {{ prohookContacts.hours }}<br />
+          Информация на сайте предназначена для лиц старше 18 лет.
         </p>
-        <NuxtLink to="/design-system" class="text-link"
-          >Дизайн-система ↗</NuxtLink
-        >
+        <nav class="footer-socials" aria-label="Социальные сети Прохук">
+          <a
+            :href="prohookContacts.vk"
+            class="text-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            >ВКонтакте ↗</a
+          >
+          <a
+            :href="prohookContacts.telegram"
+            class="text-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Telegram ↗</a
+          >
+          <a
+            :href="prohookContacts.instagram"
+            class="text-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Instagram ↗</a
+          >
+        </nav>
       </div>
     </div>
     <div class="footer-bottom">
       <span>© 2026 Прохук</span><span>18+</span
-      ><NuxtLink to="/information">Информация о проекте</NuxtLink>
+      ><NuxtLink to="/information">Информация о сайте</NuxtLink>
     </div>
   </UiContainer>
 </template>

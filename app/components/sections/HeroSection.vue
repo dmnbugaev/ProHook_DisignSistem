@@ -1,12 +1,11 @@
 <template>
   <UiContainer as="section" class="hero" aria-labelledby="hero-title">
     <div class="hero__copy">
-      <p class="edition">
-        <span class="edition__dot" />Прохук / Каталог товаров
-      </p>
-      <h1 id="hero-title">Характер.<br />В каждой<br />детали.</h1>
+      <p class="edition"><span class="edition__dot" />Прохук / 18+</p>
+      <h1 id="hero-title">Прохук.<br />Больше, чем<br />вейпшоп.</h1>
       <p class="hero__intro">
-        Выберите нужное в каталоге.<br />Проверьте цену и наличие в магазине.
+        Информационный каталог товаров для взрослых.<br />Выберите магазин,
+        чтобы посмотреть ассортимент и наличие.
       </p>
       <NuxtLink to="/catalog" class="button button--primary button--large"
         >Открыть каталог <span aria-hidden="true">↗</span></NuxtLink
@@ -24,7 +23,7 @@
         /><span class="hero__corner" aria-hidden="true" />
       </div>
       <div class="hero__art-caption">
-        <span>Сильная форма. Чистое пространство.</span
+        <span>Магазины, ассортимент и контакты.</span
         ><span aria-hidden="true">↗</span>
       </div>
     </div>

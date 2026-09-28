@@ -5,9 +5,9 @@ import { URL } from "node:url";
 import { createJiti } from "jiti";
 
 process.env.NUXT_MOYSKLAD_TOKEN = "test-token";
-const { fetchCatalog, fetchStock } = await createJiti(import.meta.url).import(
-  "../server/services/moysklad.ts",
-);
+const { excludeHiddenStores, fetchCatalog, fetchStock } = await createJiti(
+  import.meta.url,
+).import("../server/services/moysklad.ts");
 const originalFetch = globalThis.fetch;
 const Response = globalThis.Response;
 after(() => {
@@ -62,6 +62,7 @@ globalThis.fetch = async (input) => {
         { id: "hidden-1", name: "Вокзал", pathName: "Саратов" },
         { id: "hidden-2", name: "Буровая", pathName: "Москва" },
         { id: "hidden-3", name: "Ильинская площадь", pathName: "Москва" },
+        { id: "hidden-4", name: "Чапаева 45", pathName: "Саратов" },
         { id: "internal", name: "РЦ Саратов", pathName: "Саратов" },
       ]
     : path.endsWith("/entity/productfolder")
@@ -123,6 +124,10 @@ test("visibility field, city prices and retail store mapping", async () => {
     snapshot.meta.stores.some((item) => item.name === "Ильинская площадь"),
     false,
   );
+  assert.equal(
+    snapshot.meta.stores.some((item) => item.name === "Чапаева 45"),
+    false,
+  );
   assert.deepEqual(
     snapshot.products[0].offers.map((offer) => offer.price),
     [140000, 120000],
@@ -137,6 +142,38 @@ test("visibility field, city prices and retail store mapping", async () => {
     stocked[0].offers.find((offer) => offer.storeId === "store-2")
       ?.availability,
     "unavailable",
+  );
+});
+
+test("closed stores are removed from older cached snapshots and product offers", async () => {
+  const snapshot = await fetchCatalog();
+  snapshot.meta.stores.push({
+    id: "closed-store",
+    cityId: "saratov",
+    name: "Чапаева 45",
+    description: "Закрытая точка",
+  });
+  snapshot.products[0].offers.push({
+    storeId: "closed-store",
+    currency: "RUB",
+    price: 100000,
+    availability: "available",
+  });
+
+  const filtered = excludeHiddenStores(snapshot);
+  assert.equal(
+    filtered.meta.stores.some((store) => store.id === "closed-store"),
+    false,
+  );
+  assert.equal(
+    filtered.products[0].offers.some(
+      (offer) => offer.storeId === "closed-store",
+    ),
+    false,
+  );
+  assert.equal(
+    snapshot.meta.stores.some((store) => store.id === "closed-store"),
+    true,
   );
 });
 

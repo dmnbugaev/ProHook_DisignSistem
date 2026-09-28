@@ -19,7 +19,12 @@ const INTERNAL_STORES = new Set([
   "САМОВЫВОЗ",
   "шаблон",
 ]);
-const HIDDEN_STORES = new Set(["Вокзал", "Буровая", "Ильинская площадь"]);
+const HIDDEN_STORES = new Set([
+  "Вокзал",
+  "Буровая",
+  "Ильинская площадь",
+  "Чапаева 45",
+]);
 
 interface MsMeta {
   href: string;
@@ -154,6 +159,30 @@ export interface CatalogSnapshot {
   stockUpdatedAt: number;
   meta: CatalogMeta;
   products: Product[];
+}
+
+export function excludeHiddenStores(
+  snapshot: CatalogSnapshot,
+): CatalogSnapshot {
+  const hiddenIds = new Set(
+    snapshot.meta.stores
+      .filter((store) => HIDDEN_STORES.has(store.name))
+      .map((store) => store.id),
+  );
+  if (!hiddenIds.size) return snapshot;
+  return {
+    ...snapshot,
+    meta: {
+      ...snapshot.meta,
+      stores: snapshot.meta.stores.filter((store) => !hiddenIds.has(store.id)),
+    },
+    products: snapshot.products
+      .map((product) => ({
+        ...product,
+        offers: product.offers.filter((offer) => !hiddenIds.has(offer.storeId)),
+      }))
+      .filter((product) => product.offers.length > 0),
+  };
 }
 
 export async function fetchCatalog(): Promise<CatalogSnapshot> {

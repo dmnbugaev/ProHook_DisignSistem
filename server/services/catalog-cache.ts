@@ -2,7 +2,12 @@ import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import type { Product } from "../../shared/types/product";
-import { fetchCatalog, fetchStock, type CatalogSnapshot } from "./moysklad";
+import {
+  excludeHiddenStores,
+  fetchCatalog,
+  fetchStock,
+  type CatalogSnapshot,
+} from "./moysklad";
 
 const FIXTURE_FILE = process.env.MOYSKLAD_SNAPSHOT_PATH;
 const CACHE_FILE = resolve(
@@ -30,7 +35,8 @@ async function load() {
     const value = JSON.parse(
       await readFile(CACHE_FILE, "utf8"),
     ) as CatalogSnapshot;
-    if (Array.isArray(value.products) && value.meta?.stores) snapshot = value;
+    if (Array.isArray(value.products) && value.meta?.stores)
+      snapshot = excludeHiddenStores(value);
   } catch {
     // The first run has no private snapshot yet.
   }
