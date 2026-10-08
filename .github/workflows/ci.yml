@@ -28,7 +28,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # 24.x — как в локальной разработке (README: «проверено на 24.21.0»);
+          # часть unit-тестов тайминг-зависима и на Node 22 даёт ложные
+          # «Promise resolution is still pending». Прод-сервер тоже на 24.x.
+          node-version: 24
           cache: npm
 
       - name: Установка зависимостей
