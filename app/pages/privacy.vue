@@ -32,7 +32,7 @@ usePageSeo(
       <p>
         Оператором обработки персональных данных является продавец:
         {{ sellerRequisites.legalName }}, ИНН {{ sellerRequisites.inn }}, ОГРНИП
-        {{ sellerRequisites.ogrnip }}, адрес: {{ sellerRequisites.address }}.
+        {{ sellerRequisites.ogrnip }}.
       </p>
       <h2>3. Какие данные обрабатываются и зачем</h2>
       <h3>3.1. Заявка на сотрудничество (форма «Стать партнёром»)</h3>

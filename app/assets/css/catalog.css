@@ -415,18 +415,18 @@ button.text-link {
   position: relative;
   text-decoration: none;
 }
-.product-card__badges {
+/* Метка нулевого остатка поверх фото: позиция остаётся в каталоге. */
+.product-card__soon {
   position: absolute;
-  top: var(--space-3);
   left: var(--space-3);
-  right: var(--space-3);
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  pointer-events: none;
+  bottom: var(--space-3);
+  max-width: calc(100% - var(--space-6));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .product-image {
-  aspect-ratio: 6 / 5;
+  aspect-ratio: 1 / 1;
   background: var(--surface-subtle);
   overflow: hidden;
 }
@@ -465,19 +465,34 @@ button.text-link {
   max-width: 20ch;
 }
 .product-card__body {
-  padding: var(--space-6);
+  padding: var(--space-4) var(--space-3) var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   flex: 1;
 }
-.product-card h3 {
-  font-size: 22px;
-  margin-bottom: auto;
-  padding-bottom: var(--space-3);
+.product-card__category {
+  font-size: 12px;
+  line-height: 16px;
 }
-.product-card h3 a {
+/* Витринная пропорция карточки: крупное квадратное фото, компактное имя
+   ровно в две строки и цена заметнее подписей. */
+.product-card__name {
+  font-size: 15px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(2 * 1.4em);
+  margin-bottom: auto;
+}
+.product-card__name a {
   text-decoration: none;
+}
+.product-card .availability {
+  font-size: 12px;
 }
 .product-price {
   display: flex;
@@ -486,7 +501,7 @@ button.text-link {
   gap: var(--space-2) var(--space-3);
 }
 .product-price strong {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: var(--weight-semibold);
 }
 .product-price del {
@@ -708,18 +723,42 @@ button.text-link {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-6);
+  gap: var(--space-4) var(--space-6);
   border-top: 1px solid var(--separator);
   padding-top: var(--space-6);
   margin-top: var(--space-12);
   color: var(--text-secondary);
   font-size: 13px;
 }
-.footer-bottom a {
+.footer-bottom__legal {
+  max-width: none;
+}
+.footer-bottom__legal span {
+  /* Реквизиты переносятся построчно, номера не рвутся посередине. */
+  display: inline-block;
+}
+.footer-bottom nav {
   margin-left: auto;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+}
+.footer-bottom nav a {
+  display: inline-flex;
+  align-items: center;
   min-height: 44px;
+}
+.footer-bottom__age {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  height: 24px;
+  padding-inline: 5px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  font-weight: var(--weight-bold);
 }
 .product-detail {
   display: grid;
@@ -1228,7 +1267,7 @@ button.text-link {
   max-width: 20ch;
 }
 @media (hover: hover) and (pointer: fine) {
-  .product-card h3 a:hover,
+  .product-card__name a:hover,
   .footer-grid nav a:hover {
     text-decoration: underline;
   }
@@ -1376,30 +1415,38 @@ button.text-link {
   .product-grid,
   .product-grid--catalog {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4);
+    gap: var(--space-3);
   }
   .product-card__body {
-    padding: var(--space-3);
+    padding: var(--space-3) var(--space-2) var(--space-2);
+    gap: var(--space-1);
   }
-  .product-card h3 {
-    font-size: 18px;
-    line-height: 1.3;
+  .product-card__category {
+    font-size: 11px;
+    line-height: 14px;
+  }
+  .product-card__name {
+    font-size: 13px;
+    line-height: 1.35;
+    min-height: calc(2 * 1.35em);
   }
   .product-price strong {
-    font-size: 18px;
+    font-size: 16px;
   }
   .product-price del,
   .availability {
     font-size: 12px;
   }
-  .product-card__badges {
-    top: var(--space-2);
-    left: var(--space-2);
-    right: var(--space-2);
+  .product-card .availability {
+    font-size: 11px;
   }
   .product-card .badge {
     font-size: 10px;
     padding: var(--space-1);
+  }
+  .product-card__soon {
+    left: var(--space-2);
+    bottom: var(--space-2);
   }
   .catalog-toolbar {
     align-items: center;
@@ -1477,12 +1524,22 @@ button.text-link {
   .footer-brand img {
     margin-bottom: 0;
   }
+  /* Юридический блок: аккуратная вертикальная стопка вместо рваной
+     переносами строки — реквизиты, возрастная метка и ссылки построчно. */
   .footer-bottom {
-    gap: var(--space-4);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
   }
-  .footer-bottom a {
-    width: 100%;
+  .footer-bottom__legal {
+    line-height: 20px;
+  }
+  .footer-bottom nav {
     margin-left: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+    justify-items: start;
   }
   .product-offers li {
     grid-template-columns: 1fr auto;

@@ -1,11 +1,11 @@
 <template>
   <UiContainer as="section" class="hero" aria-labelledby="hero-title">
     <div class="hero__copy">
-      <p class="edition"><span class="edition__dot" />Прохук / 18+</p>
+      <p class="edition"><span class="edition__dot" />Прохук / Каталог сети</p>
       <h1 id="hero-title">Прохук.<br />Больше, чем<br />вейпшоп.</h1>
       <p class="hero__intro">
-        Информационный каталог товаров для взрослых.<br />Выберите магазин,
-        чтобы посмотреть ассортимент и наличие.
+        Информационный каталог товаров.<br />Выберите магазин, чтобы посмотреть
+        ассортимент и наличие.
       </p>
       <NuxtLink to="/catalog" class="button button--primary button--large"
         >Открыть каталог <span aria-hidden="true">↗</span></NuxtLink

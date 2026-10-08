@@ -113,6 +113,50 @@ test("catalog pages contain no remote-sale or promotion vocabulary", async ({
   }
 });
 
+test("owner home address, adult-shop tagline and MoySklad captions are absent", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "prohook-age-confirmed",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
+  for (const path of [
+    "/",
+    "/catalog",
+    "/product/stands-01",
+    "/information",
+    "/privacy",
+    "/personal-data",
+    "/about",
+    "/stores",
+    "/contacts",
+    "/partners",
+    "/reserve",
+    "/login",
+    "/register",
+  ]) {
+    await page.goto(path);
+    const text = await page.locator("body").innerText();
+    // Домашний адрес владельца не публикуется нигде (решение владельца
+    // 08.10.2026); строки «магазин для взрослых 18+» и подписи про МойСклад
+    // убраны по требованию заказчика.
+    for (const banned of [
+      "Васильковская",
+      "Васильевская",
+      "410039",
+      "Магазины для взрослых",
+      "магазинов для взрослых",
+      "Изображение товара из каталога МойСклад",
+      "поступают из МойСклад",
+    ])
+      expect(text, `${path}: «${banned}»`).not.toContain(banned);
+  }
+});
+
 test("security headers are present", async ({ request }) => {
   const response = await request.get("/");
   const headers = response.headers();

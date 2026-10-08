@@ -35,18 +35,22 @@ test("filters and sorting use the selected store price", async ({ page }) => {
   const filters = page.locator(".catalog-sidebar");
   await expect(filters.getByText("Бренд")).toHaveCount(0);
   await expect(filters.getByText("Материал")).toHaveCount(0);
+  // «Только в наличии» включён с открытия страницы: Подставка 01 с нулевым
+  // остатком в store-1 скрыта, в выдаче 3 позиции из 4.
+  await expect(filters.getByLabel("Только в наличии")).toBeChecked();
+  await expect(page.locator(".product-card")).toHaveCount(3);
   await filters.getByLabel("От", { exact: true }).fill("1000");
   await filters.getByLabel("До", { exact: true }).fill("2000");
   // Цена применяется сама после паузы ввода — кнопки «Применить» нет.
-  await expect(page.locator(".product-card")).toHaveCount(2);
+  await expect(page.locator(".product-card")).toHaveCount(1);
   await expect(page).toHaveURL(/minPrice=1000/);
   await expect(page.locator(".filter-chips")).toContainText("Цена:");
   await page.getByLabel("Сортировка").selectOption("price-asc");
   await expect(page.locator(".product-card h3").first()).toHaveText(
-    "Подставка 01",
+    "Подставка 02",
   );
   await filters.getByRole("button", { name: "Сбросить фильтры" }).click();
-  await expect(page.locator(".product-card")).toHaveCount(4);
+  await expect(page.locator(".product-card")).toHaveCount(3);
 });
 
 test("store changes availability and city price without losing the product", async ({
@@ -55,7 +59,7 @@ test("store changes availability and city price without losing the product", asy
   await open(page, "/product/stands-01");
   const info = page.locator(".product-detail__info");
   await expect(info.locator(".product-price strong")).toContainText(/1\s?200/);
-  await expect(info.locator(".availability")).toHaveText("Нет в наличии");
+  await expect(info.locator(".availability")).toHaveText("Скоро в наличии");
   // Аноним без подтверждённой даты рождения не видит изображения: сервер
   // отдаёт пустой images, галерея показывает заглушку 18+.
   await expect(
@@ -76,13 +80,25 @@ test("store changes availability and city price without losing the product", asy
   await expect(info.locator(".availability")).toHaveText("Мало в наличии");
 });
 
-test("instant filters: availability, photo and removable chips", async ({
+test("instant filters: availability is on by default, photo and removable chips", async ({
   page,
 }) => {
   await open(page);
   const sidebar = page.locator(".catalog-sidebar");
+  // Фильтр наличия включён с открытия сайта: каталог показывает только
+  // товары в выбранном магазине, чип фильтра уже активен.
+  const available = sidebar.getByLabel("Только в наличии");
+  await expect(available).toBeChecked();
+  await expect(page.locator(".filter-chips li")).toHaveCount(2);
+  await available.uncheck();
+  await expect(page).toHaveURL(/available=0/);
+  // Позиции с нулевым остатком возвращаются в выдачу с меткой.
+  await expect(page.locator(".product-card")).toHaveCount(4);
+  await expect(page.locator(".product-card__soon")).toHaveCount(1);
+  await expect(page.locator(".filter-chips")).toHaveCount(0);
   await sidebar.getByLabel("Только в наличии").check();
   await expect(page).toHaveURL(/available=1/);
+  await expect(page.locator(".product-card")).toHaveCount(3);
   await sidebar.getByLabel("Только с фотографией").check();
   await expect(page).toHaveURL(/photo=1/);
   await expect(page.locator(".filter-chips li")).toHaveCount(3);
@@ -90,7 +106,7 @@ test("instant filters: availability, photo and removable chips", async ({
     .locator(".filter-chips")
     .getByRole("button", { name: "В наличии" })
     .click();
-  await expect(page).not.toHaveURL(/available/);
+  await expect(page).not.toHaveURL(/available=1/);
   await expect(page).toHaveURL(/photo=1/);
 });
 
@@ -114,7 +130,9 @@ test("category descendants, search, missing image and API pagination", async ({
   request,
 }) => {
   await open(page, "/catalog/objects");
-  await expect(page.locator(".product-card")).toHaveCount(2);
+  // Фильтр наличия по умолчанию: из двух подставок видна только та, что
+  // в store-1 в наличии; вторая — с нулевым остатком — скрыта.
+  await expect(page.locator(".product-card")).toHaveCount(1);
   await page
     .getByRole("navigation", { name: "Подкатегории" })
     .getByRole("link", { name: "Подставки" })
@@ -158,7 +176,7 @@ test("page in URL survives the price-filter sync (pagination regression)", async
   // (в том числе ?page=) и через дебаунс эмитил «apply», который стирал
   // page и возвращал пользователя на первую страницу каталога.
   await open(page, "/catalog?page=2");
-  await expect(page.locator(".product-card")).toHaveCount(4);
+  await expect(page.locator(".product-card")).toHaveCount(3);
   await page.waitForTimeout(900);
   await expect(page).toHaveURL(/page=2/);
 });
@@ -226,7 +244,7 @@ test("API failure is retryable", async ({ page }) => {
   ).toBeVisible();
   fail = false;
   await page.getByRole("button", { name: "Повторить", exact: true }).click();
-  await expect(page.locator(".product-card")).toHaveCount(4);
+  await expect(page.locator(".product-card")).toHaveCount(3);
 });
 
 test("main pages fit mobile and desktop widths", async ({ page }) => {

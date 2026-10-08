@@ -2,7 +2,8 @@ import type { Product } from "../types/product";
 export const availabilityLabels = {
   available: "В наличии",
   low: "Мало в наличии",
-  unavailable: "Нет в наличии",
+  /** Нулевой остаток: ассортимент пополняется, поэтому оптимистичная метка. */
+  unavailable: "Скоро в наличии",
   unknown: "Наличие уточняется",
 } as const;
 const currencyFormat = new Intl.NumberFormat("ru-RU", {

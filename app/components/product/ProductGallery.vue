@@ -36,6 +36,5 @@ watch(
     <p v-if="restricted" class="caption">
       Изображения товаров доступны только совершеннолетним пользователям.
     </p>
-    <p v-else class="caption">Изображение товара из каталога МойСклад</p>
   </div>
 </template>

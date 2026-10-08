@@ -19,7 +19,7 @@ const categories = computed(
           alt="Прохук"
           loading="lazy"
         />
-        <p class="caption">Прохук · Магазины для взрослых 18+</p>
+        <p class="caption">Прохук · Сеть магазинов</p>
       </div>
       <nav aria-label="Навигация в подвале">
         <h2>Прохук</h2>
@@ -76,14 +76,23 @@ const categories = computed(
       </div>
     </div>
     <div class="footer-bottom">
-      <span
-        >© 2026 Прохук · {{ sellerRequisites.shortName }}, ИНН
-        {{ sellerRequisites.inn }}, ОГРНИП {{ sellerRequisites.ogrnip }}</span
-      ><span>18+</span><NuxtLink to="/information">Информация о сайте</NuxtLink
-      ><NuxtLink to="/privacy">Политика обработки персональных данных</NuxtLink
-      ><NuxtLink to="/personal-data"
-        >Согласие на обработку персональных данных</NuxtLink
-      >
+      <p class="footer-bottom__legal">
+        <span>© 2026 Прохук · {{ sellerRequisites.shortName }}</span>
+        <span>ИНН {{ sellerRequisites.inn }}</span>
+        <span>ОГРНИП {{ sellerRequisites.ogrnip }}</span>
+      </p>
+      <nav aria-label="Юридическая информация">
+        <span
+          class="footer-bottom__age"
+          aria-label="Только для совершеннолетних"
+          >18+</span
+        ><NuxtLink to="/information">Информация о сайте</NuxtLink
+        ><NuxtLink to="/privacy"
+          >Политика обработки персональных данных</NuxtLink
+        ><NuxtLink to="/personal-data"
+          >Согласие на обработку персональных данных</NuxtLink
+        >
+      </nav>
     </div>
   </UiContainer>
 </template>

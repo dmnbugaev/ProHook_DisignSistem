@@ -55,7 +55,6 @@ const licensedStores = computed(
         {{ sellerRequisites.legalName }}.<br />
         ИНН {{ sellerRequisites.inn }}, ОГРНИП
         {{ sellerRequisites.ogrnip }}.<br />
-        Адрес: {{ sellerRequisites.address }}.<br />
         Телефон:
         <a :href="prohookContacts.phoneHref">{{ prohookContacts.phone }}</a
         >, электронная почта:
@@ -88,15 +87,6 @@ const licensedStores = computed(
       <h2>Региональные ограничения</h2>
       <p v-for="item in REGIONAL_RESTRICTIONS" :key="item.region">
         {{ item.note }}
-      </p>
-      <h2>Данные каталога</h2>
-      <p>
-        Товары, категории, изображения, цены и остатки поступают из МойСклад.
-        Данные обновляются на сервере с кэшированием. Юридическая классификация
-        ассортимента применяется централизованно: товары, дистанционная продажа
-        и реклама которых запрещены, а также неклассифицированные категории, на
-        сайте не публикуются. Для регулируемых категорий публикуются только
-        названия, характеристики, цена и наличие.
       </p>
       <h2>Информация о магазинах</h2>
       <p>
