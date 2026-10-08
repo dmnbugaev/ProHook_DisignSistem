@@ -1,0 +1,85 @@
+# CI/CD ProHook.
+# quality: формат → линт → типы → unit-тесты → production build
+# deploy:  после зелёных проверок на main — деплой на VPS по SSH.
+# Ключ PROHOOK_DEPLOY_KEY хранится в GitHub Secrets; на сервере он
+# ограничен форсированной командой (только prohook-deploy) и правилом
+# sudoers NOPASSWD строго для этого скрипта.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Проверки (format, lint, types, unit, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: quality-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Установка зависимостей
+        run: npm ci
+
+      - name: Форматирование (prettier)
+        run: npm run format:check
+
+      - name: Линт (eslint)
+        run: npm run lint
+
+      - name: Типы (vue-tsc)
+        run: npm run typecheck
+
+      - name: Unit-тесты
+        run: npm run test:unit
+
+      - name: Production build
+        run: npm run build
+
+  deploy:
+    name: Деплой на vapeserver
+    # только push/manual на main, и только после зелёных проверок
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Подготовка SSH-ключа и host key
+        env:
+          DEPLOY_KEY: ${{ secrets.PROHOOK_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          install -m 600 /dev/null ~/.ssh/prohook_deploy_key
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/prohook_deploy_key
+          # host key закреплён (TOFU исключён)
+          printf '%s\n' "[5.63.158.22]:22222 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF+rvA6SjA/yg4OKy0y3uDiY1BUxNT/Pm/XyukbPMqzU" > ~/.ssh/known_hosts
+
+      - name: Деплой (prohook-deploy на сервере)
+        run: |
+          ssh -p 22222 -i ~/.ssh/prohook_deploy_key \
+            -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            admin@5.63.158.22 deploy
+
+          echo "Проверка продакшена..."
+          sleep 3
+          curl -sf --max-time 20 -o /dev/null \
+            -w "https://прохук.рф → HTTP %{http_code}\n" \
+            https://xn--j1ahceql.xn--p1ai/
