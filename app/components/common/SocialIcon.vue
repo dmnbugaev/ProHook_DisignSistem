@@ -1,8 +1,11 @@
 <script setup lang="ts">
 // Логотипы соцсетей для ссылок: единый стиль, текущий цвет, размер по месту.
-withDefaults(defineProps<{ network: "vk" | "telegram" | "instagram"; size?: number }>(), {
-  size: 22,
-});
+withDefaults(
+  defineProps<{ network: "vk" | "telegram" | "instagram"; size?: number }>(),
+  {
+    size: 22,
+  },
+);
 const paths: Record<"vk" | "telegram" | "instagram", string> = {
   vk: "M13.162 18.994c-5.098 0-7.985-3.498-8.106-9.293h2.553c.084 4.254 1.971 6.053 3.471 6.422V9.701h2.4v3.665c1.485-.16 3.043-1.821 3.569-3.665h2.4c-.4 2.274-2.082 3.935-3.274 4.616 1.191.559 3.116 2.008 3.842 4.677h-2.649c-.571-1.785-1.999-3.17-3.961-3.371v3.371h-.285z",
   telegram:

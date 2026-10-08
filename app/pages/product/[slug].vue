@@ -152,7 +152,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-            /></svg>
+            />
+          </svg>
         </NuxtLink>
         <span v-else aria-hidden="true"></span>
         <NuxtLink
@@ -175,7 +176,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-            /></svg>
+            />
+          </svg>
         </NuxtLink>
       </nav>
       <nav

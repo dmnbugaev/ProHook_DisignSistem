@@ -59,10 +59,13 @@ export function useStoreSelection() {
    * любой момент из шапки. Session-cookie (без maxAge) видна и SSR, поэтому
    * сервер не рендерит окно открытым после отказа.
    */
-  const dismissedCookie = useCookie<boolean | null>("prohook-picker-dismissed", {
-    sameSite: "lax",
-    default: () => null,
-  });
+  const dismissedCookie = useCookie<boolean | null>(
+    "prohook-picker-dismissed",
+    {
+      sameSite: "lax",
+      default: () => null,
+    },
+  );
   const pickerDismissed = computed(() => dismissedCookie.value === true);
   const { data: meta } = useNuxtData<CatalogMeta>("catalog-meta");
   const store = computed(() =>
