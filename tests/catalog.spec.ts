@@ -1,6 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
+// Подтверждение 18+ сохраняется в cookie на год. Для детерминизма тестов
+// чистим cookie перед каждым заходом — гейт показывается всегда.
 async function open(page: Page, path = "/catalog") {
+  await page.context().clearCookies({ name: "prohook-age-confirmed" });
   await page.goto(path);
   await page.getByRole("button", { name: "Мне 18 лет или больше" }).click();
 }
@@ -17,10 +20,8 @@ test("first visit chooses a real city and store", async ({ page, context }) => {
   const picker = page.getByRole("dialog", { name: "Ваш город и магазин" });
   await expect(picker).toBeVisible();
   await picker.getByLabel("Город", { exact: true }).selectOption("moscow");
+  // Магазин применяется сразу при выборе — отдельной кнопки больше нет.
   await picker.getByRole("radio", { name: /МСК\. Боброво/ }).check();
-  await picker
-    .getByRole("button", { name: "Выбрать магазин", exact: true })
-    .click();
   await expect(picker).not.toBeVisible();
   await expect(page.locator(".store-trigger")).toContainText("Москва");
   const cookies = await context.cookies();
@@ -36,8 +37,10 @@ test("filters and sorting use the selected store price", async ({ page }) => {
   await expect(filters.getByText("Материал")).toHaveCount(0);
   await filters.getByLabel("От", { exact: true }).fill("1000");
   await filters.getByLabel("До", { exact: true }).fill("2000");
-  await filters.getByRole("button", { name: "Применить" }).click();
+  // Цена применяется сама после паузы ввода — кнопки «Применить» нет.
   await expect(page.locator(".product-card")).toHaveCount(2);
+  await expect(page).toHaveURL(/minPrice=1000/);
+  await expect(page.locator(".filter-chips")).toContainText("Цена:");
   await page.getByLabel("Сортировка").selectOption("price-asc");
   await expect(page.locator(".product-card h3").first()).toHaveText(
     "Подставка 01",
@@ -53,25 +56,57 @@ test("store changes availability and city price without losing the product", asy
   const info = page.locator(".product-detail__info");
   await expect(info.locator(".product-price strong")).toContainText(/1\s?200/);
   await expect(info.locator(".availability")).toHaveText("Нет в наличии");
-  await page.getByRole("button", { name: "Показать изображение 2" }).click();
+  // Аноним без подтверждённой даты рождения не видит изображения: сервер
+  // отдаёт пустой images, галерея показывает заглушку 18+.
   await expect(
-    page.locator(".product-gallery > .product-image img"),
-  ).toHaveAttribute("src", "/demo/detail.svg");
+    page.locator(".product-gallery").getByRole("img", {
+      name: "Изображение доступно только совершеннолетним пользователям",
+    }),
+  ).toBeVisible();
+  await expect(page.locator(".gallery-thumbnails")).toHaveCount(0);
   await info.getByRole("button", { name: "Изменить магазин" }).click();
   const picker = page.getByRole("dialog", { name: "Ваш город и магазин" });
   await picker.getByRole("radio", { name: /Студия · Север/ }).check();
-  await picker
-    .getByRole("button", { name: "Выбрать магазин", exact: true })
-    .click();
+  await expect(picker).not.toBeVisible();
   await expect(info.locator(".availability")).toHaveText("В наличии");
   await info.getByRole("button", { name: "Изменить магазин" }).click();
   await picker.getByLabel("Город", { exact: true }).selectOption("moscow");
   await picker.getByRole("radio", { name: /МСК\. Боброво/ }).check();
-  await picker
-    .getByRole("button", { name: "Выбрать магазин", exact: true })
-    .click();
   await expect(info.locator(".product-price strong")).toContainText(/1\s?350/);
   await expect(info.locator(".availability")).toHaveText("Мало в наличии");
+});
+
+test("instant filters: availability, photo and removable chips", async ({
+  page,
+}) => {
+  await open(page);
+  const sidebar = page.locator(".catalog-sidebar");
+  await sidebar.getByLabel("Только в наличии").check();
+  await expect(page).toHaveURL(/available=1/);
+  await sidebar.getByLabel("Только с фотографией").check();
+  await expect(page).toHaveURL(/photo=1/);
+  await expect(page.locator(".filter-chips li")).toHaveCount(3);
+  await page
+    .locator(".filter-chips")
+    .getByRole("button", { name: "В наличии" })
+    .click();
+  await expect(page).not.toHaveURL(/available/);
+  await expect(page).toHaveURL(/photo=1/);
+});
+
+test("search field in catalog shows live suggestions", async ({ page }) => {
+  await open(page);
+  // Поле поиска доступно прямо в каталоге, без перехода на /search.
+  const field = page.getByLabel("Поиск по каталогу", { exact: true });
+  await expect(field).toBeVisible();
+  await field.fill("Блок");
+  const suggest = page.getByRole("listbox", { name: "Подсказки поиска" });
+  await expect(suggest.getByRole("option").first()).toContainText("Блокнот", {
+    ignoreCase: true,
+  });
+  // Клик по подсказке ведёт на страницу товара.
+  await suggest.getByRole("option").first().click();
+  await expect(page).toHaveURL(/\/product\//);
 });
 
 test("category descendants, search, missing image and API pagination", async ({
@@ -90,26 +125,80 @@ test("category descendants, search, missing image and API pagination", async ({
   await open(page, "/search?q=Блокнот");
   await expect(page.locator(".product-card")).toHaveCount(2);
   await open(page, "/product/stands-02");
+  // Без подтверждённого 18+ заглушка возраста приоритетнее «нет изображения».
   await expect(
-    page
-      .locator(".product-gallery")
-      .getByRole("img", { name: "Изображение отсутствует" }),
+    page.locator(".product-gallery").getByRole("img", {
+      name: "Изображение доступно только совершеннолетним пользователям",
+    }),
   ).toBeVisible();
   const response = await request.get("/api/products?limit=2&page=2");
   expect(response.ok()).toBe(true);
   expect(await response.json()).toMatchObject({
-    total: 4,
+    total: 5,
     page: 2,
-    pageCount: 2,
+    pageCount: 3,
   });
 });
 
-test("invalid category, product, store and price range return HTTP errors", async ({
+test("suggest API matches names and slugs", async ({ request }) => {
+  const response = await request.get("/api/products/suggest?q=Блокнот");
+  expect(response.ok()).toBe(true);
+  const payload = await response.json();
+  expect(payload.items.length).toBeGreaterThan(0);
+  expect(payload.items[0]).toMatchObject({
+    name: expect.stringContaining("Блокнот"),
+  });
+  expect(payload.items[0]).not.toHaveProperty("images");
+});
+
+test("page in URL survives the price-filter sync (pagination regression)", async ({
   page,
+}) => {
+  // Регрессия: вотчер черновика цены реагировал на любую смену query
+  // (в том числе ?page=) и через дебаунс эмитил «apply», который стирал
+  // page и возвращал пользователя на первую страницу каталога.
+  await open(page, "/catalog?page=2");
+  await expect(page.locator(".product-card")).toHaveCount(4);
+  await page.waitForTimeout(900);
+  await expect(page).toHaveURL(/page=2/);
+});
+
+test("adjacent API returns category neighbours", async ({ request }) => {
+  const response = await request.get("/api/products/stands-01/adjacent");
+  expect(response.ok()).toBe(true);
+  const { prev, next } = await response.json();
+  expect(prev).toBeNull();
+  expect(next).toMatchObject({ slug: "stands-02", name: "Подставка 02" });
+  expect((await request.get("/api/products/missing/adjacent")).status()).toBe(
+    404,
+  );
+});
+
+test("product page switches to the neighbouring product", async ({ page }) => {
+  await open(page, "/product/stands-01");
+  const nav = page.locator("nav.product-adjacent");
+  await expect(nav).toBeVisible();
+  // Подпись «Следующий →» скрыта от скринридеров (aria-hidden), поэтому
+  // ищем ссылку по тексту, а не по доступному имени.
+  const next = nav.getByRole("link").filter({ hasText: "Следующий" });
+  await expect(next).toContainText("Подставка 02");
+  await next.click();
+  await expect(page).toHaveURL(/stands-02/);
+  await expect(
+    nav.getByRole("link").filter({ hasText: "Предыдущий" }),
+  ).toContainText("Подставка 01");
+});
+
+test("invalid category, product, store and price range return HTTP errors", async ({
   request,
 }) => {
+  // 404-статусы проверяем прямым запросом с подтверждением возраста:
+  // до подтверждения контент страниц не рендерится и маршрут отвечает
+  // 200 с гейтом. Браузерные переходы не используются — WebKit гоняет
+  // навигации на страницах ошибок.
+  const headers = { cookie: "prohook-age-confirmed=true" };
   for (const path of ["/catalog/missing", "/product/missing"]) {
-    expect((await page.goto(path))?.status()).toBe(404);
+    expect((await request.get(path, { headers })).status()).toBe(404);
   }
   expect((await request.get("/api/products?storeId=missing")).status()).toBe(
     400,
@@ -149,6 +238,7 @@ test("main pages fit mobile and desktop widths", async ({ page }) => {
     "/product/stands-01",
     "/stores",
     "/search?q=Блокнот",
+    "/reserve",
   ]) {
     await open(page, path);
     for (const width of [375, 768, 1440]) {

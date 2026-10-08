@@ -7,16 +7,18 @@
     "build": "nuxt build",
     "preview": "NITRO_HOST=127.0.0.1 nuxt preview",
     "catalog:sync": "node scripts/sync-catalog.mjs",
+    "stores:geocode": "node scripts/geocode-stores.mjs",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "test": "playwright test",
-    "test:unit": "node --test tests/moysklad-mapping.test.mjs",
+    "test:unit": "node --test tests/*.test.mjs",
     "lint": "eslint . --max-warnings 0",
     "format:check": "prettier --check app server shared nuxt.config.ts playwright.config.ts tests scripts eslint.config.mjs package.json .prettierrc.json",
     "format": "prettier --write app server shared nuxt.config.ts playwright.config.ts tests scripts eslint.config.mjs package.json .prettierrc.json"
   },
   "dependencies": {
     "@fontsource-variable/golos-text": "^5.3.0",
+    "@node-rs/argon2": "^2.2.1",
     "jiti": "^2.7.0",
     "nuxt": "^4.5.2",
     "vue": "^3.5.43"

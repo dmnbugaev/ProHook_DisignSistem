@@ -2,6 +2,9 @@
 .page-shell {
   padding-top: var(--space-32);
 }
+.app-shell .page-shell {
+  padding-top: var(--space-12);
+}
 .page-heading {
   margin-block: var(--space-8) var(--space-12);
 }
@@ -148,6 +151,9 @@ button.text-link {
   margin-top: var(--space-1);
 }
 .search-form {
+  position: relative;
+}
+.search-form form {
   display: flex;
   align-items: flex-end;
   gap: var(--space-3);
@@ -155,6 +161,57 @@ button.text-link {
 }
 .search-form .field {
   flex: 1;
+}
+/* Живые подсказки поиска: выпадают под полем, поверх каталога. */
+.search-suggest {
+  position: absolute;
+  z-index: 15;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  background: var(--background);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-dialog);
+}
+.search-suggest [role="option"] + [role="option"] {
+  border-top: 1px solid var(--separator);
+}
+.search-suggest [role="option"] button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  text-align: left;
+}
+.search-suggest [role="option"] button:hover,
+.search-suggest [role="option"][aria-selected="true"] button {
+  background: var(--accent);
+}
+.search-suggest__name {
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+.search-suggest__meta {
+  flex-shrink: 0;
+  max-width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-suggest__footer {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  border-top: 1px solid var(--separator);
+  text-align: right;
 }
 .category-grid {
   display: grid;
@@ -168,10 +225,8 @@ button.text-link {
   min-width: 0;
 }
 .category-card__number {
-  position: absolute;
-  top: var(--space-4);
-  left: var(--space-4);
-  z-index: 1;
+  display: block;
+  margin-bottom: var(--space-3);
 }
 .category-card > img {
   width: 100%;
@@ -257,6 +312,70 @@ button.text-link {
 .filter-actions {
   display: grid;
   gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--separator);
+}
+/* Чипы активных фильтров над выдачей: снимаются по одному. */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+.filter-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 4px 12px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+}
+.filter-chips button:hover {
+  box-shadow: var(--shadow-button-hover);
+}
+.filter-chips__reset {
+  background: var(--background);
+}
+/* Плашка «магазин выбран по геолокации». */
+.geo-note {
+  position: fixed;
+  z-index: 30;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--background);
+  box-shadow: var(--shadow-dialog);
+}
+.geo-note p {
+  max-width: none;
+}
+.geo-note__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.geo-note .text-link {
+  min-height: 36px;
+  font-size: 13px;
+}
+.geo-note .icon-button {
+  min-width: 36px;
+  min-height: 36px;
+  font-size: 20px;
 }
 .catalog-toolbar {
   display: flex;
@@ -332,6 +451,19 @@ button.text-link {
   font-size: var(--h2-size);
   color: var(--ink);
 }
+/* Заглушка 18+: изображения скрыты сервером без подтверждённого возраста. */
+.image-placeholder--restricted > span:first-child {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
+  padding: 4px 12px;
+}
+.image-placeholder--restricted > span:last-child {
+  max-width: 20ch;
+}
 .product-card__body {
   padding: var(--space-6);
   display: flex;
@@ -379,6 +511,26 @@ button.text-link {
 .availability--yes > span {
   background: var(--ink);
   border-color: var(--ink);
+}
+/* Кнопка «+ В список» в карточке товара: запрос на резерв, не покупка. */
+.product-card__select {
+  justify-self: start;
+  min-height: 36px;
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+.product-card__select--active {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding-inline: 10px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--accent);
+}
+.product-card__select--active:hover {
+  box-shadow: var(--shadow-button-hover);
 }
 .pagination {
   display: flex;
@@ -597,8 +749,101 @@ button.text-link {
   margin-top: var(--space-6);
   border-block: 1px solid var(--separator);
 }
+.product-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-6);
+}
+.product-select .caption {
+  flex-basis: 100%;
+  margin: 0;
+}
 .product-detail__info > .caption {
   margin-top: var(--space-6);
+}
+/* Переключение между соседними товарами категории. */
+.product-adjacent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-top: var(--space-12);
+}
+.product-adjacent__link {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-card);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+}
+.product-adjacent__link:hover {
+  border-color: var(--ink);
+}
+.product-adjacent__link .caption {
+  color: var(--text-secondary);
+}
+.product-adjacent__link--next {
+  text-align: right;
+}
+.product-adjacent__name {
+  overflow-wrap: anywhere;
+}
+.product-adjacent__hint {
+  margin-top: var(--space-3);
+  color: var(--text-secondary);
+}
+@media (max-width: 1023px) {
+  .product-adjacent__hint {
+    display: none;
+  }
+}
+/* Плавающие стрелки «предыдущий/следующий товар» по краям экрана: видны из
+   любой точки страницы, не нужно прокручивать к навигации под карточкой.
+   Показываем от 1440px — когда рядом с контейнером есть свободное поле. */
+.product-floating-nav {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: none;
+  justify-content: space-between;
+  gap: var(--space-4);
+  pointer-events: none;
+  z-index: 30;
+}
+.product-floating-btn {
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--background);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    box-shadow var(--duration-fast),
+    transform var(--duration-fast),
+    background var(--duration-fast);
+}
+.product-floating-btn:hover {
+  background: var(--accent);
+  box-shadow: var(--shadow-button-hover);
+}
+.product-floating-btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+@media (min-width: 1440px) {
+  .product-floating-nav {
+    display: flex;
+    margin-inline: max(var(--space-4), calc(50vw - 730px));
+  }
 }
 .specifications {
   margin-block: var(--space-6) 0;
@@ -717,14 +962,253 @@ button.text-link {
 }
 .contact-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: var(--space-16);
+  align-items: start;
 }
 .contact-grid h2 {
   font-size: var(--h3-size);
+  margin-bottom: var(--space-4);
 }
 .contact-grid p {
-  margin-block: var(--space-6);
+  margin-block: var(--space-4) var(--space-6);
+}
+/* Контакты: единая колонка подписей, значения выровнены по одной линии. */
+.specifications--contacts > div {
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: baseline;
+}
+.specifications--contacts a {
+  font-weight: var(--weight-medium);
+}
+/* Соцсети на контактах: заметные кнопки-строки с иконкой в плашке. */
+.contact-links {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.contact-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 64px;
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
+  text-decoration: none;
+  font-weight: var(--weight-semibold);
+  transition:
+    box-shadow var(--duration-fast),
+    transform var(--duration-fast);
+}
+.contact-links a:hover {
+  box-shadow: var(--shadow-button-hover);
+  transform: translate(-1px, -1px);
+}
+.contact-links a:active {
+  transform: none;
+  box-shadow: none;
+}
+.contact-links__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  background: var(--surface-subtle);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+  transition: background var(--duration-fast);
+}
+.contact-links a:hover .contact-links__icon {
+  background: var(--accent);
+}
+.contact-links a > span:last-child {
+  margin-left: auto;
+  color: var(--text-secondary);
+}
+.contact-stores {
+  padding: var(--space-8);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-card);
+}
+.contact-stores .button {
+  margin-top: var(--space-2);
+}
+/* Блок «Наши магазины» на странице контактов: карта + список по городам. */
+.stores-map-section {
+  margin-top: var(--space-16);
+}
+.stores-map-intro .caption {
+  margin-top: var(--space-2);
+}
+.stores-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 384px;
+  gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-8);
+}
+.stores-map-frame {
+  position: relative;
+  height: clamp(420px, 62vh, 640px);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-card);
+  background: var(--surface-subtle);
+  overflow: hidden;
+}
+.stores-map-canvas,
+.stores-map-view {
+  width: 100%;
+  height: 100%;
+}
+.stores-map-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--surface-subtle);
+  text-align: center;
+}
+.stores-map-list {
+  display: grid;
+  gap: var(--space-8);
+  max-height: clamp(420px, 62vh, 640px);
+  overflow-y: auto;
+  padding: 2px;
+}
+.stores-map-city {
+  display: grid;
+  gap: var(--space-3);
+}
+.stores-map-city h3 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--h3-size);
+  line-height: var(--h3-leading);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+}
+.stores-map-city ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.store-map-option {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-control);
+  background: var(--background);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.store-map-option strong {
+  display: block;
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+}
+.store-map-option .caption {
+  display: block;
+  margin-top: var(--space-1);
+}
+.store-map-option--selected {
+  border-color: var(--ink);
+  background: var(--surface-subtle);
+}
+.stores-map-view:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+/* Якорю нужны явные размеры: внутри API он обёрнут инлайновым
+   <ymaps>-элементом, и автоширина схлопывается в ноль. Кончик «капли»
+   при этом остаётся в якорной точке: (11, 26) от левого верхнего угла. */
+.store-pin-anchor {
+  display: block;
+  width: 22px;
+  height: 27px;
+  background: none;
+  border: 0;
+}
+.store-pin {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ink);
+  border-radius: 50% 50% 50% 0;
+  background: var(--background);
+  transform: rotate(-45deg);
+  transition:
+    background var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+.store-pin::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.store-pin--selected {
+  background: var(--accent);
+  transform: rotate(-45deg) scale(1.2);
+}
+.store-pin-anchor:focus-visible .store-pin {
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--ink);
+}
+/* Балун Яндекс.Карт: классы API содержат номер сборки (ymaps-2-1-79-…),
+   поэтому стилизуем по стабильным подстрокам имён. */
+.stores-map-view [class*="balloon__layout"] {
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--background);
+  box-shadow: var(--shadow-dialog);
+}
+.stores-map-view [class*="balloon__content"] {
+  padding: var(--space-4);
+  padding-right: 44px;
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  line-height: var(--leading-body);
+  color: var(--ink);
+}
+.stores-map-view [class*="balloon__tail"] {
+  display: none;
+}
+.stores-map-view [class*="balloon__close-button"] {
+  width: 28px;
+  height: 28px;
+  color: var(--ink);
+  font-size: 18px;
+}
+.store-popup-card strong {
+  display: block;
+  font-weight: var(--weight-semibold);
+}
+.store-popup-card .caption {
+  display: block;
+  margin-top: var(--space-1);
 }
 .reading-content {
   max-width: 720px;
@@ -759,8 +1243,17 @@ button.text-link {
   .pagination a:hover {
     border-color: var(--ink);
   }
+  .store-map-option:hover {
+    border-color: var(--ink);
+  }
+  .store-pin:hover {
+    background: var(--accent);
+  }
 }
 @media (max-width: 1279px) {
+  .stores-map-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
   .catalog-layout {
     grid-template-columns: 208px minmax(0, 1fr);
     gap: var(--space-6);
@@ -776,6 +1269,17 @@ button.text-link {
   }
 }
 @media (max-width: 1023px) {
+  .stores-map-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-8);
+  }
+  .stores-map-frame {
+    height: min(60vh, 520px);
+  }
+  .stores-map-list {
+    max-height: none;
+    overflow: visible;
+  }
   .header-actions {
     flex: 1;
   }
@@ -797,6 +1301,12 @@ button.text-link {
   .product-detail {
     gap: var(--space-8);
   }
+  .product-adjacent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .product-adjacent__link--next {
+    text-align: left;
+  }
   .footer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -810,6 +1320,15 @@ button.text-link {
   }
 }
 @media (max-width: 767px) {
+  .stores-map-section {
+    margin-top: var(--space-12);
+  }
+  .stores-map-frame {
+    height: 380px;
+  }
+  .stores-map-city h3 {
+    font-size: 20px;
+  }
   .category-links {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -821,6 +1340,9 @@ button.text-link {
   }
   .page-shell {
     padding-top: var(--space-24);
+  }
+  .app-shell .page-shell {
+    padding-top: var(--space-8);
   }
   .page-heading {
     margin-block: var(--space-6) var(--space-8);
@@ -911,6 +1433,25 @@ button.text-link {
   .contact-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-8);
+  }
+  .specifications--contacts > div {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+  .contact-stores {
+    padding: var(--space-6);
+  }
+  .geo-note {
+    flex-direction: column;
+    align-items: flex-start;
+    bottom: 12px;
+    gap: var(--space-2);
+  }
+  .geo-note p {
+    font-size: 13px;
+  }
+  .search-suggest__meta {
+    display: none;
   }
   .feature-block {
     padding: var(--space-6);

@@ -18,7 +18,26 @@ const jiti = createJiti(import.meta.url);
 const { syncCatalogNow } = await jiti.import(
   "../server/services/catalog-cache.ts",
 );
+const { findBelowMinimum, minPricesConfigured, MIN_PRICE_CONFIG } =
+  await jiti.import("../shared/legal/min-prices.ts");
 const snapshot = await syncCatalogNow();
 process.stdout.write(
   `МойСклад: ${snapshot.products.length} товаров, ${snapshot.meta.categories.length} категорий, ${snapshot.meta.stores.length} магазинов.\n`,
 );
+// Проверка МРЦ: только предупреждения, цены не изменяются автоматически.
+if (minPricesConfigured(MIN_PRICE_CONFIG)) {
+  const below = findBelowMinimum(snapshot.products, MIN_PRICE_CONFIG);
+  if (below.length) {
+    process.stdout.write(
+      `ВНИМАНИЕ: ${below.length} товаров REGULATED_NICOTINE ниже настроенного порога МРЦ (проверьте цены и законность продажи):\n`,
+    );
+    for (const item of below)
+      process.stdout.write(
+        `  - ${item.sku} · ${item.name}: ${item.pricePerMl.toFixed(2)} ₽/мл при пороге ${item.thresholdPerMl} ₽/мл\n`,
+      );
+  }
+} else {
+  process.stdout.write(
+    "Проверка МРЦ отключена: пороги не заданы в shared/legal/min-prices.ts (сверить с действующей редакцией постановления и внести).\n",
+  );
+}

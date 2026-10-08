@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { prohookContacts, relocationNotice } from "~~/shared/content/prohook";
+import { prohookContacts } from "~~/shared/content/prohook";
 
 const { data: meta, error, refresh } = await useCatalogMeta();
 const { store, select, pickerOpen } = useStoreSelection();
@@ -21,21 +21,6 @@ usePageSeo(
         обновляется из учётной системы.
       </p>
     </div>
-    <aside class="store-notice" aria-label="Изменение адреса магазина">
-      <strong>Переезд магазина на Чапаева</strong>
-      <p>
-        По сообщению Прохук от {{ relocationNotice.date }}, точка по адресу
-        {{ relocationNotice.from }} закрыта. Техническое открытие по адресу
-        {{ relocationNotice.to }} запланировано на
-        {{ relocationNotice.opening }}.
-        <a
-          :href="relocationNotice.source"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Источник ↗</a
-        >
-      </p>
-    </aside>
     <UiButton variant="secondary" @click="pickerOpen = true"
       >Выбрать город и магазин</UiButton
     ><UiEmptyState v-if="error" title="Не удалось загрузить магазины"
@@ -59,6 +44,11 @@ usePageSeo(
           <p class="caption">
             <template v-if="item.address">{{ item.address }}<br /></template>
             {{ item.hours ?? `Общий режим сети: ${prohookContacts.hours}` }}
+            <template v-if="item.license"
+              ><br />
+              Лицензия № {{ item.license.number }} (до
+              {{ item.license.validUntil }})</template
+            >
           </p>
           <UiButton
             variant="secondary"

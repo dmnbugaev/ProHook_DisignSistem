@@ -3,8 +3,14 @@
   "stockUpdatedAt": 4102444800000,
   "meta": {
     "cities": [
-      { "id": "saratov", "name": "Саратов" },
-      { "id": "moscow", "name": "Москва" }
+      {
+        "id": "saratov",
+        "name": "Саратов"
+      },
+      {
+        "id": "moscow",
+        "name": "Москва"
+      }
     ],
     "stores": [
       {
@@ -30,7 +36,7 @@
       {
         "id": "objects",
         "slug": "objects",
-        "name": "Объекты",
+        "name": "Снеки",
         "description": "Тестовая категория",
         "parentId": null
       },
@@ -44,7 +50,7 @@
       {
         "id": "stationery",
         "slug": "stationery",
-        "name": "Канцелярия",
+        "name": "Напитки",
         "description": "Тестовая категория",
         "parentId": null
       },
@@ -54,6 +60,27 @@
         "name": "Блокноты",
         "description": "Тестовая категория",
         "parentId": "stationery"
+      },
+      {
+        "id": "chew",
+        "slug": "chew",
+        "name": "Жевательный табак",
+        "description": "Безтабачные никотиновые паучи (регулируемая категория)",
+        "parentId": null
+      },
+      {
+        "id": "aroma",
+        "slug": "aroma",
+        "name": "Ароматизаторы",
+        "description": "Категория до юридической классификации",
+        "parentId": null
+      },
+      {
+        "id": "nbc",
+        "slug": "nbc",
+        "name": "НБС",
+        "description": "Запрещённая к публикации категория",
+        "parentId": null
       }
     ],
     "brands": [],
@@ -68,8 +95,16 @@
       "categoryId": "stands",
       "categoryName": "Подставки",
       "images": [
-        { "id": "main", "src": "/demo/object.svg", "alt": "Подставка" },
-        { "id": "detail", "src": "/demo/detail.svg", "alt": "Деталь" }
+        {
+          "id": "main",
+          "src": "/demo/object.svg",
+          "alt": "Подставка"
+        },
+        {
+          "id": "detail",
+          "src": "/demo/detail.svg",
+          "alt": "Деталь"
+        }
       ],
       "description": "Описание подставки.",
       "attributes": [],
@@ -93,8 +128,6 @@
           "availability": "low"
         }
       ],
-      "isPopular": false,
-      "isNew": false,
       "publishedAt": "2026-09-25T12:00:00Z"
     },
     {
@@ -121,8 +154,6 @@
           "availability": "low"
         }
       ],
-      "isPopular": false,
-      "isNew": false,
       "publishedAt": "2026-09-24T12:00:00Z"
     },
     {
@@ -133,7 +164,11 @@
       "categoryId": "notebooks",
       "categoryName": "Блокноты",
       "images": [
-        { "id": "main", "src": "/demo/notebook.svg", "alt": "Блокнот" }
+        {
+          "id": "main",
+          "src": "/demo/notebook.svg",
+          "alt": "Блокнот"
+        }
       ],
       "description": "Описание блокнота.",
       "attributes": [],
@@ -157,8 +192,6 @@
           "availability": "unavailable"
         }
       ],
-      "isPopular": false,
-      "isNew": false,
       "publishedAt": "2026-09-23T12:00:00Z"
     },
     {
@@ -185,9 +218,90 @@
           "availability": "available"
         }
       ],
-      "isPopular": false,
-      "isNew": false,
       "publishedAt": "2026-09-22T12:00:00Z"
+    },
+    {
+      "id": "p5",
+      "slug": "chew-01",
+      "sku": "005",
+      "name": "Паучи тестовые 4 мг",
+      "categoryId": "chew",
+      "categoryName": "Жевательный табак",
+      "images": [],
+      "description": "Не публикуется для регулируемого класса.",
+      "attributes": [],
+      "offers": [
+        {
+          "storeId": "store-3",
+          "price": 55000,
+          "currency": "RUB",
+          "availability": "available"
+        }
+      ],
+      "publishedAt": "2026-09-21T12:00:00Z"
+    },
+    {
+      "id": "p6",
+      "slug": "aroma-01",
+      "sku": "006",
+      "name": "Ароматизатор тестовый",
+      "categoryId": "aroma",
+      "categoryName": "Ароматизаторы",
+      "images": [],
+      "description": "Не публикуется до классификации.",
+      "attributes": [],
+      "offers": [
+        {
+          "storeId": "store-1",
+          "price": 40000,
+          "currency": "RUB",
+          "availability": "available"
+        }
+      ],
+      "publishedAt": "2026-09-20T12:00:00Z"
+    },
+    {
+      "id": "p7",
+      "slug": "nbc-01",
+      "sku": "007",
+      "name": "НБС тестовый",
+      "categoryId": "nbc",
+      "categoryName": "НБС",
+      "images": [],
+      "description": "Не должен публиковаться.",
+      "attributes": [],
+      "offers": [
+        {
+          "storeId": "store-1",
+          "price": 30000,
+          "currency": "RUB",
+          "availability": "available"
+        }
+      ],
+      "publishedAt": "2026-09-19T12:00:00Z"
     }
-  ]
+  ],
+  "stockDetail": {
+    "p1": {
+      "store-1": 0,
+      "store-2": 12,
+      "store-3": 3
+    },
+    "p2": {
+      "store-1": 5,
+      "store-2": 2
+    },
+    "p3": {
+      "store-1": 8,
+      "store-2": 4,
+      "store-3": 0
+    },
+    "p4": {
+      "store-1": 2,
+      "store-2": 6
+    },
+    "p5": {
+      "store-3": 15
+    }
+  }
 }

@@ -11,6 +11,9 @@ import { prohookContacts } from "~~/shared/content/prohook";
           контактов или перейдите в удобную социальную сеть.
         </p>
         <div class="contact-section__links">
+          <NuxtLink to="/partners" class="text-link"
+            >Стать партнёром ↗</NuxtLink
+          >
           <NuxtLink to="/contacts" class="text-link">Контакты ↗</NuxtLink>
           <a
             :href="prohookContacts.vk"

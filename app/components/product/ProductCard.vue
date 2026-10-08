@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { Product } from "~~/shared/types/product";
-defineProps<{ product: Product }>();
+const props = defineProps<{ product: Product }>();
+const { add, quantityOf } = useSelectionList();
+const inList = computed(() => quantityOf(props.product.id) > 0);
+const quantity = computed(() => quantityOf(props.product.id));
 </script>
 <template>
   <article class="product-card">
@@ -10,11 +13,10 @@ defineProps<{ product: Product }>();
       tabindex="-1"
       aria-hidden="true"
     >
-      <ProductImage :image="product.images[0]" />
-      <div class="product-card__badges">
-        <UiBadge v-if="product.isNew" accent>Новинка</UiBadge
-        ><UiBadge v-else-if="product.isPopular">Выбор коллекции</UiBadge>
-      </div>
+      <ProductImage
+        :image="product.images[0]"
+        :restricted="product.imagesRestricted"
+      />
     </NuxtLink>
     <div class="product-card__body">
       <p class="caption">{{ product.categoryName ?? "Каталог" }}</p>
@@ -23,6 +25,21 @@ defineProps<{ product: Product }>();
       </h3>
       <ProductAvailability :product="product" />
       <ProductPrice :product="product" />
+      <NuxtLink
+        v-if="inList"
+        to="/reserve"
+        class="product-card__select product-card__select--active"
+      >
+        В списке<template v-if="quantity > 1"> · {{ quantity }}</template>
+      </NuxtLink>
+      <button
+        v-else
+        type="button"
+        class="product-card__select text-link"
+        @click="add(product.id)"
+      >
+        + В список
+      </button>
     </div>
   </article>
 </template>

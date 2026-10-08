@@ -8,3 +8,6 @@ package-lock.json
 .idea
 public
 docs/screenshots
+scripts/mass-rename/*.json
+scripts/mass-rename/batches
+scripts/mass-rename/out

@@ -15,11 +15,7 @@ const lowest = computed(() =>
 <template>
   <div class="product-price">
     <template v-if="offer"
-      ><strong>{{ formatPrice(offer.price) }}</strong
-      ><del v-if="offer.oldPrice && offer.oldPrice > offer.price"
-        ><span class="sr-only">Прежняя цена </span
-        >{{ formatPrice(offer.oldPrice) }}</del
-      ></template
+      ><strong>{{ formatPrice(offer.price) }}</strong></template
     >
     <strong v-else-if="!store && lowest !== undefined"
       >от {{ formatPrice(lowest) }}</strong

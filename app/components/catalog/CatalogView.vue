@@ -15,9 +15,8 @@ if (props.categorySlug && meta.value && !category.value)
     statusMessage: "Not Found",
     message: "Категория не найдена",
   });
-const { parsed, requestQuery, values, apply, reset, sort } = useCatalogQuery(
-  () => props.categorySlug ?? "",
-);
+const { parsed, requestQuery, values, activeCount, apply, reset, sort } =
+  useCatalogQuery(() => props.categorySlug ?? "");
 const { data, error, status, refresh } = await useProducts(requestQuery);
 const filtersOpen = ref(false);
 const { store, city, pickerOpen } = useStoreSelection();
@@ -56,19 +55,26 @@ const breadcrumbs = computed(() => [
     : []),
   { label: props.search ? "Поиск" : title.value },
 ]);
-const activeCount = computed(
-  () =>
-    Number(!!values.value.minPrice || !!values.value.maxPrice) +
-    Number(values.value.available),
-);
-async function applyFilters(value: Parameters<typeof apply>[0]) {
-  await apply(value);
-  filtersOpen.value = false;
+// Чипы активных фильтров: каждый снимается по одному, «Сбросить всё» — целиком.
+type ChipKey = "price" | "available" | "photo";
+const chips = computed<{ key: ChipKey; label: string }[]>(() => {
+  const list: { key: ChipKey; label: string }[] = [];
+  if (values.value.minPrice || values.value.maxPrice)
+    list.push({
+      key: "price",
+      label: `Цена: ${values.value.minPrice || "0"}–${values.value.maxPrice || "∞"}`,
+    });
+  if (values.value.available)
+    list.push({ key: "available", label: "В наличии" });
+  if (values.value.photo) list.push({ key: "photo", label: "С фото" });
+  return list;
+});
+function removeChip(key: ChipKey) {
+  if (key === "price") return apply({ minPrice: "", maxPrice: "" });
+  return apply({ [key]: false });
 }
-async function resetFilters() {
-  await reset();
-  filtersOpen.value = false;
-}
+const applyFilters = apply;
+const resetFilters = reset;
 watch(
   () => route.fullPath,
   () => {
@@ -84,7 +90,7 @@ watch(
       <h1>{{ title }}</h1>
       <p>{{ description }}</p>
     </div>
-    <SearchForm v-if="search" :initial="parsed.q" />
+    <SearchForm :initial="parsed.q" :autofocus="search" />
     <CatalogCategories :categories="parents" :selected="category?.slug" />
     <nav
       v-if="children.length"
@@ -117,14 +123,32 @@ watch(
           Фильтры <UiBadge v-if="activeCount">{{ activeCount }}</UiBadge>
         </h2>
         <CatalogFilters
-          v-if="meta"
-          :meta="meta"
           :values="values"
           @apply="applyFilters"
           @reset="resetFilters"
         />
       </aside>
       <div class="catalog-results" :aria-busy="status === 'pending'">
+        <ul
+          v-if="chips.length"
+          class="filter-chips"
+          aria-label="Активные фильтры"
+        >
+          <li v-for="chip in chips" :key="chip.key">
+            <button type="button" @click="removeChip(chip.key)">
+              {{ chip.label }} <span aria-hidden="true">×</span>
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              class="filter-chips__reset"
+              @click="resetFilters"
+            >
+              Сбросить всё
+            </button>
+          </li>
+        </ul>
         <CatalogToolbar
           :total="data?.total ?? 0"
           :sort="parsed.sort"
@@ -162,7 +186,6 @@ watch(
     <UiDialog v-model="filtersOpen" title="Фильтры" drawer
       ><CatalogFilters
         v-if="meta && filtersOpen"
-        :meta="meta"
         :values="values"
         @apply="applyFilters"
         @reset="resetFilters"

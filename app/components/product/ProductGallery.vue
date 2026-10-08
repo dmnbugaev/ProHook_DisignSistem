@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import type { ProductImage } from "~~/shared/types/product";
-const props = defineProps<{ images: ProductImage[] }>();
+const props = defineProps<{
+  images: ProductImage[];
+  /** Сервер скрыл изображения: нет подтверждённого 18+. */
+  restricted?: boolean;
+}>();
 const selected = ref(0);
 watch(
-  () => props.images,
+  () => [props.images, props.restricted],
   () => {
     selected.value = 0;
   },
 );
 </script>
+
 <template>
   <div class="product-gallery">
-    <ProductImage :image="images[selected]" eager />
+    <ProductImage :image="images[selected]" eager :restricted="restricted" />
     <div
       v-if="images.length > 1"
       class="gallery-thumbnails"
@@ -28,6 +33,9 @@ watch(
         <ProductImage :image="image" />
       </button>
     </div>
-    <p class="caption">Изображение товара из каталога МойСклад</p>
+    <p v-if="restricted" class="caption">
+      Изображения товаров доступны только совершеннолетним пользователям.
+    </p>
+    <p v-else class="caption">Изображение товара из каталога МойСклад</p>
   </div>
 </template>

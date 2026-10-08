@@ -1,6 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
 async function openReady(page: Page) {
+  // Гейт подтверждается каждый раз заново: чистим cookie подтверждения.
+  await page.context().clearCookies({ name: "prohook-age-confirmed" });
   await page.goto("/design-system");
   await page.waitForFunction(
     () =>
@@ -43,8 +45,9 @@ test("dialog isolates focus, closes with Escape and restores its trigger", async
   await expect(trigger).toBeFocused();
 });
 
-test("age gate blocks dismissal, handles refusal and asks again on reload", async ({
+test("age gate blocks dismissal, persists confirmation and returns without cookie", async ({
   page,
+  context,
 }) => {
   await page.goto("/design-system");
   const dialog = page.getByRole("dialog", {
@@ -62,7 +65,13 @@ test("age gate blocks dismissal, handles refusal and asks again on reload", asyn
   await dialog.getByRole("button", { name: "Мне 18 лет или больше" }).click();
   await expect(dialog).not.toBeVisible();
   await expect(page.locator("#top")).not.toHaveAttribute("inert");
+  // Подтверждение сохраняется локально на год и переживает перезагрузку.
   await page.reload();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator("#top")).not.toHaveAttribute("inert");
+  // Без cookie подтверждения гейт запрашивается заново.
+  await context.clearCookies();
+  await page.goto("/design-system");
   await expect(dialog).toBeVisible();
 });
 

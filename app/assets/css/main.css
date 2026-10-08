@@ -176,6 +176,112 @@ legend {
   border-color: var(--ink);
   box-shadow: var(--shadow-header);
 }
+.app-shell .site-header {
+  position: sticky;
+  top: 8px;
+  left: auto;
+  transform: none;
+  margin: 8px auto 0;
+}
+.app-shell .hero {
+  padding-top: 64px;
+}
+.legal-notice {
+  background: #292929;
+  color: #fff;
+  border-bottom: 2px solid var(--accent);
+}
+.legal-notice__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: calc(100% - var(--gutter) * 2);
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-block: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.legal-notice__symbol {
+  display: grid;
+  place-items: center;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+.legal-notice p {
+  max-width: none;
+  flex: 1;
+}
+.legal-notice a {
+  color: var(--accent);
+}
+.legal-notice__close {
+  flex: 0 0 auto;
+  min-height: 32px;
+  margin-left: auto;
+  padding: 4px 12px;
+  border: 1px solid #858585;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+}
+.legal-notice__close:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.age-marquee {
+  overflow: hidden;
+  margin-top: 8px;
+  border-block: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+.age-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: age-marquee-scroll 80s linear infinite;
+  will-change: transform;
+}
+.age-marquee__group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 36px;
+  padding: 8px 36px 8px 0;
+}
+.age-marquee__item {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+}
+.age-marquee__badge {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: var(--weight-extrabold);
+}
+@keyframes age-marquee-scroll {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
 @supports (backdrop-filter: blur(16px)) {
   .site-header--glass {
     background: #ffffffe6;
@@ -220,6 +326,44 @@ legend {
   font-size: 32px;
   line-height: 1;
   flex-shrink: 0;
+}
+/* Ссылка «Войти»/«Личный кабинет»: иконка всегда, подпись — на широких. */
+.account-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 10px;
+  text-decoration: none;
+  font-size: var(--font-caption);
+  font-weight: var(--weight-medium);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  flex-shrink: 0;
+}
+.account-link span {
+  white-space: nowrap;
+}
+/* Ссылка «Список выбранных товаров» в шапке: иконка + счётчик позиций. */
+.selection-link {
+  position: relative;
+  text-decoration: none;
+}
+.selection-link__badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 4px;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--background);
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
 }
 .menu-toggle {
   display: none;
@@ -1060,6 +1204,12 @@ legend {
 }
 .button > span {
   min-width: 0;
+  /* Иконка и подпись в одну строку: без этого глобальный display:block для
+     svg ставит иконку над текстом столбиком. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
 }
 .button > svg {
   flex-shrink: 0;
@@ -1095,7 +1245,8 @@ legend {
   .info-card a:hover {
     text-decoration: underline;
   }
-  .icon-button:hover {
+  .icon-button:hover,
+  .account-link:hover {
     background: var(--accent);
     border-color: var(--ink);
   }
@@ -1132,6 +1283,12 @@ legend {
   }
   .menu-toggle {
     display: grid;
+  }
+  .account-link span {
+    display: none;
+  }
+  .mobile-nav__account {
+    color: var(--text-secondary);
   }
   .site-header {
     min-height: 64px;
@@ -1202,6 +1359,29 @@ legend {
   }
   .site-header {
     top: 8px;
+  }
+  .app-shell .hero {
+    padding-top: 48px;
+  }
+  .legal-notice__content {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding-block: 10px;
+  }
+  .legal-notice p {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .legal-notice__close {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
+    padding-inline: 8px;
+  }
+  .age-marquee__group {
+    gap: 24px;
+    padding-right: 24px;
   }
   .brand-link {
     gap: 10px;

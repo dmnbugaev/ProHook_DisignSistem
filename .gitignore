@@ -2,6 +2,7 @@ node_modules/
 .nuxt/
 .output/
 .cache/
+.data/
 test-results/
 playwright-report/
 .DS_Store

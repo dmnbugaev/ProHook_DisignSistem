@@ -3,7 +3,14 @@ export interface FilterValues {
   minPrice: string;
   maxPrice: string;
   available: boolean;
+  photo: boolean;
 }
+export const EMPTY_FILTERS: FilterValues = {
+  minPrice: "",
+  maxPrice: "",
+  available: false,
+  photo: false,
+};
 export function useCatalogQuery(category: MaybeRefOrGetter<string> = "") {
   const route = useRoute();
   const router = useRouter();
@@ -19,26 +26,31 @@ export function useCatalogQuery(category: MaybeRefOrGetter<string> = "") {
     minPrice: parsed.value.minPrice?.toString() ?? "",
     maxPrice: parsed.value.maxPrice?.toString() ?? "",
     available: parsed.value.available,
+    photo: parsed.value.photo,
   }));
-  function apply(filters: FilterValues) {
+  const activeCount = computed(
+    () =>
+      Number(!!values.value.minPrice || !!values.value.maxPrice) +
+      Number(values.value.available) +
+      Number(values.value.photo),
+  );
+  function apply(filters: Partial<FilterValues>) {
+    const next = { ...values.value, ...filters };
     return router.push({
       query: {
         ...route.query,
         page: undefined,
-        brand: undefined,
-        minPrice: filters.minPrice || undefined,
-        maxPrice: filters.maxPrice || undefined,
-        available: filters.available ? "1" : undefined,
+        minPrice: next.minPrice || undefined,
+        maxPrice: next.maxPrice || undefined,
+        available: next.available ? "1" : undefined,
+        photo: next.photo ? "1" : undefined,
         material: undefined,
+        brand: undefined,
       },
     });
   }
   function reset() {
-    return apply({
-      minPrice: "",
-      maxPrice: "",
-      available: false,
-    });
+    return apply(EMPTY_FILTERS);
   }
   function sort(value: string) {
     return router.push({
@@ -56,5 +68,5 @@ export function useCatalogQuery(category: MaybeRefOrGetter<string> = "") {
         void router.replace({ query: { ...route.query, page: undefined } });
     },
   );
-  return { parsed, requestQuery, values, apply, reset, sort };
+  return { parsed, requestQuery, values, activeCount, apply, reset, sort };
 }

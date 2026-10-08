@@ -1,18 +1,33 @@
 <script setup lang="ts">
 import type { ProductImage } from "~~/shared/types/product";
-const props = defineProps<{ image?: ProductImage; eager?: boolean }>();
+const props = defineProps<{
+  image?: ProductImage;
+  eager?: boolean;
+  /** Сервер скрыл изображения: нет подтверждённого 18+. */
+  restricted?: boolean;
+}>();
 const failed = ref(false);
 watch(
-  () => props.image?.src,
+  () => [props.image?.src, props.restricted],
   () => {
     failed.value = false;
   },
 );
 </script>
+
 <template>
   <div class="product-image">
+    <div
+      v-if="restricted"
+      class="image-placeholder image-placeholder--restricted"
+      role="img"
+      aria-label="Изображение доступно только совершеннолетним пользователям"
+    >
+      <span aria-hidden="true">18+</span>
+      <span>Изображение доступно<br />совершеннолетним</span>
+    </div>
     <img
-      v-if="image && !failed"
+      v-else-if="image && !failed"
       :src="image.src"
       :alt="image.alt"
       width="480"

@@ -2,12 +2,8 @@ import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import type { Product } from "../../shared/types/product";
-import {
-  excludeHiddenStores,
-  fetchCatalog,
-  fetchStock,
-  type CatalogSnapshot,
-} from "./moysklad";
+import { applyLegalPolicy } from "../../shared/legal/catalog-policy";
+import { fetchCatalog, fetchStock, type CatalogSnapshot } from "./moysklad";
 
 const FIXTURE_FILE = process.env.MOYSKLAD_SNAPSHOT_PATH;
 const CACHE_FILE = resolve(
@@ -36,7 +32,9 @@ async function load() {
       await readFile(CACHE_FILE, "utf8"),
     ) as CatalogSnapshot;
     if (Array.isArray(value.products) && value.meta?.stores)
-      snapshot = excludeHiddenStores(value);
+      // Снимок мог быть записан до смены юридической политики — применяем её
+      // повторно (идемпотентно: фильтрация запрещённых классов, legalClass).
+      snapshot = applyLegalPolicy(value);
   } catch {
     // The first run has no private snapshot yet.
   }
@@ -61,6 +59,9 @@ function retainStock(next: CatalogSnapshot, previous?: CatalogSnapshot) {
       })),
     } as Product;
   });
+  // Точные остатки переживают обновление каталога, пока не придёт новый
+  // отчёт остатков (stockDetail — server-only, API его не отдаёт).
+  next.stockDetail = previous.stockDetail;
   next.stockUpdatedAt = previous.stockUpdatedAt;
   return next;
 }
@@ -85,10 +86,15 @@ export async function refreshStock() {
   if (stockRefresh) return stockRefresh;
   stockRefresh = (async () => {
     const current = await getCatalogSnapshot();
-    const products = await fetchStock(current);
+    const { products, stockDetail } = await fetchStock(current);
     // A newer catalog refresh may have completed during the stock report.
     if (snapshot === current) {
-      snapshot = { ...current, products, stockUpdatedAt: Date.now() };
+      snapshot = {
+        ...current,
+        products,
+        stockDetail,
+        stockUpdatedAt: Date.now(),
+      };
       await save(snapshot);
     }
   })();

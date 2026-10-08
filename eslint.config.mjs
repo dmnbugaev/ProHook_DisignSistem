@@ -34,4 +34,22 @@ export default [
     ],
     rules: { "vue/multi-word-component-names": "off" },
   },
+  {
+    // Операционные скрипты (массовое переименование, синхронизация) бегут
+    // в Node и сознательно используют fetch/AbortSignal и контроль-символы
+    // в регулярках для проверки данных.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        fetch: "readonly",
+        AbortSignal: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        console: "readonly",
+        process: "readonly",
+        URL: "readonly",
+      },
+    },
+    rules: { "no-control-regex": "off" },
+  },
 ];

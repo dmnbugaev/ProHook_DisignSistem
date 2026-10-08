@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { prohookContacts } from "~~/shared/content/prohook";
+import { sellerRequisites } from "~~/shared/content/legal";
 
 const { data } = await useCatalogMeta();
 const categories = computed(
@@ -24,7 +25,8 @@ const categories = computed(
         <h2>Прохук</h2>
         <NuxtLink to="/about">О нас</NuxtLink
         ><NuxtLink to="/stores">Магазины</NuxtLink
-        ><NuxtLink to="/contacts">Контакты</NuxtLink>
+        ><NuxtLink to="/contacts">Контакты</NuxtLink
+        ><NuxtLink to="/partners">Стать партнёром</NuxtLink>
       </nav>
       <nav aria-label="Каталог в подвале">
         <h2>Каталог</h2>
@@ -67,11 +69,21 @@ const categories = computed(
             >Instagram ↗</a
           >
         </nav>
+        <p class="caption footer-disclaimer">
+          Instagram принадлежит компании Meta, признанной экстремистской
+          организацией, деятельность которой запрещена на территории РФ.
+        </p>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Прохук</span><span>18+</span
-      ><NuxtLink to="/information">Информация о сайте</NuxtLink>
+      <span
+        >© 2026 Прохук · {{ sellerRequisites.shortName }}, ИНН
+        {{ sellerRequisites.inn }}, ОГРНИП {{ sellerRequisites.ogrnip }}</span
+      ><span>18+</span><NuxtLink to="/information">Информация о сайте</NuxtLink
+      ><NuxtLink to="/privacy">Политика обработки персональных данных</NuxtLink
+      ><NuxtLink to="/personal-data"
+        >Согласие на обработку персональных данных</NuxtLink
+      >
     </div>
   </UiContainer>
 </template>

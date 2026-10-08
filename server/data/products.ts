@@ -72,9 +72,6 @@ export const products: Product[] = Array.from({ length: 28 }, (_, index) => {
       storeId: store.id,
       currency: "RUB",
       price: basePrice + storeIndex * 15000,
-      ...(index % 5 === 0
-        ? { oldPrice: basePrice + 50000 + storeIndex * 15000 }
-        : {}),
       availability:
         (index + storeIndex) % 7 === 0
           ? "unavailable"
@@ -82,8 +79,7 @@ export const products: Product[] = Array.from({ length: 28 }, (_, index) => {
             ? "low"
             : "available",
     })),
-    isPopular: index < 8,
-    isNew: index >= 20,
+    legalClass: "UNREGULATED",
     publishedAt: `2026-09-${String(index + 1).padStart(2, "0")}T12:00:00Z`,
   };
 });

@@ -1,6 +1,9 @@
 import type { CatalogMeta } from "../../shared/types/catalog";
 import type { Product } from "../../shared/types/product";
 import type { Store } from "../../shared/types/store";
+import { applyLegalPolicy } from "../../shared/legal/catalog-policy";
+import { storeAddresses } from "../data/store-addresses";
+import { storeLicenses } from "../data/store-licenses";
 
 const API = "https://api.moysklad.ru/api/remap/1.2/";
 const PAGE_SIZE = 1000;
@@ -18,12 +21,6 @@ const INTERNAL_STORES = new Set([
   "БУНКЕР",
   "САМОВЫВОЗ",
   "шаблон",
-]);
-const HIDDEN_STORES = new Set([
-  "Вокзал",
-  "Буровая",
-  "Ильинская площадь",
-  "Чапаева 45",
 ]);
 
 interface MsMeta {
@@ -159,30 +156,12 @@ export interface CatalogSnapshot {
   stockUpdatedAt: number;
   meta: CatalogMeta;
   products: Product[];
-}
-
-export function excludeHiddenStores(
-  snapshot: CatalogSnapshot,
-): CatalogSnapshot {
-  const hiddenIds = new Set(
-    snapshot.meta.stores
-      .filter((store) => HIDDEN_STORES.has(store.name))
-      .map((store) => store.id),
-  );
-  if (!hiddenIds.size) return snapshot;
-  return {
-    ...snapshot,
-    meta: {
-      ...snapshot.meta,
-      stores: snapshot.meta.stores.filter((store) => !hiddenIds.has(store.id)),
-    },
-    products: snapshot.products
-      .map((product) => ({
-        ...product,
-        offers: product.offers.filter((offer) => !hiddenIds.has(offer.storeId)),
-      }))
-      .filter((product) => product.offers.length > 0),
-  };
+  /**
+   * Точные остатки штук для проверки запросов на резерв: productId →
+   * storeId → доступно (stock − reserve). Только server-side: API каталога
+   * отдаёт products/meta, это поле наружу не попадает.
+   */
+  stockDetail?: Record<string, Record<string, number>>;
 }
 
 export async function fetchCatalog(): Promise<CatalogSnapshot> {
@@ -196,20 +175,24 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
     (field) =>
       field.name.trim().toLocaleLowerCase("ru") === "показать на сайте",
   );
+  const siteNameField = productAttributes.find(
+    (field) =>
+      field.name.trim().toLocaleLowerCase("ru") === "название для сайта",
+  );
   const stores: Store[] = msStores
     .filter(
       (item) =>
-        !item.archived &&
-        !INTERNAL_STORES.has(item.name) &&
-        !HIDDEN_STORES.has(item.name) &&
-        cityFor(item),
+        !item.archived && !INTERNAL_STORES.has(item.name) && cityFor(item),
     )
     .map((item) => ({
       id: item.id,
       cityId: cityFor(item)!,
       name: item.name,
       description: item.description?.trim() || `Точка «${item.name}»`,
-      ...(item.address?.trim() ? { address: item.address.trim() } : {}),
+      ...(storeAddresses[item.id] || item.address?.trim()
+        ? { address: storeAddresses[item.id] || item.address!.trim() }
+        : {}),
+      ...(storeLicenses[item.id] ? { license: storeLicenses[item.id] } : {}),
     }))
     .sort(
       (a, b) =>
@@ -261,8 +244,23 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
       parentId: idOf(folder.productFolder) ?? null,
     }));
   const categoryNames = new Map(categories.map((item) => [item.id, item.name]));
-  const products: Product[] = visible
+  // legalClass назначается ниже централизованно (applyLegalPolicy).
+  const products = visible
     .map((item) => {
+      const siteNameValue = item.attributes?.find(
+        (attribute) =>
+          siteNameField &&
+          (attribute.id === siteNameField.id ||
+            attribute.meta?.href
+              ?.split("?")[0]
+              ?.endsWith(`/${siteNameField.id}`) ||
+            attribute.name?.trim().toLocaleLowerCase("ru") ===
+              "название для сайта"),
+      )?.value;
+      const name =
+        typeof siteNameValue === "string" && siteNameValue.trim()
+          ? siteNameValue.trim()
+          : item.name;
       const categoryId = idOf(item.productFolder) ?? "";
       const prices = new Map(
         (item.salePrices ?? []).map((price) => [
@@ -288,7 +286,13 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
       });
       const attributes = (item.attributes ?? [])
         .filter(
-          (attribute) => typeof attribute.value === "string" && attribute.value,
+          (attribute) =>
+            typeof attribute.value === "string" &&
+            attribute.value &&
+            (!siteNameField ||
+              (attribute.id !== siteNameField.id &&
+                attribute.name?.trim().toLocaleLowerCase("ru") !==
+                  "название для сайта")),
         )
         .map((attribute) => ({
           code: attribute.id ?? attribute.name ?? "",
@@ -299,48 +303,26 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
         id: item.id,
         slug: item.id,
         sku: item.article || item.code || item.id,
-        name: item.name,
+        name,
         categoryId,
         categoryName: categoryNames.get(categoryId) ?? "Каталог",
         images: Array.from({ length: imageCount }, (_, index) => ({
           id: `${item.id}-${index}`,
           src: `/api/products/${item.id}/images/${index}`,
-          alt: `${item.name} — изображение ${index + 1}`,
+          alt: `${name} — изображение ${index + 1}`,
         })),
         description:
           item.description?.trim() || "Описание товара пока не добавлено.",
         attributes,
         offers,
-        isPopular: false,
-        isNew: false,
         publishedAt: item.updated ? item.updated.replace(" ", "T") + "Z" : "",
       };
     })
     .filter((item) => item.offers.length > 0);
-  const categoryById = new Map(
-    categories.map((category) => [category.id, category]),
-  );
-  const rootCounts = new Map<string, number>();
-  for (const product of products) {
-    let id: string | null = product.categoryId;
-    const visited = new Set<string>();
-    while (id && !visited.has(id)) {
-      visited.add(id);
-      const category = categoryById.get(id);
-      if (!category) break;
-      if (!category.image && product.images[0])
-        category.image = product.images[0].src;
-      if (!category.parentId) rootCounts.set(id, (rootCounts.get(id) ?? 0) + 1);
-      id = category.parentId;
-    }
-  }
-  categories.sort((a, b) =>
-    !a.parentId && !b.parentId
-      ? (rootCounts.get(b.id) ?? 0) - (rootCounts.get(a.id) ?? 0) ||
-        a.name.localeCompare(b.name, "ru")
-      : a.name.localeCompare(b.name, "ru"),
-  );
-  return {
+  // Юридическая политика применяется к снимку до подсчёта категорий:
+  // запрещённые и неклассифицированные категории и товары не публикуются,
+  // у регулируемых классов убираются свободные описания.
+  const classified = applyLegalPolicy({
     updatedAt: Date.now(),
     stockUpdatedAt: 0,
     meta: {
@@ -354,46 +336,92 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
       materials: [],
     },
     products,
-  };
+  });
+  const categoryById = new Map(
+    classified.meta.categories.map((category) => [category.id, category]),
+  );
+  const rootCounts = new Map<string, number>();
+  for (const product of classified.products) {
+    let id: string | null = product.categoryId;
+    const visited = new Set<string>();
+    while (id && !visited.has(id)) {
+      visited.add(id);
+      const category = categoryById.get(id);
+      if (!category) break;
+      if (!category.image && product.images[0])
+        category.image = product.images[0].src;
+      if (!category.parentId) rootCounts.set(id, (rootCounts.get(id) ?? 0) + 1);
+      id = category.parentId;
+    }
+  }
+  classified.meta.categories.sort((a, b) =>
+    !a.parentId && !b.parentId
+      ? (rootCounts.get(b.id) ?? 0) - (rootCounts.get(a.id) ?? 0) ||
+        a.name.localeCompare(b.name, "ru")
+      : a.name.localeCompare(b.name, "ru"),
+  );
+  return classified;
 }
 
-export async function fetchStock(
-  snapshot: CatalogSnapshot,
-): Promise<Product[]> {
+export async function fetchStock(snapshot: CatalogSnapshot): Promise<{
+  products: Product[];
+  stockDetail: CatalogSnapshot["stockDetail"];
+}> {
   const rows = await allRows<MsStockRow>(
     "report/stock/bystore?filter=stockMode=nonEmpty",
     120000,
   );
   const productStock = new Map<string, Map<string, number>>();
-  const storesByName = new Map(
-    snapshot.meta.stores.map((store) => [store.name, store.id]),
-  );
+  const storeIds = new Set(snapshot.meta.stores.map((store) => store.id));
+  // Older responses without metadata may be matched only by a unique name.
+  const storesByName = new Map<string, string | undefined>();
+  for (const store of snapshot.meta.stores) {
+    storesByName.set(
+      store.name,
+      storesByName.has(store.name) ? undefined : store.id,
+    );
+  }
   for (const row of rows) {
     const id = row.meta?.href?.split("?")[0]?.split("/").at(-1);
     if (!id) continue;
     const byStore = new Map<string, number>();
     for (const entry of row.stockByStore ?? []) {
-      const storeId = entry.name ? storesByName.get(entry.name) : undefined;
+      const referenceId = idOf(entry);
+      const storeId = referenceId
+        ? storeIds.has(referenceId)
+          ? referenceId
+          : undefined
+        : entry.name
+          ? storesByName.get(entry.name)
+          : undefined;
       if (storeId)
         byStore.set(storeId, (entry.stock ?? 0) - (entry.reserve ?? 0));
     }
     productStock.set(id, byStore);
   }
-  return snapshot.products.map((product) => ({
-    ...product,
-    offers: product.offers.map((offer) => {
-      const amount = productStock.get(product.id)?.get(offer.storeId) ?? 0;
-      return {
-        ...offer,
-        availability:
-          amount <= 0
-            ? ("unavailable" as const)
-            : amount <= 3
-              ? ("low" as const)
-              : ("available" as const),
-      };
-    }),
-  }));
+  const stockDetail: NonNullable<CatalogSnapshot["stockDetail"]> = {};
+  const products = snapshot.products.map((product) => {
+    const byStore = productStock.get(product.id);
+    if (byStore && byStore.size > 0) {
+      stockDetail[product.id] = Object.fromEntries(byStore);
+    }
+    return {
+      ...product,
+      offers: product.offers.map((offer) => {
+        const amount = byStore?.get(offer.storeId) ?? 0;
+        return {
+          ...offer,
+          availability:
+            amount <= 0
+              ? ("unavailable" as const)
+              : amount <= 3
+                ? ("low" as const)
+                : ("available" as const),
+        };
+      }),
+    };
+  });
+  return { products, stockDetail };
 }
 
 const imageLists = new Map<string, { expires: number; urls: string[] }>();

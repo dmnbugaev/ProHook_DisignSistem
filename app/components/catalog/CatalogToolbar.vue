@@ -2,7 +2,7 @@
 defineProps<{ total: number; sort: string; activeCount: number }>();
 const emit = defineEmits<{ sort: [value: string]; filters: [] }>();
 const options = [
-  { value: "popular", label: "Недавно обновлены" },
+  { value: "popular", label: "С фото и в наличии" },
   { value: "price-asc", label: "Сначала дешевле" },
   { value: "price-desc", label: "Сначала дороже" },
   { value: "newest", label: "Новинки" },
