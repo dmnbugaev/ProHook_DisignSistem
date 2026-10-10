@@ -1,6 +1,20 @@
-# Сайт не публикуется: индексация запрещена (см. также meta robots noindex).
-# При публикации: решить вопрос индексации с юристом — для регулируемых
-# категорий витрина с ценами несёт риск квалификации как реклама (38-ФЗ ст. 7);
-# товарные фиды и merchant-разметка для них не создаются (docs/COMPLIANCE.md).
+# Прохук — https://прохук.рф
+# Индексируются только информационные страницы; каталог и карточки
+# товаров закрыты от индексации (витрина регулируемой продукции —
+# до юридической оценки, см. docs/COMPLIANCE.md и SEO_COMPLIANCE_AUDIT.md).
+# robots.txt не используется как защита персональных данных: приватные
+# маршруты дополнительно закрывает meta noindex и серверная авторизация.
 User-agent: *
-Disallow: /
+Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /reserve
+Disallow: /search
+Disallow: /design-system
+Disallow: /api/
+# Карточки товаров (~4 тыс. URL): контент скрыт age gate 18+ — для
+# робота это пустая страница, расход обхода; meta noindex и так исключает
+# их из выдачи.
+Disallow: /product/
+
+Sitemap: https://xn--j1ahceql.xn--p1ai/sitemap.xml

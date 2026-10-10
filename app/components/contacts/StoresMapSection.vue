@@ -29,12 +29,17 @@ const optionCaption = (store: StoreLocation) => {
 
 const toggleSelection = (id: string) => {
   selectedId.value = selectedId.value === id ? null : id;
+  if (selectedId.value)
+    trackEvent("store_location_view", { storeId: id, source: "contacts-list" });
 };
 
 // Клик по маркеру всегда выбирает точку: повторный клик по пину
 // не должен закрывать попап.
 const selectFromMap = (id: string) => {
   selectedId.value = id;
+  // Взаимодействие с картой магазинов: техническое событие аналитики
+  // (без персональных данных, см. app/utils/analytics.ts).
+  trackEvent("store_map_open", { storeId: id });
 };
 </script>
 

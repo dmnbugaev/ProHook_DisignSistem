@@ -28,7 +28,6 @@ export function parseCatalogQuery(
     minPrice: price("minPrice"),
     maxPrice: price("maxPrice"),
     available: text("available") === "1",
-    photo: text("photo") === "1",
     storeId: text("storeId"),
     sort: sorts.includes(sort as CatalogSort)
       ? (sort as CatalogSort)

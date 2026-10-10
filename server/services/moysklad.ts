@@ -8,7 +8,6 @@ import { storeLicenses } from "../data/store-licenses";
 const API = "https://api.moysklad.ru/api/remap/1.2/";
 const PAGE_SIZE = 1000;
 const INTERNAL_STORES = new Set([
-  "РЦ Южный",
   "РЦ Саратов",
   "Саратов",
   "Москва",
@@ -21,6 +20,19 @@ const INTERNAL_STORES = new Set([
   "БУНКЕР",
   "САМОВЫВОЗ",
   "шаблон",
+]);
+// Учётные имена складов-распределителей могут нести суффиксы («РЦ Южный -
+// Хлам»), точного совпадения с INTERNAL_STORES недостаточно.
+function isInternalStore(name: string): boolean {
+  return INTERNAL_STORES.has(name) || name.trim().startsWith("РЦ");
+}
+
+// Точки физически расположены в Энгельсе (подтверждено публичной
+// Яндекс.Картой: организации «ПроХук», см. docs/STORE-MAPPING.md), хотя в
+// учётной системе лежат в группе «Саратов». Цены — как в Саратове.
+const ENGELS_STORE_IDS = new Set([
+  "06251449-db11-11f0-0a80-181f0005085f", // Тельмана, 6
+  "5c684bc5-dcda-11f0-0a80-1823000f8fc6", // Тельмана, 29
 ]);
 
 interface MsMeta {
@@ -146,7 +158,25 @@ function idOf(ref?: MsReference): string | undefined {
   return ref?.meta?.href?.split("?")[0]?.split("/").at(-1);
 }
 
+/** Название корневой папки товара (юридический класс и фасовка — от корня). */
+function rootFolderName(
+  folderId: string | undefined,
+  folderMap: Map<string, MsFolder>,
+): string | undefined {
+  let current = folderId ? folderMap.get(folderId) : undefined;
+  const visited = new Set<string>();
+  let rootName = current?.name;
+  while (current?.productFolder && !visited.has(current.id)) {
+    visited.add(current.id);
+    const parentId = idOf(current.productFolder);
+    current = parentId ? folderMap.get(parentId) : undefined;
+    if (current) rootName = current.name;
+  }
+  return rootName;
+}
+
 function cityFor(store: MsStore) {
+  if (ENGELS_STORE_IDS.has(store.id)) return "engels";
   if (store.pathName === "Москва") return "moscow";
   return store.pathName === "Саратов" ? "saratov" : undefined;
 }
@@ -182,13 +212,14 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
   const stores: Store[] = msStores
     .filter(
       (item) =>
-        !item.archived && !INTERNAL_STORES.has(item.name) && cityFor(item),
+        !item.archived && !isInternalStore(item.name.trim()) && cityFor(item),
     )
     .map((item) => ({
       id: item.id,
       cityId: cityFor(item)!,
       name: item.name,
-      description: item.description?.trim() || `Точка «${item.name}»`,
+      // Нейтральный фолбэк: адрес точки показывается отдельной строкой.
+      description: item.description?.trim() || "Магазин сети Прохук",
       ...(storeAddresses[item.id] || item.address?.trim()
         ? { address: storeAddresses[item.id] || item.address!.trim() }
         : {}),
@@ -311,8 +342,17 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
           src: `/api/products/${item.id}/images/${index}`,
           alt: `${name} — изображение ${index + 1}`,
         })),
-        description:
-          item.description?.trim() || "Описание товара пока не добавлено.",
+        // Фасовка по корневой категории: китайский чай продаётся порционно
+        // по 10 г (владелец, 10.10.2026), остальной ассортимент — по 1 шт.
+        unit:
+          rootFolderName(idOf(item.productFolder), folderMap)
+            ?.trim()
+            .toLocaleLowerCase("ru") === "китайский чай"
+            ? "10 г"
+            : "1 шт",
+        // Описание берётся из МойСклад как есть; пустое не подменяется
+        // заглушкой — карточка просто не показывает блок «О товаре».
+        description: item.description?.trim() ?? "",
         attributes,
         offers,
         publishedAt: item.updated ? item.updated.replace(" ", "T") + "Z" : "",
@@ -327,8 +367,9 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
     stockUpdatedAt: 0,
     meta: {
       cities: [
-        { id: "moscow", name: "Москва" },
         { id: "saratov", name: "Саратов" },
+        { id: "engels", name: "Энгельс" },
+        { id: "moscow", name: "Москва" },
       ],
       stores,
       categories,

@@ -48,11 +48,14 @@ onBeforeUnmount(() => window.removeEventListener("scroll", onScroll));
     </nav>
     <div class="header-actions">
       <button type="button" class="store-trigger" @click="pickerOpen = true">
-        <span class="caption">{{ city?.name ?? "Ваш город" }}</span
-        ><span
+        <span class="caption store-trigger__city">{{
+          city?.name ?? "Ваш город"
+        }}</span>
+        <span class="store-trigger__store"
           >{{ store?.name ?? "Выбрать магазин" }}
           <span aria-hidden="true">⌄</span></span
         >
+        <span class="store-trigger__chevron" aria-hidden="true">⌄</span>
       </button>
       <NuxtLink to="/search" class="icon-button" aria-label="Поиск"
         ><svg

@@ -83,11 +83,6 @@ onBeforeUnmount(() => timer && clearTimeout(timer));
       label="Только в наличии"
       @update:model-value="emit('apply', { available: $event })"
     />
-    <UiCheckbox
-      :model-value="values.photo"
-      label="Только с фотографией"
-      @update:model-value="emit('apply', { photo: $event })"
-    />
     <div class="filter-actions">
       <UiButton variant="quiet" @click="emit('reset')"
         >Сбросить фильтры</UiButton

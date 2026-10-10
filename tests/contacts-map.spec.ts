@@ -19,6 +19,10 @@ async function openContacts(page: Page) {
         }
       )?.__vue_app__?.$nuxt?.isHydrating === false,
   );
+  // Карта инициализируется лениво при приближении к вьюпорту —
+  // подкатываем её, чтобы зависимые от карты проверки не зависели
+  // от высоты вьюпорта.
+  await page.locator(".stores-map-frame").scrollIntoViewIfNeeded();
 }
 
 test.describe("Контакты: блок «Наши магазины»", () => {
@@ -30,8 +34,12 @@ test.describe("Контакты: блок «Наши магазины»", () => 
       page.getByRole("heading", { name: "Наши магазины" }),
     ).toBeVisible();
     await expect(page.locator(".store-map-option")).toHaveCount(30);
+    // 10.10.2026: Тельмана, 6 и 29 выделены в отдельный город Энгельс.
     await expect(page.getByRole("heading", { name: /Саратов/ })).toContainText(
-      "27 магазинов",
+      "25 магазинов",
+    );
+    await expect(page.getByRole("heading", { name: /Энгельс/ })).toContainText(
+      "2 магазина",
     );
     await expect(page.getByRole("heading", { name: /Москва/ })).toContainText(
       "3 магазина",

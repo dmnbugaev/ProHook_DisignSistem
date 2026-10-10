@@ -6,8 +6,11 @@ import type { LegalClass } from "./classification";
  * ограничение активируется автоматически.
  */
 export interface RegionalRestriction {
-  /** Ключ региона (совпадает с cityId каталога, пока город = регион). */
-  region: string;
+  /**
+   * Ключи регионов (совпадают с cityId каталога). Энгельс — отдельный
+   * cityId, но тот же субъект: закон Саратовской области действует и там.
+   */
+  regions: string[];
   /** Классы, розничная продажа которых в регионе запрещена. */
   bannedClasses: LegalClass[];
   /** ISO-дата вступления ограничения в силу. */
@@ -18,7 +21,7 @@ export interface RegionalRestriction {
 
 export const REGIONAL_RESTRICTIONS: RegionalRestriction[] = [
   {
-    region: "saratov",
+    regions: ["saratov", "engels"],
     // Закон запрещает ЭСДН и жидкости для них. Безтабачные паучи
     // (REGULATED_POUCH) не входят в предмет запрета — LEGAL REVIEW REQUIRED:
     // сверить формулировку закона области о распространении на иную
@@ -39,6 +42,7 @@ export function activeRestrictionFor(
   if (!cityId) return undefined;
   return REGIONAL_RESTRICTIONS.find(
     (item) =>
-      item.region === cityId && now.getTime() >= Date.parse(item.effectiveFrom),
+      item.regions.includes(cityId) &&
+      now.getTime() >= Date.parse(item.effectiveFrom),
   );
 }

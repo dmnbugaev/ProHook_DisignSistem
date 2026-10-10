@@ -3,13 +3,11 @@ export interface FilterValues {
   minPrice: string;
   maxPrice: string;
   available: boolean;
-  photo: boolean;
 }
 export const EMPTY_FILTERS: FilterValues = {
   minPrice: "",
   maxPrice: "",
   available: true,
-  photo: false,
 };
 export function useCatalogQuery(category: MaybeRefOrGetter<string> = "") {
   const route = useRoute();
@@ -36,13 +34,11 @@ export function useCatalogQuery(category: MaybeRefOrGetter<string> = "") {
     minPrice: parsed.value.minPrice?.toString() ?? "",
     maxPrice: parsed.value.maxPrice?.toString() ?? "",
     available: availableDefault.value ? true : parsed.value.available,
-    photo: parsed.value.photo,
   }));
   const activeCount = computed(
     () =>
       Number(!!values.value.minPrice || !!values.value.maxPrice) +
-      Number(values.value.available) +
-      Number(values.value.photo),
+      Number(values.value.available),
   );
   function apply(filters: Partial<FilterValues>) {
     const next = { ...values.value, ...filters };
@@ -53,7 +49,6 @@ export function useCatalogQuery(category: MaybeRefOrGetter<string> = "") {
         minPrice: next.minPrice || undefined,
         maxPrice: next.maxPrice || undefined,
         available: next.available ? "1" : "0",
-        photo: next.photo ? "1" : undefined,
         material: undefined,
         brand: undefined,
       },

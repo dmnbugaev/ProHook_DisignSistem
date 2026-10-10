@@ -5,5 +5,5 @@ export const prohookContacts = {
   vk: "https://vk.ru/prohook64",
   telegram: "https://t.me/prohooksar",
   instagram: "https://www.instagram.com/pro.hook.official/",
-  hours: "Ежедневно, 10:00–22:00",
+  hours: "Ежедневно, 9:00–22:00",
 } as const;

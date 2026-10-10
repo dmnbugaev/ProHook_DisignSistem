@@ -175,12 +175,12 @@ test("visibility field, city prices, retail store mapping and legal policy", asy
     (product) => product.id === "product-5",
   );
   assert.equal(liquid.legalClass, "REGULATED_NICOTINE");
-  // Свободные описания регулируемых классов не публикуются.
-  assert.equal(liquid.description, "");
+  // Описания публикуются для всех классов по решению владельца от
+  // 10.10.2026 (тексты готовятся в МойСклад самим продавцом).
+  assert.equal(liquid.description, "В первом вдохе — вкус.");
   const pouch = snapshot.products.find((product) => product.id === "product-4");
   // Паучи — регулируемая никотинсодержащая продукция (без табака).
   assert.equal(pouch.legalClass, "REGULATED_POUCH");
-  assert.equal(pouch.description, "");
   const categoryNames = snapshot.meta.categories.map((item) => item.name);
   assert.ok(categoryNames.includes("Жевательный табак"));
   // Категория со скрытой публикацией не публикуется вместе с товарами.

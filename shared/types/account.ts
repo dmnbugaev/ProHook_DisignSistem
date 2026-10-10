@@ -26,6 +26,12 @@ export interface SessionUser {
 /** Ответ GET /api/auth/me. */
 export interface MeResponse {
   user: SessionUser | null;
+  /**
+   * true для аккаунтов из allowlist STAFF_INBOX_PHONES: в личном кабинете
+   * появляется инбокс заявок (резервы + партнёрство) — резервный канал,
+   * пока Telegram-уведомления недоступны с хостинга.
+   */
+  staffInbox?: boolean;
 }
 
 export type LoyaltyAvailability =

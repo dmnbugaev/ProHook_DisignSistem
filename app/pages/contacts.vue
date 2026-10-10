@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { prohookContacts } from "~~/shared/content/prohook";
-
 usePageSeo(
   "Контакты",
   "Контакты Прохук: телефон, электронная почта, ВКонтакте, Telegram, Instagram и карта всех магазинов сети.",
+  undefined,
+  {
+    index: true,
+    breadcrumbs: [{ label: "Главная", to: "/" }, { label: "Контакты" }],
+  },
 );
+onMounted(() => trackEvent("contacts_page_view"));
+function phoneClick() {
+  trackEvent("store_phone_click", { source: "contacts-page" });
+}
 const socials = [
   { label: "ВКонтакте", href: prohookContacts.vk, network: "vk" as const },
   {
@@ -38,7 +46,7 @@ const socials = [
           <div>
             <dt>Телефон</dt>
             <dd>
-              <a :href="prohookContacts.phoneHref">{{
+              <a :href="prohookContacts.phoneHref" @click="phoneClick">{{
                 prohookContacts.phone
               }}</a>
             </dd>

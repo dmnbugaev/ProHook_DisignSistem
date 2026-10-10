@@ -161,6 +161,16 @@ export async function findReservationByPublicId(
   return data.requests.find((request) => request.publicId === publicId);
 }
 
+/** Свежие запросы первыми — для инбокса сотрудников. */
+export async function listReservations(
+  limit = 50,
+): Promise<StoredReservation[]> {
+  const data = await load();
+  return [...data.requests]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+}
+
 /** Фиксация попытки доставки в Telegram (без ПД в логах). */
 export async function recordTelegramAttempt(
   id: string,

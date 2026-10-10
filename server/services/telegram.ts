@@ -29,9 +29,9 @@ export async function sendPartnership(
   data: Partnership,
   id: string,
   request: typeof fetch = fetch,
-) {
+): Promise<string[]> {
   // Plain text deliberately avoids interpreting user input as Telegram markup.
-  let delivered = 0;
+  const deliveredTo: string[] = [];
   for (const chatId of chatIds) {
     try {
       const response = await request(
@@ -56,11 +56,12 @@ export async function sendPartnership(
         result.ok === true &&
         typeof result.result?.message_id === "number"
       ) {
-        delivered++;
+        deliveredTo.push(chatId);
       }
     } catch {
       // One unreachable chat must not block delivery to the others.
     }
   }
-  if (delivered === 0) throw new Error("Telegram delivery failed");
+  if (deliveredTo.length === 0) throw new Error("Telegram delivery failed");
+  return deliveredTo;
 }

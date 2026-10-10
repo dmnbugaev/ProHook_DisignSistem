@@ -1,6 +1,7 @@
-import { randomUUID } from "node:crypto";
 import { validatePartnership } from "../../shared/utils/partnership";
-import { sendPartnership, parseTelegramChatIds } from "../services/telegram";
+import { parseTelegramChatIds } from "../services/telegram";
+import { createPartnership } from "../services/partnership-store";
+import { dispatchPartnershipNotification } from "../services/partnership-telegram";
 import { allowPartnership } from "../utils/partnership-rate-limit";
 
 export default defineEventHandler(async (event) => {
@@ -48,22 +49,22 @@ export default defineEventHandler(async (event) => {
       data: { errors },
     });
   const config = useRuntimeConfig(event);
+  // Заявка сохраняется до любой доставки: сбой Telegram (в том числе
+  // блокировка api.telegram.org хостингом) не теряет её и не возвращает
+  // ошибку отправителю. Сотрудники читают заявки в инбоксе /api/staff/inbox.
+  const application = await createPartnership(data);
   const chatIds = parseTelegramChatIds(config.telegramChatId);
-  if (!config.telegramBotToken || chatIds.length === 0) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: "Partnership delivery unavailable",
-    });
-  }
-  const id = randomUUID();
-  try {
-    await sendPartnership(config.telegramBotToken, chatIds, data, id);
-  } catch {
-    // Never log upstream errors: they may contain the bot token or applicant data.
-    throw createError({
-      statusCode: 502,
-      statusMessage: "Partnership delivery failed",
-    });
-  }
-  return { ok: true, id };
+  void dispatchPartnershipNotification(
+    application,
+    data,
+    config.telegramBotToken,
+    chatIds,
+  ).catch(() => {
+    // Без ПД и токена: только публичный номер заявки.
+    console.error(
+      "Partnership notification dispatch failed:",
+      application.publicId,
+    );
+  });
+  return { ok: true, id: application.publicId };
 });

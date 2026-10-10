@@ -9,8 +9,6 @@ export interface CatalogQuery {
   minPrice?: number;
   maxPrice?: number;
   available: boolean;
-  /** Только товары с фотографией (photo=1). */
-  photo: boolean;
   storeId: string;
   sort: CatalogSort;
   page: number;

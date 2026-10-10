@@ -2,6 +2,11 @@
 usePageSeo(
   "О Прохук",
   "Прохук — сеть специализированных магазинов. Информация об ассортименте, магазинах и способах связи.",
+  undefined,
+  {
+    index: true,
+    breadcrumbs: [{ label: "Главная", to: "/" }, { label: "О проекте" }],
+  },
 );
 </script>
 <template>
@@ -19,7 +24,13 @@ usePageSeo(
         </p>
       </div>
       <div class="about-editorial">
-        <img src="/brand/lockup.webp" alt="Прохук" width="360" height="360" />
+        <img
+          src="/brand/lockup.webp"
+          alt="Прохук"
+          width="360"
+          height="360"
+          fetchpriority="high"
+        />
         <div>
           <h2>Ассортимент<br />и магазины.</h2>
           <p>

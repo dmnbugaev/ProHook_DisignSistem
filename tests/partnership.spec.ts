@@ -1,10 +1,30 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+// Клик по форме до гидрации Vue не доходит до обработчиков (известная
+// особенность e2e проекта) — ждём монтирования приложения.
+async function waitForHydration(page: Page) {
+  await page.waitForFunction(() => {
+    const root = document.getElementById("__nuxt") as
+      (HTMLElement & { __vue_app__?: unknown }) | null;
+    return !!root?.__vue_app__;
+  });
+}
 
 test("partnership form validates, preserves errors and confirms delivery", async ({
   page,
 }, testInfo) => {
+  // /partners — публичная страница без гейта; возраст подтверждаем cookie
+  // (эквивалент состояния после подтверждения на каталоге).
+  await page.context().addCookies([
+    {
+      name: "prohook-age-confirmed",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
   await page.goto("/partners");
-  await page.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+  await waitForHydration(page);
   await expect(
     page.getByRole("dialog", { name: "Ваш город и магазин" }),
   ).not.toBeVisible();
@@ -66,8 +86,18 @@ test("partnership mobile layout fits the viewport", async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 375, height: 812 });
+  // /partners — публичная страница без гейта; возраст подтверждаем cookie
+  // (эквивалент состояния после подтверждения на каталоге).
+  await page.context().addCookies([
+    {
+      name: "prohook-age-confirmed",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
   await page.goto("/partners");
-  await page.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+  await waitForHydration(page);
   await expect(
     page.getByRole("heading", { name: "Стать партнёром." }),
   ).toBeVisible();

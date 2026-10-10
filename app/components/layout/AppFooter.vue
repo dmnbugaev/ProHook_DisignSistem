@@ -7,6 +7,10 @@ const categories = computed(
   () =>
     data.value?.categories.filter((item) => !item.parentId).slice(0, 8) ?? [],
 );
+const { openSettings: openConsentSettings } = useConsentSettings();
+function footerPhoneClick() {
+  trackEvent("store_phone_click", { source: "footer" });
+}
 </script>
 <template>
   <UiContainer as="footer" class="app-footer">
@@ -41,7 +45,9 @@ const categories = computed(
       <div class="footer-note">
         <h2>На связи</h2>
         <p class="caption">
-          <a :href="prohookContacts.phoneHref">{{ prohookContacts.phone }}</a
+          <a :href="prohookContacts.phoneHref" @click="footerPhoneClick">{{
+            prohookContacts.phone
+          }}</a
           ><br />
           {{ prohookContacts.hours }}<br />
           Информация на сайте предназначена для лиц старше 18 лет.
@@ -91,7 +97,9 @@ const categories = computed(
           >Политика обработки персональных данных</NuxtLink
         ><NuxtLink to="/personal-data"
           >Согласие на обработку персональных данных</NuxtLink
-        >
+        ><button type="button" @click="openConsentSettings()">
+          Файлы cookie
+        </button>
       </nav>
     </div>
   </UiContainer>

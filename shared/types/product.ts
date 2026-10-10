@@ -21,6 +21,11 @@ export interface Product {
   categoryId: string;
   images: ProductImage[];
   description: string;
+  /**
+   * Фасовка позиции для покупателя: «10 г» (китайский чай) или «1 шт».
+   * Заполняется на сервере по корневой категории МойСклад.
+   */
+  unit?: string;
   attributes: ProductAttribute[];
   offers: StoreOffer[];
   /** Юридический класс (см. shared/legal/classification.ts). */

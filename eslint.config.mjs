@@ -48,8 +48,17 @@ export default [
         console: "readonly",
         process: "readonly",
         URL: "readonly",
+        // scripts/seo-perf-measure.mjs — код внутри page.evaluate.
+        window: "readonly",
+        performance: "readonly",
+        PerformanceObserver: "readonly",
       },
     },
     rules: { "no-control-regex": "off" },
+  },
+  {
+    // Node-тесты (node --test) с jiti-импортом TS-модулей.
+    files: ["tests/**/*.mjs"],
+    languageOptions: { globals: { URL: "readonly" } },
   },
 ];

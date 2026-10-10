@@ -17,17 +17,22 @@ const cityNames = Object.fromEntries(
   storeCities.map((city) => [city.id, city.name]),
 );
 
-test("публичный список: 30 точек — 27 в Саратове, 3 в Москве", () => {
+test("публичный список: 30 точек — 25 Саратов, 2 Энгельс, 3 Москва", () => {
   assert.equal(storeLocations.length, 30);
   assert.equal(
     storeLocations.filter((store) => store.cityId === "saratov").length,
-    27,
+    25,
+  );
+  assert.equal(
+    storeLocations.filter((store) => store.cityId === "engels").length,
+    2,
   );
   assert.equal(
     storeLocations.filter((store) => store.cityId === "moscow").length,
     3,
   );
   assert.deepEqual(storeCities.map((city) => city.id).sort(), [
+    "engels",
     "moscow",
     "saratov",
   ]);
@@ -66,6 +71,7 @@ test("адреса согласованы с учётным списком store
 test("координаты есть у заполненных точек и лежат в границах города", () => {
   const bounds = {
     saratov: [45.8, 51.35, 46.3, 51.8],
+    engels: [46.0, 51.42, 46.2, 51.56],
     moscow: [36.9, 55.1, 38.1, 56.05],
   };
   let withCoordinates = 0;
@@ -91,9 +97,11 @@ test("координаты есть у заполненных точек и ле
       `координаты ${store.id} вне границ ${cityNames[store.cityId]}: ${lng}, ${lat}`,
     );
   }
+  // 30 точек минус Огородная, 144/2 (адрес не геокодируется — см.
+  // docs/STORE-MAPPING.md): все остальные должны иметь координаты.
   assert.ok(
-    withCoordinates >= 26,
-    `ожидаем не менее 26 точек с координатами, сейчас ${withCoordinates}`,
+    withCoordinates >= 29,
+    `ожидаем не менее 29 точек с координатами, сейчас ${withCoordinates}`,
   );
 });
 

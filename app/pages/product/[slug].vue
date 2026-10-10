@@ -1,6 +1,19 @@
 <script setup lang="ts">
 import { availabilityLabels, formatPrice } from "~~/shared/utils/product";
-definePageMeta({ key: (route) => route.path });
+// Валидация до рендера и независимо от age gate: несуществующий товар
+// отвечает 404 всем, включая ботов (см. комментарий в catalog/[category].vue).
+definePageMeta({
+  key: (route) => route.path,
+  async validate(route) {
+    const slug = String(route.params.slug);
+    try {
+      await useRequestFetch()(`/api/products/${encodeURIComponent(slug)}`);
+      return true;
+    } catch {
+      return createError({ statusCode: 404, message: "Товар не найден" });
+    }
+  },
+});
 const route = useRoute();
 const {
   data: product,

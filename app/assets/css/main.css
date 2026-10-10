@@ -779,6 +779,43 @@ legend {
   font-size: 15px;
   font-weight: var(--weight-medium);
 }
+/* Баннер согласия на использование файлов cookie (152-ФЗ). */
+.cookie-consent {
+  position: fixed;
+  z-index: 35;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--background);
+  box-shadow: var(--shadow-dialog);
+}
+.cookie-consent__text {
+  flex: 1;
+  font-size: var(--font-caption);
+  line-height: 20px;
+}
+.cookie-consent__text a {
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+}
+.cookie-consent__actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-2);
+}
+.cookie-consent .button {
+  min-height: 44px;
+  padding: 8px 18px;
+  font-size: 14px;
+}
 .button-samples {
   display: flex;
   flex-wrap: wrap;
@@ -1132,6 +1169,8 @@ legend {
 .dialog {
   width: min(480px, calc(100% - 32px));
   max-width: none;
+  /* vh-фоллбек для iOS < 15.4 (dvh там не поддерживается) */
+  max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
   padding: 0;
   border: 1px solid var(--ink);
@@ -1374,10 +1413,17 @@ legend {
     grid-row: 1;
   }
   .legal-notice__close {
+    min-height: 44px;
     grid-column: 3;
     grid-row: 1;
     align-self: start;
     padding-inline: 8px;
+  }
+  /* Логотип — тоже touch-target: невидимый запас до 44px вокруг метки */
+  .brand-link {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
   }
   .age-marquee__group {
     gap: 24px;
@@ -1637,6 +1683,21 @@ legend {
   }
   .dialog__actions {
     flex-direction: column;
+  }
+  .cookie-consent {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    transform: none;
+    width: auto;
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-4);
+  }
+  .cookie-consent__text {
+    flex-basis: 100%;
+  }
+  .cookie-consent__actions {
+    margin-left: auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -176,7 +176,6 @@ export const catalogRepository: CatalogRepository = {
         (query.maxPrice === undefined ||
           price(product) <= query.maxPrice * 100) &&
         (!query.available || available(product)) &&
-        (!query.photo || product.images.length > 0) &&
         product.id !== query.excludeId
       );
     });

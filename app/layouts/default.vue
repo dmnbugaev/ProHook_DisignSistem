@@ -1,9 +1,16 @@
 <script setup lang="ts">
 // Подтверждение 18+ сохраняется в cookie на год (локально в браузере) и
 // доступно серверу при SSR: без подтверждения контент каталога не рендерится
-// в HTML страницы. Юридические страницы и маршруты аккаунта (регистрация
-// сама запрашивает дату рождения) открыты без гейта.
-const OPEN_ROUTES = [
+// в HTML страницы. Публичные (не гейтируемые) маршруты: юридические страницы,
+// аккаунт (регистрация сама запрашивает дату рождения) и информационные
+// разделы, индексируемые поисковыми системами (/, /about, /stores,
+// /partners) — каталогозависимые секции на них скрываются на уровне самих
+// страниц (см. pages/index.vue).
+const PUBLIC_ROUTES = [
+  "/",
+  "/about",
+  "/stores",
+  "/partners",
   "/privacy",
   "/personal-data",
   "/information",
@@ -16,13 +23,13 @@ const ageCookie = useCookie<boolean | null>("prohook-age-confirmed", {
   maxAge: 60 * 60 * 24 * 365,
   sameSite: "lax",
 });
-const ageConfirmed = useState("age-confirmed", () => ageCookie.value === true);
+const ageConfirmed = useAgeConfirmed();
 watch(ageConfirmed, (value) => {
   if (value) ageCookie.value = true;
 });
 const route = useRoute();
 const showcase = computed(() => route.path === "/design-system");
-const publicRoute = computed(() => OPEN_ROUTES.includes(route.path));
+const publicRoute = computed(() => PUBLIC_ROUTES.includes(route.path));
 const contentVisible = computed(() => ageConfirmed.value || publicRoute.value);
 const { data: meta } = await useCatalogMeta();
 const { store, pickerOpen, pickerDismissed, autoDetected, detect } =
@@ -84,6 +91,9 @@ onBeforeUnmount(() => noticeTimer && clearTimeout(noticeTimer));
     </div>
     <AgeGate v-if="!publicRoute" v-model="ageConfirmed" />
     <StorePicker v-if="ageConfirmed && !showcase" />
+    <!-- Баннер согласия на cookie: до подтверждения 18+ не показываем,
+         чтобы не складывать два поверхностных слоя поверх гейта. -->
+    <CookieConsent v-if="contentVisible || showcase" />
     <div v-if="autoDetected" class="geo-note" role="status">
       <p class="caption">
         Ближайший магазин — <strong>{{ store?.name }}</strong

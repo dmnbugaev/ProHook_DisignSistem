@@ -56,7 +56,7 @@ const breadcrumbs = computed(() => [
   { label: props.search ? "Поиск" : title.value },
 ]);
 // Чипы активных фильтров: каждый снимается по одному, «Сбросить всё» — целиком.
-type ChipKey = "price" | "available" | "photo";
+type ChipKey = "price" | "available";
 const chips = computed<{ key: ChipKey; label: string }[]>(() => {
   const list: { key: ChipKey; label: string }[] = [];
   if (values.value.minPrice || values.value.maxPrice)
@@ -66,7 +66,6 @@ const chips = computed<{ key: ChipKey; label: string }[]>(() => {
     });
   if (values.value.available)
     list.push({ key: "available", label: "В наличии" });
-  if (values.value.photo) list.push({ key: "photo", label: "С фото" });
   return list;
 });
 function removeChip(key: ChipKey) {
@@ -81,10 +80,45 @@ watch(
     if (import.meta.client) window.scrollTo({ top: 0, behavior: "instant" });
   },
 );
+// Технические ошибки загрузки каталога/поиска — событие аналитики без
+// содержимого запроса (только scope и HTTP-статус).
+watch(error, (value) => {
+  if (!value) return;
+  trackEvent(props.search ? "site_search_error" : "catalog_technical_error", {
+    scope: "products",
+    status: value.statusCode ?? 0,
+  });
+});
+watch(metaError, (value) => {
+  if (!value) return;
+  trackEvent("catalog_technical_error", {
+    scope: "meta",
+    status: value.statusCode ?? 0,
+  });
+});
+onMounted(() => {
+  if (error.value)
+    trackEvent(props.search ? "site_search_error" : "catalog_technical_error", {
+      scope: "products",
+      status: error.value.statusCode ?? 0,
+    });
+  if (metaError.value)
+    trackEvent("catalog_technical_error", {
+      scope: "meta",
+      status: metaError.value.statusCode ?? 0,
+    });
+});
 </script>
 <template>
   <UiContainer class="page-shell">
     <UiBreadcrumbs :items="breadcrumbs" />
+    <NuxtLink
+      v-if="category"
+      :to="parent ? `/catalog/${parent.slug}` : '/catalog'"
+      class="catalog-back"
+    >
+      ← Назад{{ parent ? `: ${parent.name}` : " в каталог" }}</NuxtLink
+    >
     <div class="page-heading">
       <p class="eyebrow">Прохук / Каталог</p>
       <h1>{{ title }}</h1>

@@ -55,6 +55,9 @@ async function submit() {
       retry: 0,
     });
     setSessionUser(response.user);
+    // Только технический факт успешной регистрации: персональные данные
+    // (ФИО, телефон, дата рождения) в аналитику не передаются.
+    trackEvent("account_registration_success");
     await navigateTo("/account");
   } catch (error) {
     const response = error as {
@@ -275,6 +278,12 @@ async function submit() {
 @media (max-width: 479px) {
   .auth-actions > .button {
     width: 100%;
+  }
+  /* HIG 44×44: самостоятельная CTA-ссылка под кнопкой формы */
+  .auth-switch {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 }
 </style>

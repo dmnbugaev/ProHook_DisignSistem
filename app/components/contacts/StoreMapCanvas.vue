@@ -71,6 +71,8 @@ const status = ref<"loading" | "ready" | "error">("loading");
 // DOM-узлами, повторный рендер компонента им не нужен.
 let map: YmapsMap | null = null;
 const placemarks = new Map<string, YmapsPlacemark>();
+// Наблюдатель ленивой инициализации (отключается после первого срабатывания).
+let mapObserver: IntersectionObserver | null = null;
 
 // SDK грузится одним скриптом на страницу, сколько бы карт ни было.
 let ymapsPromise: Promise<YmapsApi> | null = null;
@@ -274,7 +276,23 @@ onMounted(() => {
     container.addEventListener("pointerdown", enableWheelZoom);
     container.addEventListener("mouseleave", disableWheelZoom);
   }
-  void init();
+  // Карта инициализируется при приближении к вьюпорту: SDK и тайлы
+  // (~1 МБ) не конкурируют с загрузкой контента страницы и не качаются
+  // тем, кто не доскроллил (см. замеры в SEO_IMPLEMENTATION_REPORT.md).
+  if (container && "IntersectionObserver" in window) {
+    mapObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        mapObserver?.disconnect();
+        mapObserver = null;
+        void init();
+      },
+      { rootMargin: "400px" },
+    );
+    mapObserver.observe(container);
+  } else {
+    void init();
+  }
 });
 
 watch(
@@ -290,6 +308,8 @@ onBeforeUnmount(() => {
     container.removeEventListener("pointerdown", enableWheelZoom);
     container.removeEventListener("mouseleave", disableWheelZoom);
   }
+  mapObserver?.disconnect();
+  mapObserver = null;
   map?.destroy();
   map = null;
   placemarks.clear();

@@ -41,10 +41,14 @@ export interface LegalClassPolicy {
 }
 
 export const LEGAL_CLASS_POLICIES: Record<LegalClass, LegalClassPolicy> = {
+  // Описания регулируемых классов публикуются по решению владельца от
+  // 10.10.2026: тексты готовятся в МойСклад самим продавцом и отражаются
+  // на сайте «как есть» (см. docs/COMPLIANCE.md — риск рекламной лексики
+  // 38-ФЗ ст. 7 лежит на владельце, редакция текстов — в МойСклад).
   REGULATED_NICOTINE: {
     publishProducts: true,
     publishCategories: true,
-    publishDescription: false,
+    publishDescription: true,
   },
   // Безтабачные никотиновые паучи (подтверждено владельцем 05.10.2026):
   // оборот разрешён, режим никотинсодержащей продукции (18+, запрет
@@ -52,22 +56,22 @@ export const LEGAL_CLASS_POLICIES: Record<LegalClass, LegalClassPolicy> = {
   REGULATED_POUCH: {
     publishProducts: true,
     publishCategories: true,
-    publishDescription: false,
+    publishDescription: true,
   },
   REGULATED_DEVICE: {
     publishProducts: true,
     publishCategories: true,
-    publishDescription: false,
+    publishDescription: true,
   },
   REGULATED_TOBACCO: {
     publishProducts: true,
     publishCategories: true,
-    publishDescription: false,
+    publishDescription: true,
   },
   REGULATED_HOOKAH: {
     publishProducts: true,
     publishCategories: true,
-    publishDescription: false,
+    publishDescription: true,
   },
   ACCESSORY: {
     publishProducts: true,
@@ -113,9 +117,12 @@ export const ROOT_CATEGORY_CLASSES: Record<string, LegalClass> = {
   "лапша быстрого приготовления": "UNREGULATED",
   "китайский чай": "UNREGULATED",
   другое: "UNREGULATED",
-  // LEGAL REVIEW REQUIRED: природа товаров (пищевые концентраты или
-  // компоненты никотинсодержащей продукции) не подтверждена владельцем.
-  ароматизаторы: "PENDING_REVIEW",
+  // Пищевые ароматизаторы для самозамеса (например, OffLine, ПОДГОНКИ):
+  // по подтверждению владельца 10.10.2026 сами по себе никотина не
+  // содержат и публикуются как нерегулируемый ассортимент. LEGAL REVIEW
+  // REQUIRED: если в категории появятся позиции, являющиеся компонентами
+  // никотинсодержащей продукции, — переклассифицировать.
+  ароматизаторы: "UNREGULATED",
   // По подтверждению владельца (05.10.2026) категория содержит БЕЗТАБАЧНЫЕ
   // никотиновые паучи, а не снюс (сосательный табак, оборот которого
   // запрещён ст. 19 15-ФЗ). Класс REGULATED_POUCH. LEGAL REVIEW REQUIRED:

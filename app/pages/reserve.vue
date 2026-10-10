@@ -283,7 +283,7 @@ async function submit() {
                     {{ rowAvailability(row) }}
                   </p>
                   <p v-if="rowPrice(row)" class="reserve-item__price">
-                    {{ rowPrice(row)
+                    {{ rowPrice(row) }} / {{ row.product?.unit ?? "1 шт"
                     }}<span v-if="!store"> · минимальная цена</span>
                   </p>
                   <p v-if="rowIssue(row)" class="reserve-item__issue">

@@ -35,13 +35,14 @@ const geoById = storeCoordinatesJson as unknown as Record<
 
 export const storeCities: readonly City[] = [
   { id: "saratov", name: "Саратов" },
+  { id: "engels", name: "Энгельс" },
   { id: "moscow", name: "Москва" },
 ];
 
 type StoreLocationDraft = Omit<StoreLocation, "coordinates" | "geoSource">;
 
 const storeDrafts: readonly StoreLocationDraft[] = [
-  // Саратов — 27 точек.
+  // Саратов — 25 точек.
   {
     id: "saratov-antonova-33",
     cityId: "saratov",
@@ -53,12 +54,6 @@ const storeDrafts: readonly StoreLocationDraft[] = [
     cityId: "saratov",
     name: "ул. 2-я Садовая, 99",
     address: "ул. 2-я Садовая, 99",
-  },
-  {
-    id: "saratov-telmana-29",
-    cityId: "saratov",
-    name: "ул. Тельмана, 29",
-    address: "ул. Тельмана, 29",
   },
   {
     id: "saratov-stolypina-13",
@@ -97,16 +92,13 @@ const storeDrafts: readonly StoreLocationDraft[] = [
     address: "ул. Большая Казачья, 103",
   },
   {
-    id: "saratov-telmana-6",
+    // Точка переехала с ул. Чапаева, 45 (старая публикация о переезде);
+    // владелец подтвердил адрес «Мичурина, 51» 10.10.2026. Координаты по
+    // старому адресу удалены — ждём актуальные (npm run stores:geocode).
+    id: "saratov-michurina-51",
     cityId: "saratov",
-    name: "ул. Тельмана, 6",
-    address: "ул. Тельмана, 6",
-  },
-  {
-    id: "saratov-chapaeva-45",
-    cityId: "saratov",
-    name: "ул. Чапаева, 45",
-    address: "ул. Чапаева, 45",
+    name: "ул. Мичурина, 51",
+    address: "ул. Мичурина, 51",
   },
   {
     id: "saratov-zhukovskogo-6",
@@ -203,6 +195,21 @@ const storeDrafts: readonly StoreLocationDraft[] = [
     cityId: "saratov",
     name: "ул. Чапаева В.И., 1/5",
     address: "ул. Чапаева В.И., 1/5",
+  },
+  // Энгельс — 2 точки (организации «ПроХук» на ул. Тельмана подтверждены
+  // публичной Яндекс.Картой, см. docs/STORE-MAPPING.md; в учёте МойСклад
+  // они лежат в группе «Саратов»).
+  {
+    id: "engels-telmana-29",
+    cityId: "engels",
+    name: "ул. Тельмана, 29",
+    address: "ул. Тельмана, 29",
+  },
+  {
+    id: "engels-telmana-6",
+    cityId: "engels",
+    name: "ул. Тельмана, 6",
+    address: "ул. Тельмана, 6",
   },
   // Москва — 3 точки. Названия учётные, адреса подтверждены владельцем.
   {

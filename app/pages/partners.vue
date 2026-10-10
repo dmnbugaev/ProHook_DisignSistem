@@ -5,6 +5,11 @@ import { prohookContacts } from "~~/shared/content/prohook";
 usePageSeo(
   "Стать партнёром",
   "Оставьте заявку на сотрудничество с Прохук: расскажите о вашей компании, и мы свяжемся с вами.",
+  undefined,
+  {
+    index: true,
+    breadcrumbs: [{ label: "Главная", to: "/" }, { label: "Стать партнёром" }],
+  },
 );
 const form = reactive({
   name: "",

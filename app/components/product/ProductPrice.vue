@@ -21,5 +21,11 @@ const lowest = computed(() =>
       >от {{ formatPrice(lowest) }}</strong
     >
     <span v-else class="caption">Нет цены для выбранного города</span>
+    <!-- Фасовка позиции: «10 г» у китайского чая, «1 шт» у остального. -->
+    <span
+      v-if="offer || (!store && lowest !== undefined)"
+      class="caption product-price__unit"
+      >/ {{ props.product.unit ?? "1 шт" }}</span
+    >
   </div>
 </template>

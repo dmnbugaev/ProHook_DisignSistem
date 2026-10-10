@@ -6,6 +6,11 @@ import { REGIONAL_RESTRICTIONS } from "~~/shared/legal/regional-restrictions";
 usePageSeo(
   "Информация о сайте",
   "Условия использования информационного каталога Прохук, сведения о продавце, источники данных и возрастное ограничение 18+.",
+  undefined,
+  {
+    index: true,
+    breadcrumbs: [{ label: "Главная", to: "/" }, { label: "Информация" }],
+  },
 );
 const { data: meta } = await useCatalogMeta();
 const licensedStores = computed(
@@ -85,7 +90,7 @@ const licensedStores = computed(
         странице после их получения.
       </p>
       <h2>Региональные ограничения</h2>
-      <p v-for="item in REGIONAL_RESTRICTIONS" :key="item.region">
+      <p v-for="item in REGIONAL_RESTRICTIONS" :key="item.regions.join(',')">
         {{ item.note }}
       </p>
       <h2>Информация о магазинах</h2>

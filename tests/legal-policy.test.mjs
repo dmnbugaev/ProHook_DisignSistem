@@ -70,13 +70,14 @@ test("root category classification", () => {
   assert.equal(classifyRootCategory("жевательный табак"), "REGULATED_POUCH");
   assert.equal(classifyRootCategory("СИГАРЕТЫ"), "BANNED_FROM_SITE");
   assert.equal(classifyRootCategory("нбс"), "BANNED_FROM_SITE");
-  assert.equal(classifyRootCategory("Ароматизаторы"), "PENDING_REVIEW");
+  // Пищевые ароматизаторы — публикация подтверждена владельцем 10.10.2026.
+  assert.equal(classifyRootCategory("Ароматизаторы"), "UNREGULATED");
   // Неизвестные и отсутствующие категории не публикуются.
   assert.equal(classifyRootCategory("Новая категория"), "PENDING_REVIEW");
   assert.equal(classifyRootCategory(undefined), "PENDING_REVIEW");
 });
 
-test("applyLegalPolicy hides banned and unclassified, strips regulated descriptions", () => {
+test("applyLegalPolicy hides banned and unclassified, keeps owner-written descriptions", () => {
   const categories = [
     {
       id: "snack",
@@ -131,27 +132,28 @@ test("applyLegalPolicy hides banned and unclassified, strips regulated descripti
   ];
   const result = applyLegalPolicy(snapshot(categories, products));
   assert.deepEqual(result.products.map((item) => item.id).sort(), [
+    "aroma-1",
     "chew-1",
     "liq-1",
     "snack-1",
   ]);
   const names = result.meta.categories.map((item) => item.name);
-  assert.ok(!names.includes("Ароматизаторы"));
   assert.ok(!names.includes("Что-то новое"));
   assert.deepEqual(names.sort(), [
+    "Ароматизаторы",
     "Жевательный табак",
     "Жидкости",
     "Снеки",
     "Чипсы",
   ]);
+  // Описания публикуются для всех классов по решению владельца от
+  // 10.10.2026: тексты готовятся в МойСклад самим продавцом.
   const liquid = result.products.find((item) => item.id === "liq-1");
   assert.equal(liquid.legalClass, "REGULATED_NICOTINE");
-  assert.equal(liquid.description, "");
-  // Паучи публикуются как регулируемая никотинсодержащая продукция —
-  // без свободных описаний.
+  assert.equal(liquid.description, "Описание товара.");
   const pouch = result.products.find((item) => item.id === "chew-1");
   assert.equal(pouch.legalClass, "REGULATED_POUCH");
-  assert.equal(pouch.description, "");
+  assert.equal(pouch.description, "Описание товара.");
   const snack = result.products.find((item) => item.id === "snack-1");
   assert.equal(snack.legalClass, "UNREGULATED");
   assert.equal(snack.description, "Описание товара.");
@@ -162,9 +164,10 @@ test("applyLegalPolicy hides banned and unclassified, strips regulated descripti
 });
 
 test("regional restrictions activate by date and filter store offers", () => {
-  const saratovBan = REGIONAL_RESTRICTIONS.find(
-    (item) => item.region === "saratov",
+  const saratovBan = REGIONAL_RESTRICTIONS.find((item) =>
+    item.regions.includes("saratov"),
   );
+  assert.ok(saratovBan.regions.includes("engels"));
   assert.equal(saratovBan.effectiveFrom, "2027-03-01");
   assert.equal(
     activeRestrictionFor("saratov", new Date("2027-02-28")) === undefined,
@@ -172,6 +175,11 @@ test("regional restrictions activate by date and filter store offers", () => {
   );
   assert.notEqual(
     activeRestrictionFor("saratov", new Date("2027-03-01")),
+    undefined,
+  );
+  // Энгельс — тот же субъект (Саратовская область), запрет действует и там.
+  assert.notEqual(
+    activeRestrictionFor("engels", new Date("2027-03-01")),
     undefined,
   );
   assert.equal(

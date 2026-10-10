@@ -12,23 +12,27 @@ function uniquePhone() {
 }
 
 const ADULT = "01.01.2000";
-// Дата рождения «ровно 18 сегодня» и «17 лет 364 дня».
+// Дата рождения «ровно 18 сегодня» и «17 лет 364 дня». Компоненты берём
+// из UTC-даты: isAdult (shared/utils/account.ts) сверяет рождение с
+// new Date().toISOString(), и в первые часы московских суток локальная
+// дата уже «завтра» относительно UTC — локальные компоненты дают
+// ложномолодого ровесника и падение теста на границе суток.
 function birthdayExact18(): string {
-  const today = new Date();
-  const iso = new Date(
-    Date.UTC(today.getFullYear() - 18, today.getMonth(), today.getDate()),
-  )
-    .toISOString()
-    .slice(0, 10);
+  const now = new Date();
+  const iso = [
+    now.getUTCFullYear() - 18,
+    String(now.getUTCMonth() + 1).padStart(2, "0"),
+    String(now.getUTCDate()).padStart(2, "0"),
+  ].join("-");
   return iso.split("-").reverse().join(".");
 }
 function birthdayUnder18(): string {
-  const today = new Date();
-  const iso = new Date(
-    Date.UTC(today.getFullYear() - 17, today.getMonth(), today.getDate() - 1),
-  )
-    .toISOString()
-    .slice(0, 10);
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const iso = [
+    yesterday.getUTCFullYear() - 17,
+    String(yesterday.getUTCMonth() + 1).padStart(2, "0"),
+    String(yesterday.getUTCDate()).padStart(2, "0"),
+  ].join("-");
   return iso.split("-").reverse().join(".");
 }
 

@@ -17,9 +17,11 @@ const yandexMaps = {
     " https://api-maps.yandex.ru https://yastatic.net https://yandex.ru https://*.maps.yandex.net",
   // yandex.ru нужен и для картинок: промо-блок карты («Как добраться»,
   // «На такси») отправляет счётчики видимости <img>-пикселями с /clck/.
-  img: " https://*.maps.yandex.net https://yastatic.net https://api-maps.yandex.ru https://yandex.ru",
+  // log.api-maps.yandex.ru — служебная телеметрия JS API (watch-пиксель);
+  // без него Maps пишет ошибку в консоль на каждый показ карты.
+  img: " https://*.maps.yandex.net https://yastatic.net https://api-maps.yandex.ru https://yandex.ru https://log.api-maps.yandex.ru",
   connect:
-    " https://api-maps.yandex.ru https://*.maps.yandex.net https://yandex.ru",
+    " https://api-maps.yandex.ru https://*.maps.yandex.net https://yandex.ru https://log.api-maps.yandex.ru",
 };
 // Yandex SmartCaptcha (виджет формы запроса на резерв): скрипт виджета,
 // iframe и его ресурсы. Серверная проверка токена выполняется на своём
@@ -30,13 +32,20 @@ const smartCaptcha = {
   img: " https://smartcaptcha.ru",
   connect: " https://smartcaptcha.ru",
 };
+// Яндекс.Метрика 113582832: скрипт tag.js и отправка данных
+// (хиты, Вебвизор, карта кликов) — только mc.yandex.ru, РФ.
+const yandexMetrika = {
+  script: " https://mc.yandex.ru",
+  img: " https://mc.yandex.ru",
+  connect: " https://mc.yandex.ru",
+};
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `img-src 'self' data:${yandexMaps.img}${smartCaptcha.img}`,
+  `img-src 'self' data:${yandexMaps.img}${smartCaptcha.img}${yandexMetrika.img}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
-  `connect-src 'self'${yandexMaps.connect}${smartCaptcha.connect}${isDev ? " ws: http://localhost:* http://127.0.0.1:*" : ""}`,
-  `script-src 'self' 'unsafe-inline'${yandexMaps.script}${smartCaptcha.script}${isDev ? " 'unsafe-eval'" : ""}`,
+  `connect-src 'self'${yandexMaps.connect}${smartCaptcha.connect}${yandexMetrika.connect}${isDev ? " ws: http://localhost:* http://127.0.0.1:*" : ""}`,
+  `script-src 'self' 'unsafe-inline'${yandexMaps.script}${smartCaptcha.script}${yandexMetrika.script}${isDev ? " 'unsafe-eval'" : ""}`,
   `frame-src 'self'${smartCaptcha.frame}`,
   "object-src 'none'",
   "base-uri 'self'",
@@ -48,6 +57,15 @@ export default defineNuxtConfig({
   compatibilityDate: "2026-09-27",
   runtimeConfig: {
     public: {
+      // Канонический домен сайта (кириллический; в canonical/sitemap
+      // сериализуется в punycode — см. shared/seo/site.ts).
+      // Переменная окружения: NUXT_PUBLIC_SITE_URL.
+      siteUrl: "https://прохук.рф",
+      // Яндекс.Метрика: auto — грузить счётчик только в production-сборке
+      // на публичном домене; 0 — никогда; 1 — всегда (e2e-проверки
+      // интеграции запускаются с 1 и блокируют сеть до mc.yandex.ru).
+      // Переменная окружения: NUXT_PUBLIC_METRIKA_ENABLED.
+      metrikaEnabled: "auto",
       // Ключ JS API Яндекс.Карт — публичный (виден в адресе скрипта карты),
       // карта работает и без него (API предупреждает в консоли). Выдаётся
       // бесплатно на developer.tech.yandex.ru; в Git не коммитится.
@@ -92,12 +110,16 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: "ru" },
-      title: "Прохук — каталог товаров",
+      title: "Прохук",
       meta: [
+        // Страховочный дефолт: страница без явного robots не попадает в
+        // индекс. Индексируемые информационные страницы переопределяют
+        // этот мета-тег через usePageSeo({ index: true }).
         { name: "robots", content: "noindex, nofollow" },
         {
           name: "description",
-          content: "Каталог товаров Прохук с ценами и наличием по магазинам.",
+          content:
+            "Прохук — сеть специализированных магазинов в Саратове и Москве.",
         },
       ],
       link: [{ rel: "icon", type: "image/png", href: "/brand/favicon.png" }],

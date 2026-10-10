@@ -114,7 +114,7 @@ button.text-link {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.store-trigger > span:last-child {
+.store-trigger__store {
   font-weight: var(--weight-medium);
 }
 .store-picker {
@@ -281,6 +281,21 @@ button.text-link {
   margin-block: var(--space-6);
   padding-block: var(--space-3);
   border-block: 1px solid var(--separator);
+}
+.catalog-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: var(--space-4);
+  transition: color 160ms ease;
+}
+.catalog-back:hover,
+.catalog-back:focus-visible {
+  color: var(--ink);
 }
 .catalog-layout {
   display: grid;
@@ -504,6 +519,10 @@ button.text-link {
   font-size: 18px;
   font-weight: var(--weight-semibold);
 }
+.product-price__unit {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
 .product-price del {
   font-size: var(--font-caption);
   color: var(--text-secondary);
@@ -586,7 +605,10 @@ button.text-link {
 }
 .dialog--drawer {
   margin: 0 0 0 auto;
+  /* vh-фоллбек для iOS < 15.4 (dvh там не поддерживается) */
+  height: 100vh;
   height: 100dvh;
+  max-height: 100vh;
   max-height: 100dvh;
   width: min(420px, 100%);
   border-radius: var(--radius-dialog) 0 0 var(--radius-dialog);
@@ -744,10 +766,21 @@ button.text-link {
   flex-wrap: wrap;
   gap: var(--space-4) var(--space-6);
 }
-.footer-bottom nav a {
+.footer-bottom nav a,
+.footer-bottom nav button {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+}
+/* «Файлы cookie» — кнопка, открывающая баннер согласия заново. */
+.footer-bottom nav button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
 }
 .footer-bottom__age {
   display: inline-grid;
@@ -968,6 +1001,13 @@ button.text-link {
 }
 .store-city {
   margin-top: var(--space-16);
+}
+.store-search {
+  margin-block: var(--space-8);
+  max-width: 480px;
+}
+.store-search .caption {
+  margin-top: var(--space-2);
 }
 .store-notice {
   margin-top: var(--space-8);
@@ -1402,6 +1442,18 @@ button.text-link {
   .header-actions {
     gap: var(--space-1);
   }
+  /* Apple HIG: интерактивные цели ≥ 44×44 на тач-экранах. */
+  .filter-chips button {
+    min-height: 44px;
+  }
+  .product-card__select,
+  .product-card__select--active {
+    min-height: 44px;
+  }
+  .geo-note .text-link,
+  .geo-note .icon-button {
+    min-height: 44px;
+  }
   .section-heading__link {
     justify-self: start;
   }
@@ -1557,5 +1609,77 @@ button.text-link {
   }
   .store-card {
     padding: var(--space-6);
+  }
+}
+
+/* На узких экранах триггер магазина — компактная «пилюля» города: длинные
+ * имена («МСК. Боброво - Крымская, 1») не влезают рядом с иконками,
+ * шеврон выносим в отдельный спан. Полное имя — в диалоге выбора.
+ * Блок обязан идти после @media 767 выше: перебивает его font-size. */
+.store-trigger__chevron {
+  display: none;
+  flex: 0 0 auto;
+}
+@media (max-width: 639px) {
+  .store-trigger {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .store-trigger__store {
+    display: none;
+  }
+  .store-trigger__chevron {
+    display: inline;
+  }
+  .store-trigger .caption {
+    font-size: 13px;
+    font-weight: var(--weight-medium);
+  }
+}
+/* На очень узких экранах (iPhone SE 320px и ниже) прячем иконку входа
+ * («Войти»/«Личный кабинет» остаётся первым пунктом мобильного меню)
+ * и уплотняем ряд, чтобы город читался даже на 280px. */
+@media (max-width: 359px) {
+  .app-header {
+    gap: var(--space-1);
+  }
+  .app-header .account-link {
+    display: none;
+  }
+  .header-actions {
+    gap: 2px;
+  }
+  .store-trigger .caption {
+    font-size: 11px;
+  }
+}
+
+/* HIG 44×44 для коротких футер-ссылок («О нас» 38px): расширенная
+ * hit-область паддингом; отрицательный маргин сохраняет выравнивание
+ * текста колонок без визуальных изменений. */
+@media (max-width: 767px) {
+  .footer-grid nav a {
+    padding-inline: var(--space-2);
+    margin-inline: calc(var(--space-2) * -1);
+  }
+}
+
+/* HIG 44×44 для коротких хлебных крошек («Снеки» 43px): невидимое
+ * расширение hit-области без сдвига визуала. */
+@media (max-width: 767px) {
+  .breadcrumbs a {
+    padding-inline: var(--space-2);
+    margin-inline: calc(var(--space-2) * -1);
+  }
+}
+
+/* HIG 44×44: телефон и почта на /contacts — первичные контактные
+ * каналы; на мобильных расширяем hit-область вертикальным паддингом. */
+@media (max-width: 767px) {
+  .specifications--contacts a {
+    display: inline-block;
+    padding-block: var(--space-3);
+    margin-block: calc(var(--space-3) * -1);
   }
 }

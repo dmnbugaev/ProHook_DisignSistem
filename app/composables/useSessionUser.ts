@@ -14,10 +14,20 @@ export function useSessionUser() {
   );
   const user = computed<SessionUser | null>(() => data.value?.user ?? null);
   const loggedIn = computed(() => user.value != null);
+  /** Аккаунт из allowlist STAFF_INBOX_PHONES — в кабинете доступен инбокс. */
+  const staffInbox = computed(() => data.value?.staffInbox === true);
   const canViewProductImages = computed(
     () => user.value?.canViewProductImages === true,
   );
-  return { user, loggedIn, canViewProductImages, pending, error, refresh };
+  return {
+    user,
+    loggedIn,
+    canViewProductImages,
+    staffInbox,
+    pending,
+    error,
+    refresh,
+  };
 }
 
 /**

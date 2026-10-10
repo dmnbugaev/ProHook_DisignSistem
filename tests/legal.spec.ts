@@ -41,27 +41,37 @@ test("banned and unclassified categories are never published; pouches are publis
     (category: { name: string }) => category.name,
   );
   expect(names).not.toContain("НБС");
-  expect(names).not.toContain("Ароматизаторы");
+  // Ароматизаторы (пищевые, для самозамеса) публикуются по подтверждению
+  // владельца от 10.10.2026 как нерегулируемый ассортимент.
+  expect(names).toContain("Ароматизаторы");
   // Паучи (подтверждено владельцем) публикуются как регулируемая категория.
   expect(names).toContain("Жевательный табак");
   const list = await (await request.get("/api/products?limit=24")).json();
-  expect(list.total).toBe(5);
+  expect(list.total).toBe(6);
   const pouch = list.items.find(
     (item: { slug: string }) => item.slug === "chew-01",
   );
   expect(pouch).toBeTruthy();
-  // Свободные описания регулируемых классов не публикуются.
-  expect(pouch.description).toBe("");
+  // Описания публикуются для всех классов по решению владельца от
+  // 10.10.2026 (тексты готовятся в МойСклад самим продавцом).
+  expect(pouch.description).toBe("Не публикуется для регулируемого класса.");
   const banned = await request.get("/api/products/nbc-01");
   expect(banned.status()).toBe(404);
 });
 
 test("legal pages are reachable without the age gate", async ({ page }) => {
+  // 09.10.2026: информационные страницы (/, /about, /stores, /partners)
+  // открыты без гейта — как юридические; каталогозависимые секции
+  // главной при этом скрыты до подтверждения 18+ (см. seo.spec).
   for (const path of [
     "/privacy",
     "/personal-data",
     "/information",
     "/contacts",
+    "/",
+    "/about",
+    "/stores",
+    "/partners",
   ]) {
     await page.goto(path);
     await expect(

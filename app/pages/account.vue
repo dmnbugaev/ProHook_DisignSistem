@@ -8,7 +8,72 @@ import {
 } from "~~/shared/utils/account";
 
 usePageSeo("Личный кабинет", "Бонусы Прохук и личные данные.");
-const { user } = useSessionUser();
+const { user, staffInbox } = useSessionUser();
+
+// Инбокс сотрудников: свежие резервы и партнёрские заявки. Резервный канал
+// оповещения на случай недоступности Telegram-уведомлений с хостинга.
+interface InboxReservation {
+  publicId: string;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
+  customerName: string;
+  phone: string;
+  storeName: string;
+  storeAddress: string;
+  comment: string;
+  items: Array<{ name: string; quantity: number }>;
+  telegramDelivered: boolean;
+}
+interface InboxPartnership {
+  publicId: string;
+  createdAt: string;
+  name: string;
+  phone: string;
+  city: string;
+  company: string;
+  offer: string;
+  telegramDelivered: boolean;
+}
+interface InboxResponse {
+  reservations: InboxReservation[];
+  partnerships: InboxPartnership[];
+}
+const inbox = ref<InboxResponse | null>(null);
+const inboxPending = ref(false);
+const inboxFailed = ref(false);
+async function loadInbox() {
+  if (!staffInbox.value || inboxPending.value) return;
+  inboxPending.value = true;
+  inboxFailed.value = false;
+  try {
+    inbox.value = await $fetch<InboxResponse>("/api/staff/inbox", {
+      retry: 0,
+    });
+  } catch {
+    inboxFailed.value = true;
+  } finally {
+    inboxPending.value = false;
+  }
+}
+watch(
+  () => [user.value?.id, staffInbox.value] as const,
+  ([, allowed]) => {
+    if (allowed) void loadInbox();
+  },
+  { immediate: true },
+);
+function inboxTime(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+}
 
 // Бонусы грузятся явным запросом при появлении пользователя сессии:
 // без гонки enabled-опции useAsyncData с обновлением session-user.
@@ -124,6 +189,96 @@ async function logout() {
           </p>
         </template>
         <p v-else class="account-bonus--empty">{{ loyaltyMessage }}</p>
+      </section>
+
+      <section
+        v-if="staffInbox"
+        class="account-block"
+        aria-labelledby="inbox-title"
+      >
+        <div class="account-inbox__header">
+          <h2 id="inbox-title">Заявки сети</h2>
+          <button
+            type="button"
+            class="text-link"
+            :disabled="inboxPending"
+            @click="loadInbox()"
+          >
+            {{ inboxPending ? "Обновляем…" : "Обновить" }}
+          </button>
+        </div>
+        <p class="caption account-inbox__note">
+          Резервный канал оповещения: свежие запросы на резерв и заявки на
+          партнёрство, сохранённые сервером (включая недоставленные в Telegram).
+          Данные видны только сотрудникам сети.
+        </p>
+        <p v-if="inboxFailed" class="account-bonus--error">
+          Не удалось загрузить заявки. Попробуйте обновить позже.
+        </p>
+        <p
+          v-else-if="
+            !inboxPending &&
+            !inbox?.reservations.length &&
+            !inbox?.partnerships.length
+          "
+          class="caption"
+        >
+          Новых заявок нет.
+        </p>
+        <template v-else>
+          <h3 class="account-inbox__heading">Запросы на резерв</h3>
+          <ul v-if="inbox?.reservations.length" class="account-inbox">
+            <li v-for="item in inbox.reservations" :key="item.publicId">
+              <p class="account-inbox__title">
+                <strong>{{ item.publicId }}</strong>
+                · {{ inboxTime(item.createdAt) }}
+                <span class="caption">{{
+                  item.telegramDelivered
+                    ? "Telegram: доставлено"
+                    : "Telegram: не доставлено"
+                }}</span>
+              </p>
+              <p class="caption">
+                {{ item.customerName }} · {{ formatPhone(item.phone) }} ·
+                {{ item.storeName
+                }}<template v-if="item.storeAddress">
+                  · {{ item.storeAddress }}</template
+                >
+              </p>
+              <p class="caption">
+                {{
+                  item.items
+                    .map((entry) => `${entry.name} ×${entry.quantity}`)
+                    .join("; ")
+                }}
+              </p>
+              <p v-if="item.comment" class="caption">
+                Комментарий: {{ item.comment }}
+              </p>
+            </li>
+          </ul>
+          <p v-else class="caption">Запросов нет.</p>
+          <h3 class="account-inbox__heading">Заявки на партнёрство</h3>
+          <ul v-if="inbox?.partnerships.length" class="account-inbox">
+            <li v-for="item in inbox.partnerships" :key="item.publicId">
+              <p class="account-inbox__title">
+                <strong>{{ item.publicId }}</strong>
+                · {{ inboxTime(item.createdAt) }}
+                <span class="caption">{{
+                  item.telegramDelivered
+                    ? "Telegram: доставлено"
+                    : "Telegram: не доставлено"
+                }}</span>
+              </p>
+              <p class="caption">
+                {{ item.name }} · {{ formatPhone(item.phone) }} ·
+                {{ item.city }} · {{ item.company }}
+              </p>
+              <p class="caption">{{ item.offer }}</p>
+            </li>
+          </ul>
+          <p v-else class="caption">Заявок нет.</p>
+        </template>
       </section>
 
       <section class="account-block" aria-labelledby="profile-title">
@@ -249,6 +404,45 @@ async function logout() {
 .account-profile dd {
   margin: 0;
   font-size: 17px;
+}
+.account-inbox__note {
+  margin-bottom: 20px;
+}
+.account-inbox__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+.account-inbox__header h2 {
+  margin-bottom: 0;
+}
+.account-inbox__heading {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-top: 24px;
+}
+.account-inbox {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.account-inbox li {
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-control);
+  padding: 12px 16px;
+  display: grid;
+  gap: 4px;
+}
+.account-inbox__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
 }
 .account-actions {
   margin-top: 32px;
