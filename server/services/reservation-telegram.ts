@@ -130,7 +130,7 @@ export async function deliverReservationMessage(
         // TypeError = сетевой уровень (DNS/TCP): ретраи бессмысленны, пока
         // хостинг не вернёт маршруты к Telegram.
         if (error instanceof TypeError) networkFailures++;
-        throw new Error("telegram send failed");
+        throw new Error("telegram send failed", { cause: error });
       }
       const result = (await response.json().catch(() => null)) as {
         ok?: boolean;
