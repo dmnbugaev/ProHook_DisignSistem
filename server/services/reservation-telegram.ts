@@ -3,6 +3,7 @@ import {
   recordTelegramAttempt,
   type StoredReservation,
 } from "./reservation-store";
+import { notifyStaffViaMoySklad } from "./moysklad-notify";
 
 /**
  * Telegram-уведомления о запросах на резерв (бот @prohook_bunker_site_bot).
@@ -105,23 +106,32 @@ export async function deliverReservationMessage(
   chatIds: string[],
   text: string,
   request: typeof fetch = fetch,
-): Promise<{ deliveredTo: string[] }> {
+): Promise<{ deliveredTo: string[]; unreachable: boolean }> {
   const deliveredTo: string[] = [];
+  let networkFailures = 0;
   const results = await Promise.allSettled(
     chatIds.map(async (chatId) => {
-      const response = await request(
-        `https://api.telegram.org/bot${token}/sendMessage`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text,
-            link_preview_options: { is_disabled: true },
-          }),
-          signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
-        },
-      );
+      let response: Response;
+      try {
+        response = await request(
+          `https://api.telegram.org/bot${token}/sendMessage`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text,
+              link_preview_options: { is_disabled: true },
+            }),
+            signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+          },
+        );
+      } catch (error) {
+        // TypeError = сетевой уровень (DNS/TCP): ретраи бессмысленны, пока
+        // хостинг не вернёт маршруты к Telegram.
+        if (error instanceof TypeError) networkFailures++;
+        throw new Error("telegram send failed");
+      }
       const result = (await response.json().catch(() => null)) as {
         ok?: boolean;
       } | null;
@@ -132,7 +142,10 @@ export async function deliverReservationMessage(
   );
   for (const result of results)
     if (result.status === "fulfilled") deliveredTo.push(result.value);
-  return { deliveredTo };
+  return {
+    deliveredTo,
+    unreachable: deliveredTo.length === 0 && networkFailures > 0,
+  };
 }
 
 function retryDelayMs(): number {
@@ -161,13 +174,16 @@ export async function dispatchReservationNotification(
     process.env.TELEGRAM_RESERVATION_CHAT_IDS,
   );
   // Без конфигурации бот молча пропускается (dev/тесты); запрос сохранён.
-  if (!token || chatIds.length === 0) return;
+  if (!token || chatIds.length === 0) {
+    await fallbackToMoySkladTask(reservation);
+    return;
+  }
   if (inFlight.has(reservation.id)) return;
   inFlight.add(reservation.id);
   try {
     const text = buildReservationMessage(reservation);
     for (let attempt = 1; attempt <= MAX_DELIVERY_ATTEMPTS; attempt++) {
-      const { deliveredTo } = await deliverReservationMessage(
+      const { deliveredTo, unreachable } = await deliverReservationMessage(
         token,
         chatIds,
         text,
@@ -175,8 +191,12 @@ export async function dispatchReservationNotification(
       );
       await recordTelegramAttempt(reservation.id, deliveredTo);
       if (deliveredTo.length > 0) return;
+      // Сетевая недоступность (хостинг блокирует api.telegram.org) —
+      // ретраи не помогут, сразу уходим в резервный канал.
+      if (unreachable) break;
       if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs());
     }
+    await fallbackToMoySkladTask(reservation);
     // Без ПД и токена: только публичный номер запроса.
     console.error(
       "Reservation telegram delivery failed after retries:",
@@ -185,4 +205,21 @@ export async function dispatchReservationNotification(
   } finally {
     inFlight.delete(reservation.id);
   }
+}
+
+/**
+ * Резервный канал: хостинг продакшена блокирует api.telegram.org, поэтому
+ * недоставленное уведомление становится задачей в МойСклад (API доступен).
+ * Без токена МойСклад (dev/e2e) — молча пропускается.
+ */
+async function fallbackToMoySkladTask(reservation: StoredReservation) {
+  const created = await notifyStaffViaMoySklad(
+    `Прохук · резерв ${reservation.publicId}`,
+    buildReservationMessage(reservation),
+  );
+  if (!created) return;
+  console.info(
+    "Reservation notification routed to MoySklad task:",
+    reservation.publicId,
+  );
 }

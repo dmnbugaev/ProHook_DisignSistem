@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url);
-const { classifyRootCategory, HIDDEN_SUBCATEGORY_IDS } = await jiti.import(
-  "../shared/legal/classification.ts",
-);
+const {
+  classifyRootCategory,
+  HIDDEN_SUBCATEGORY_IDS,
+  HIDDEN_PRODUCT_NAME_PREFIXES,
+} = await jiti.import("../shared/legal/classification.ts");
 const { applyLegalPolicy, enforceRegionalRestrictions } = await jiti.import(
   "../shared/legal/catalog-policy.ts",
 );
@@ -138,6 +140,12 @@ test("applyLegalPolicy hides banned and unclassified, keeps owner-written descri
     product({
       id: "hidden-sub-1",
       categoryId: [...HIDDEN_SUBCATEGORY_IDS][0],
+    }),
+    // Та же скрытая линейка «БНСЖ …», но в другой (легитимной) папке.
+    product({
+      id: "hidden-line-1",
+      categoryId: "liq",
+      name: `${HIDDEN_PRODUCT_NAME_PREFIXES[0]} Хотспот Аура Манго`,
     }),
     product({ id: "unknown-1", categoryId: "unknown" }),
     product({ id: "no-cat-1", categoryId: "missing" }),

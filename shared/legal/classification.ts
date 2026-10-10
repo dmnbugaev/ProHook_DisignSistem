@@ -155,3 +155,11 @@ export function classifyRootCategory(name: string | undefined): LegalClass {
 export const HIDDEN_SUBCATEGORY_IDS: ReadonlySet<string> = new Set([
   "0abcdf30-bdb7-11f1-0a80-104700000566", // ХС МОТИВАЦИЯ (Жидкости)
 ]);
+
+/**
+ * Скрытые линейки товаров по префиксу названия МойСклад — независимо от
+ * папки. «БНСЖ …» (безникотиновые жидкие смеси «Хотспот Аура») лежат и в
+ * «ХС МОТИВАЦИЯ», и в «ХОТСПОТ»; решение владельца 10.10.2026 — линейку
+ * с сайта убрать, обычные товары «Хотспот» остаются.
+ */
+export const HIDDEN_PRODUCT_NAME_PREFIXES: readonly string[] = ["БНСЖ"];

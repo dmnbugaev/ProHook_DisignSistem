@@ -23,6 +23,9 @@ export function parseTelegramChatIds(raw: string | number) {
     .filter(Boolean);
 }
 
+/** api.telegram.org недоступен на сетевом уровне (DNS/TCP) — ретраи бессмысленны. */
+export class TelegramUnreachableError extends Error {}
+
 export async function sendPartnership(
   token: string,
   chatIds: string[],
@@ -32,6 +35,7 @@ export async function sendPartnership(
 ): Promise<string[]> {
   // Plain text deliberately avoids interpreting user input as Telegram markup.
   const deliveredTo: string[] = [];
+  let networkFailures = 0;
   for (const chatId of chatIds) {
     try {
       const response = await request(
@@ -58,10 +62,14 @@ export async function sendPartnership(
       ) {
         deliveredTo.push(chatId);
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof TypeError) networkFailures++;
       // One unreachable chat must not block delivery to the others.
     }
   }
-  if (deliveredTo.length === 0) throw new Error("Telegram delivery failed");
+  if (deliveredTo.length === 0) {
+    if (networkFailures > 0) throw new TelegramUnreachableError();
+    throw new Error("Telegram delivery failed");
+  }
   return deliveredTo;
 }

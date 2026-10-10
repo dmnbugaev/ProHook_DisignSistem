@@ -2,6 +2,7 @@ import type { CatalogMeta } from "../types/catalog";
 import type { Category } from "../types/category";
 import type { Product } from "../types/product";
 import {
+  HIDDEN_PRODUCT_NAME_PREFIXES,
   HIDDEN_SUBCATEGORY_IDS,
   LEGAL_CLASS_POLICIES,
   classifyRootCategory,
@@ -91,7 +92,10 @@ export function applyLegalPolicy<T extends PolicyInput>(
     .filter(
       (product) =>
         LEGAL_CLASS_POLICIES[product.legalClass].publishProducts &&
-        !isHiddenByOwner(product.categoryId, categoriesById),
+        !isHiddenByOwner(product.categoryId, categoriesById) &&
+        !HIDDEN_PRODUCT_NAME_PREFIXES.some((prefix) =>
+          product.name.startsWith(prefix),
+        ),
     );
 
   return { ...snapshot, meta: { ...snapshot.meta, categories }, products };

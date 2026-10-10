@@ -1,9 +1,14 @@
 import type { Partnership } from "../../shared/utils/partnership";
-import { sendPartnership } from "./telegram";
+import {
+  partnershipMessage,
+  sendPartnership,
+  TelegramUnreachableError,
+} from "./telegram";
 import {
   recordPartnershipAttempt,
   type StoredPartnership,
 } from "./partnership-store";
+import { notifyStaffViaMoySklad } from "./moysklad-notify";
 
 /**
  * Доставка заявок на партнёрство в Telegram — best-effort с повторами,
@@ -37,7 +42,10 @@ export async function dispatchPartnershipNotification(
   chatIds: string[],
   request: typeof fetch = fetch,
 ): Promise<void> {
-  if (!botToken || chatIds.length === 0) return;
+  if (!botToken || chatIds.length === 0) {
+    await fallbackToMoySkladTask(application, data);
+    return;
+  }
   if (inFlight.has(application.id)) return;
   inFlight.add(application.id);
   try {
@@ -52,11 +60,15 @@ export async function dispatchPartnershipNotification(
         );
         await recordPartnershipAttempt(application.id, deliveredTo);
         return;
-      } catch {
+      } catch (error) {
         await recordPartnershipAttempt(application.id, []);
+        // Сетевая недоступность (хостинг блокирует api.telegram.org) —
+        // ретраи не помогут, сразу уходим в резервный канал.
+        if (error instanceof TelegramUnreachableError) break;
       }
       if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs());
     }
+    await fallbackToMoySkladTask(application, data);
     // Без ПД и токена: только публичный номер заявки.
     console.error(
       "Partnership telegram delivery failed after retries:",
@@ -65,4 +77,23 @@ export async function dispatchPartnershipNotification(
   } finally {
     inFlight.delete(application.id);
   }
+}
+
+/**
+ * Резервный канал: хостинг продакшена блокирует api.telegram.org, поэтому
+ * недоставленное уведомление становится задачей в МойСклад (API доступен).
+ */
+async function fallbackToMoySkladTask(
+  application: StoredPartnership,
+  data: Partnership,
+) {
+  const created = await notifyStaffViaMoySklad(
+    `Прохук · партнёрство ${application.publicId}`,
+    partnershipMessage(data, application.publicId),
+  );
+  if (!created) return;
+  console.info(
+    "Partnership notification routed to MoySklad task:",
+    application.publicId,
+  );
 }

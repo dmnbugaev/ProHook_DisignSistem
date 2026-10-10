@@ -12,6 +12,11 @@ const dataDir = mkdtempSync(join(tmpdir(), "prohook-reservations-"));
 process.env.RESERVATION_DATA_DIR = dataDir;
 // Быстрые повторы доставки в тестах.
 process.env.TELEGRAM_RETRY_DELAY_MS = "1";
+// Резервный канал МойСклад в тестах отключён (в шелле разработчика могут
+// быть экспортированы боевые NUXT_MOYSKLAD_TOKEN/MOYSKLAD_TOKEN).
+process.env.NUXT_MOYSKLAD_TOKEN = "";
+process.env.MOYSKLAD_TOKEN = "";
+process.env.MOYSKLAD_NOTIFY_EMPLOYEE_ID = "";
 
 const jiti = createJiti(import.meta.url);
 const { validateReservation, normalizeSelectionItems } = await jiti.import(
@@ -383,6 +388,43 @@ test("dispatch is a no-op without a configured bot (dev and e2e mode)", async ()
   try {
     await dispatchReservationNotification(storedReservation());
     assert.equal(called, 0);
+  } finally {
+    process.env.TELEGRAM_BOT_TOKEN = originalToken;
+    process.env.TELEGRAM_RESERVATION_CHAT_IDS = originalChats;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("network-level Telegram failure skips retries (hosting block scenario)", async () => {
+  const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+  const originalChats = process.env.TELEGRAM_RESERVATION_CHAT_IDS;
+  const originalFetch = globalThis.fetch;
+  process.env.TELEGRAM_BOT_TOKEN = "test-token";
+  process.env.TELEGRAM_RESERVATION_CHAT_IDS = "111,222";
+  let calls = 0;
+  // TypeError = сетевой уровень (fetch failed), как при блокировке
+  // api.telegram.org хостингом: ретраи не выполняются.
+  globalThis.fetch = async () => {
+    calls++;
+    throw new TypeError("fetch failed");
+  };
+  try {
+    const created = await createReservation({
+      userId: null,
+      customerName: "Иван",
+      phone: "79991234567",
+      storeId: "store-1",
+      storeNameSnapshot: "Студия · Центр",
+      storeAddressSnapshot: "",
+      comment: "",
+      consent: { personalData: true, telegram: true },
+      captchaVerifiedAt: null,
+      items: [],
+    });
+    await dispatchReservationNotification(created);
+    assert.equal(calls, 2); // 1 попытка × 2 чата, без повторов
+    const stored = await findReservationByPublicId(created.publicId);
+    assert.equal(stored.telegramDelivery.attempts, 1);
   } finally {
     process.env.TELEGRAM_BOT_TOKEN = originalToken;
     process.env.TELEGRAM_RESERVATION_CHAT_IDS = originalChats;
