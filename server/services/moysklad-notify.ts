@@ -68,6 +68,9 @@ export async function notifyStaffViaMoySklad(
   if (!auth) return false;
   try {
     const assignee = await resolveAssignee(auth);
+    // У задачи МойСклад нет отдельного «названия» — текстом задачи служит
+    // description; короткий заголовок ставим в начало строки.
+    const description = plain(`${name}. ${text}`).slice(0, 4000);
     const response = await fetch(`${API}entity/task`, {
       method: "POST",
       headers: {
@@ -76,8 +79,7 @@ export async function notifyStaffViaMoySklad(
         Accept: "application/json;charset=utf-8",
       },
       body: JSON.stringify({
-        name: plain(name).slice(0, 128),
-        description: plain(text).slice(0, 4000),
+        description,
         ...(assignee
           ? {
               assignee: {
