@@ -3,6 +3,7 @@ import type { Product } from "../../shared/types/product";
 import type { Store } from "../../shared/types/store";
 import { applyLegalPolicy } from "../../shared/legal/catalog-policy";
 import { storeAddresses } from "../data/store-addresses";
+import { storeHours } from "../data/store-hours";
 import { storeLicenses } from "../data/store-licenses";
 
 const API = "https://api.moysklad.ru/api/remap/1.2/";
@@ -223,6 +224,7 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
       ...(storeAddresses[item.id] || item.address?.trim()
         ? { address: storeAddresses[item.id] || item.address!.trim() }
         : {}),
+      ...(storeHours[item.id] ? { hours: storeHours[item.id] } : {}),
       ...(storeLicenses[item.id] ? { license: storeLicenses[item.id] } : {}),
     }))
     .sort(

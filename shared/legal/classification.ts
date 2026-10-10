@@ -144,3 +144,14 @@ export function classifyRootCategory(name: string | undefined): LegalClass {
   const key = (name ?? "").trim().toLocaleLowerCase("ru").replace(/\s+/g, " ");
   return ROOT_CATEGORY_CLASSES[key] ?? "PENDING_REVIEW";
 }
+
+/**
+ * Скрытые подкатегории по стабильному id папки МойСклад (вместе с товарами;
+ * скрываются и все вложенные папки). Решение владельца от 10.10.2026:
+ * «ХС МОТИВАЦИЯ» (36 SKU «БНСЖ Хотспот Аура» — безникотиновые смеси) —
+ * «вот это убрать». При пересоздании папки в МойСклад id изменится —
+ * сверить по результатам синхронизации.
+ */
+export const HIDDEN_SUBCATEGORY_IDS: ReadonlySet<string> = new Set([
+  "0abcdf30-bdb7-11f1-0a80-104700000566", // ХС МОТИВАЦИЯ (Жидкости)
+]);

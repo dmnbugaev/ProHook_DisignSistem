@@ -2,6 +2,7 @@ import type { CatalogMeta } from "../types/catalog";
 import type { Category } from "../types/category";
 import type { Product } from "../types/product";
 import {
+  HIDDEN_SUBCATEGORY_IDS,
   LEGAL_CLASS_POLICIES,
   classifyRootCategory,
   type LegalClass,
@@ -38,11 +39,28 @@ export function legalClassOf(
   return classifyRootCategory(rootName);
 }
 
+/** Скрыта ли категория решением владельца (вместе со всеми потомками). */
+export function isHiddenByOwner(
+  categoryId: string,
+  categoriesById: Map<string, Category>,
+): boolean {
+  let current = categoriesById.get(categoryId);
+  const visited = new Set<string>();
+  while (current) {
+    if (HIDDEN_SUBCATEGORY_IDS.has(current.id)) return true;
+    if (!current.parentId || visited.has(current.parentId)) return false;
+    visited.add(current.id);
+    current = categoriesById.get(current.parentId);
+  }
+  return false;
+}
+
 /**
  * Применяет юридическую политику к снимку каталога: исключает товары и
- * категории классов PENDING_REVIEW/BANNED_FROM_SITE, назначает товарам
- * legalClass и убирает свободные описания у регулируемых классов.
- * Идемпотентно: повторное применение ничего не меняет.
+ * категории классов PENDING_REVIEW/BANNED_FROM_SITE, исключает категории
+ * из чёрного списка владельца (HIDDEN_SUBCATEGORY_IDS, вместе с потомками
+ * и товарами), назначает товарам legalClass. Идемпотентно: повторное
+ * применение ничего не меняет.
  */
 export function applyLegalPolicy<T extends PolicyInput>(
   snapshot: T,
@@ -56,7 +74,8 @@ export function applyLegalPolicy<T extends PolicyInput>(
 
   const categories = snapshot.meta.categories.filter(
     (item) =>
-      LEGAL_CLASS_POLICIES[classByCategory.get(item.id)!].publishCategories,
+      LEGAL_CLASS_POLICIES[classByCategory.get(item.id)!].publishCategories &&
+      !isHiddenByOwner(item.id, categoriesById),
   );
   const products = snapshot.products
     .map((product) => {
@@ -70,7 +89,9 @@ export function applyLegalPolicy<T extends PolicyInput>(
       };
     })
     .filter(
-      (product) => LEGAL_CLASS_POLICIES[product.legalClass].publishProducts,
+      (product) =>
+        LEGAL_CLASS_POLICIES[product.legalClass].publishProducts &&
+        !isHiddenByOwner(product.categoryId, categoriesById),
     );
 
   return { ...snapshot, meta: { ...snapshot.meta, categories }, products };

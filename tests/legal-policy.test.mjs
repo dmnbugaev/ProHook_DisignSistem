@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url);
-const { classifyRootCategory } = await jiti.import(
+const { classifyRootCategory, HIDDEN_SUBCATEGORY_IDS } = await jiti.import(
   "../shared/legal/classification.ts",
 );
 const { applyLegalPolicy, enforceRegionalRestrictions } = await jiti.import(
@@ -114,6 +114,14 @@ test("applyLegalPolicy hides banned and unclassified, keeps owner-written descri
       description: "",
       parentId: null,
     },
+    // Подкатегория из чёрного списка владельца (HIDDEN_SUBCATEGORY_IDS).
+    {
+      id: [...HIDDEN_SUBCATEGORY_IDS][0],
+      name: "ХС МОТИВАЦИЯ",
+      slug: "hs-motivatsiya",
+      description: "",
+      parentId: "liq",
+    },
     {
       id: "unknown",
       name: "Что-то новое",
@@ -127,6 +135,10 @@ test("applyLegalPolicy hides banned and unclassified, keeps owner-written descri
     product({ id: "liq-1", categoryId: "liq" }),
     product({ id: "chew-1", categoryId: "chew" }),
     product({ id: "aroma-1", categoryId: "aroma" }),
+    product({
+      id: "hidden-sub-1",
+      categoryId: [...HIDDEN_SUBCATEGORY_IDS][0],
+    }),
     product({ id: "unknown-1", categoryId: "unknown" }),
     product({ id: "no-cat-1", categoryId: "missing" }),
   ];
@@ -139,6 +151,9 @@ test("applyLegalPolicy hides banned and unclassified, keeps owner-written descri
   ]);
   const names = result.meta.categories.map((item) => item.name);
   assert.ok(!names.includes("Что-то новое"));
+  // Подкатегория из чёрного списка владельца скрыта вместе с товарами
+  // (решение от 10.10.2026: «ХС МОТИВАЦИЯ» — «вот это убрать»).
+  assert.ok(!names.includes("ХС МОТИВАЦИЯ"));
   assert.deepEqual(names.sort(), [
     "Ароматизаторы",
     "Жевательный табак",
