@@ -17,6 +17,26 @@ async function consentCookie(page: Page) {
   return cookies.find((item) => item.name === "prohook-consent")?.value ?? "";
 }
 
+/**
+ * Баннер отдаётся из SSR, обработчики появляются после гидрации Vue:
+ * на dev-сервере (его поднимает playwright.config) клик сразу после
+ * load успевает раньше гидрации и «теряется». Маркер конца гидрации —
+ * $nuxt.isHydrating: одного __vue_app__ из mount() недостаточно,
+ * Suspense-дерево ещё гидратируется (см. contacts-map.spec.ts).
+ */
+async function waitForHydration(page: Page) {
+  await page.waitForFunction(
+    () =>
+      (
+        document.getElementById("__nuxt") as HTMLElement & {
+          __vue_app__?: { $nuxt?: { isHydrating: boolean } };
+        }
+      )?.__vue_app__?.$nuxt?.isHydrating === false,
+    undefined,
+    { timeout: 10_000 },
+  );
+}
+
 test.beforeEach(async ({ context }) => {
   // playwright.config.ts предустанавливает всем контекстам cookie
   // согласия (чтобы баннер не перекрывал контент в чужих спецификациях) —
@@ -51,6 +71,7 @@ test("закрытие крестиком — отказ: аналитика н�
   page,
 }) => {
   await page.goto("/privacy");
+  await waitForHydration(page);
   const banner = page.getByRole("region", { name: REGION });
   await banner.getByRole("button", { name: "Закрыть" }).click();
   await expect(banner).toBeHidden();
@@ -68,6 +89,7 @@ test("принять — согласие сохраняется, счётчик
   page,
 }) => {
   await page.goto("/privacy");
+  await waitForHydration(page);
   await page.getByRole("button", { name: "Принять" }).click();
   await expect(page.getByRole("region", { name: REGION })).toBeHidden();
   expect(decodeURIComponent(await consentCookie(page))).toContain(

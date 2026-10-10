@@ -783,10 +783,13 @@ legend {
 .cookie-consent {
   position: fixed;
   z-index: 35;
-  left: 50%;
-  bottom: 20px;
-  transform: translateX(-50%);
-  width: min(640px, calc(100% - 32px));
+  /* Центрирование margin-inline вместо left:50%+transform — transform
+     занят анимацией появления и не должен её перебивать. */
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  margin-inline: auto;
+  width: min(640px, calc(100% - 48px));
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -795,6 +798,21 @@ legend {
   border-radius: var(--radius-card);
   background: var(--background);
   box-shadow: var(--shadow-dialog);
+  /* vh-фоллбек для iOS < 15.4 (dvh там не поддерживается). */
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  animation: cookie-consent-enter var(--duration-panel) ease-out;
+}
+.cookie-consent__body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+.cookie-consent__icon {
+  flex-shrink: 0;
 }
 .cookie-consent__text {
   flex: 1;
@@ -815,6 +833,17 @@ legend {
   min-height: 44px;
   padding: 8px 18px;
   font-size: 14px;
+  white-space: nowrap;
+}
+@keyframes cookie-consent-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .button-samples {
   display: flex;
@@ -1684,20 +1713,32 @@ legend {
   .dialog__actions {
     flex-direction: column;
   }
+  /* Cookie-баннер на мобильных: вертикальная компоновка — текст
+     целиком, ниже строка действий с широким «Принять» и «×». */
   .cookie-consent {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    transform: none;
+    left: 16px;
+    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    margin-inline: 0;
     width: auto;
-    flex-wrap: wrap;
-    padding: var(--space-3) var(--space-4);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
   }
-  .cookie-consent__text {
-    flex-basis: 100%;
+  .cookie-consent__body {
+    align-items: flex-start;
+    gap: var(--space-2);
   }
   .cookie-consent__actions {
-    margin-left: auto;
+    display: grid;
+    grid-template-columns: 1fr 44px;
+    gap: var(--space-2);
+  }
+  .cookie-consent__actions .button {
+    width: 100%;
   }
 }
 @media (prefers-reduced-motion: reduce) {
