@@ -15,7 +15,7 @@ after(() => {
 });
 
 const collection = (rows) => ({ meta: { size: rows.length }, rows });
-const folder = { id: "folder-1", name: "Снеки" };
+const folder = { id: "folder-1", name: "Другое" };
 const chewFolder = { id: "folder-chew", name: "Жевательный табак" };
 const liquidFolder = { id: "folder-liq", name: "Жидкости" };
 const nbcFolder = { id: "folder-nbc", name: "НБС" };

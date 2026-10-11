@@ -113,7 +113,8 @@ export const ROOT_CATEGORY_CLASSES: Record<string, LegalClass> = {
   глицерин: "ACCESSORY",
   зажигалки: "UNREGULATED",
   напитки: "UNREGULATED",
-  снеки: "UNREGULATED",
+  // Решение владельца 11.10.2026: категорию «Снеки» с сайта убрать.
+  снеки: "BANNED_FROM_SITE",
   "лапша быстрого приготовления": "UNREGULATED",
   "китайский чай": "UNREGULATED",
   другое: "UNREGULATED",

@@ -72,6 +72,8 @@ test("root category classification", () => {
   assert.equal(classifyRootCategory("жевательный табак"), "REGULATED_POUCH");
   // Сигареты публикуются по решению владельца 11.10.2026 (ранее скрыты).
   assert.equal(classifyRootCategory("СИГАРЕТЫ"), "REGULATED_TOBACCO");
+  // Снеки скрыты по решению владельца 11.10.2026.
+  assert.equal(classifyRootCategory("Снеки"), "BANNED_FROM_SITE");
   assert.equal(classifyRootCategory("нбс"), "BANNED_FROM_SITE");
   // Пищевые ароматизаторы — публикация подтверждена владельцем 10.10.2026.
   assert.equal(classifyRootCategory("Ароматизаторы"), "UNREGULATED");
@@ -84,14 +86,14 @@ test("applyLegalPolicy hides banned and unclassified, keeps owner-written descri
   const categories = [
     {
       id: "snack",
-      name: "Снеки",
+      name: "Напитки",
       slug: "snack",
       description: "",
       parentId: null,
     },
     {
       id: "snack-sub",
-      name: "Чипсы",
+      name: "Соки",
       slug: "snack-sub",
       description: "",
       parentId: "snack",
@@ -167,8 +169,8 @@ test("applyLegalPolicy hides banned and unclassified, keeps owner-written descri
     "Ароматизаторы",
     "Жевательный табак",
     "Жидкости",
-    "Снеки",
-    "Чипсы",
+    "Напитки",
+    "Соки",
   ]);
   // Описания публикуются для всех классов по решению владельца от
   // 10.10.2026: тексты готовятся в МойСклад самим продавцом.
