@@ -1,4 +1,4 @@
-вы<template>
+<template>
   <UiContainer as="section" class="hero" aria-labelledby="hero-title">
     <div class="hero__copy">
       <p class="edition">
