@@ -214,7 +214,7 @@ export async function dispatchReservationNotification(
  */
 async function fallbackToMoySkladTask(reservation: StoredReservation) {
   const created = await notifyStaffViaMoySklad(
-    `Прохук · резерв ${reservation.publicId}`,
+    `ПроХук · резерв ${reservation.publicId}`,
     buildReservationMessage(reservation),
   );
   if (!created) return;

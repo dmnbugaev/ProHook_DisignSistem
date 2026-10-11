@@ -2,7 +2,7 @@
 import { prohookContacts } from "~~/shared/content/prohook";
 usePageSeo(
   "Контакты",
-  "Контакты Прохук: телефон, электронная почта, ВКонтакте, Telegram, Instagram и карта всех магазинов сети.",
+  "Контакты ПроХук: телефон, электронная почта, ВКонтакте, Telegram, Instagram и карта всех магазинов сети.",
   undefined,
   {
     index: true,
@@ -32,7 +32,7 @@ const socials = [
     ><UiBreadcrumbs
       :items="[{ label: 'Главная', to: '/' }, { label: 'Контакты' }]" />
     <div class="page-heading">
-      <p class="eyebrow">Прохук / Контакты</p>
+      <p class="eyebrow">ПроХук / Контакты</p>
       <h1>На связи с вами.</h1>
       <p>
         Вопросы о магазинах и ассортименте можно направить по телефону, почте

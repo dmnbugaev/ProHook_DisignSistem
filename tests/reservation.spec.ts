@@ -181,7 +181,7 @@ test("server re-validates store, products, stock and consents", async ({
     "Максимум 10 шт. одного товара",
   );
 
-  // Недостаточный остаток: stands-01 в store-3 «мало» (бакет ≤ 3 шт.).
+  // Недостаточный остаток: stands-01 в store-3 — 1 шт. (бакет «Мало»).
   const lowStock = await post({
     ...payload,
     storeId: "store-3",
@@ -189,7 +189,7 @@ test("server re-validates store, products, stock and consents", async ({
   });
   expect(lowStock.status()).toBe(422);
   expect(((await lowStock.json()).data?.errors ?? {}).items).toContain(
-    "доступно к резерву 3 шт.",
+    "доступно к резерву 1 шт.",
   );
 
   // Нет в наличии: stands-01 в store-1 недоступен (фикстура).
@@ -313,6 +313,7 @@ test("no telegram secrets or chat ids reach the browser", async ({
     "1107248048",
     "5313920922",
     "8562692667",
+    "1077741598",
   ];
   const html = await (
     await request.get("/reserve", {

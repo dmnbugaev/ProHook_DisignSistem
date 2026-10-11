@@ -110,7 +110,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: "ru" },
-      title: "Прохук",
+      title: "ПроХук",
       meta: [
         // Страховочный дефолт: страница без явного robots не попадает в
         // индекс. Индексируемые информационные страницы переопределяют
@@ -119,7 +119,7 @@ export default defineNuxtConfig({
         {
           name: "description",
           content:
-            "Прохук — сеть специализированных магазинов в Саратове и Москве.",
+            "ПроХук — сеть специализированных магазинов в Саратове и Москве.",
         },
       ],
       link: [{ rel: "icon", type: "image/png", href: "/brand/favicon.png" }],

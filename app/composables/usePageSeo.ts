@@ -21,7 +21,7 @@ export function usePageSeo(
 ) {
   const siteUrl = useRuntimeConfig().public.siteUrl || "https://прохук.рф";
   const route = useRoute();
-  const pageTitle = () => `${toValue(title)} — Прохук`;
+  const pageTitle = () => `${toValue(title)} — ПроХук`;
 
   useSeoMeta({
     title: pageTitle,

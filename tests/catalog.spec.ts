@@ -76,7 +76,8 @@ test("store changes availability and city price without losing the product", asy
   const picker = page.getByRole("dialog", { name: "Ваш город и магазин" });
   await picker.getByRole("radio", { name: /Студия · Север/ }).check();
   await expect(picker).not.toBeVisible();
-  await expect(info.locator(".availability")).toHaveText("В наличии");
+  // 12 шт. в Студии · Север — бакет «Много в наличии» (порог 4+).
+  await expect(info.locator(".availability")).toHaveText("Много в наличии");
   await info.getByRole("button", { name: "Изменить магазин" }).click();
   await picker.getByLabel("Город", { exact: true }).selectOption("moscow");
   await picker.getByRole("radio", { name: /МСК\. Боброво/ }).check();

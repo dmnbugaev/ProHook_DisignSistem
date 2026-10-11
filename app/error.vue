@@ -4,13 +4,13 @@ const props = defineProps<{ error: NuxtError }>();
 const is404 = computed(() => props.error.statusCode === 404);
 useSeoMeta({
   title: () =>
-    is404.value ? "Страница не найдена — Прохук" : "Ошибка — Прохук",
+    is404.value ? "Страница не найдена — ПроХук" : "Ошибка — ПроХук",
   robots: "noindex, nofollow",
 });
 </script>
 <template>
   <main class="page-shell container error-page">
-    <img src="/brand/mark.webp" alt="Прохук" width="48" height="48" />
+    <img src="/brand/mark.webp" alt="ПроХук" width="48" height="48" />
     <p class="eyebrow">{{ error.statusCode }}</p>
     <h1>{{ is404 ? "Здесь пока пусто." : "Не удалось открыть страницу." }}</h1>
     <p>

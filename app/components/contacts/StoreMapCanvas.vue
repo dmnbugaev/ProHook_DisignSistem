@@ -327,7 +327,7 @@ onBeforeUnmount(() => {
       class="stores-map-view"
       role="application"
       tabindex="0"
-      aria-label="Карта магазинов Прохук (Яндекс Карты)"
+      aria-label="Карта магазинов ПроХук (Яндекс Карты)"
     />
     <div
       v-if="status !== 'ready'"

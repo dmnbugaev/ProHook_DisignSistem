@@ -58,7 +58,7 @@ export function organizationSchema(contacts: Contacts, baseUrl?: string) {
     "@context": "https://schema.org",
     "@type": "Organization",
     "@id": `${url}#organization`,
-    name: "Прохук",
+    name: "ПроХук",
     description:
       "Сеть розничных магазинов. Сайт — справочный каталог; продажа осуществляется только в магазинах после проверки совершеннолетия.",
     url,
@@ -81,7 +81,7 @@ export function websiteSchema(baseUrl?: string) {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "@id": `${url}#website`,
-    name: "Прохук",
+    name: "ПроХук",
     inLanguage: "ru-RU",
     url,
     publisher: { "@id": `${url}#organization` },
@@ -105,7 +105,7 @@ export function storeSchemas(
       "@context": "https://schema.org",
       "@type": "Store",
       "@id": `${pageUrl}#${store.id}`,
-      name: `Прохук — ${store.name}`,
+      name: `ПроХук — ${store.name}`,
       address: {
         "@type": "PostalAddress",
         streetAddress: store.address,

@@ -51,7 +51,8 @@ export interface StoreLocation {
   phone?: string;
   hours?: string;
 }
-export type Availability = "available" | "low" | "unavailable" | "unknown";
+export type Availability =
+  "plenty" | "available" | "low" | "unavailable" | "unknown";
 export interface StoreOffer {
   storeId: string;
   /** Integer minor currency units (kopecks). */

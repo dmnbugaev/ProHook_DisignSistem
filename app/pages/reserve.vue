@@ -17,7 +17,7 @@ import type { Product } from "~~/shared/types/product";
  */
 usePageSeo(
   "Список выбранных товаров",
-  "Сформируйте список товаров Прохук, выберите магазин и отправьте запрос на резерв: покупка — только в магазине после проверки возраста.",
+  "Сформируйте список товаров ПроХук, выберите магазин и отправьте запрос на резерв: покупка — только в магазине после проверки возраста.",
 );
 const { store, city, pickerOpen } = useStoreSelection();
 const { entries, count, totalQuantity, setQuantity, remove, clear } =
@@ -200,7 +200,7 @@ async function submit() {
       ]"
     />
     <div class="page-heading">
-      <p class="eyebrow">Прохук / Самовывоз</p>
+      <p class="eyebrow">ПроХук / Самовывоз</p>
       <h1>Список выбранных товаров</h1>
       <p>
         Проверьте состав списка, выберите магазин самовывоза и оставьте контакты

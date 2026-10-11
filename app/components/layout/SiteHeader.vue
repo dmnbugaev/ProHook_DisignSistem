@@ -29,7 +29,7 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <header class="site-header" :class="{ 'site-header--glass': scrolled }">
-    <a href="#top" class="brand-link" aria-label="Прохук — в начало"
+    <a href="#top" class="brand-link" aria-label="ПроХук — в начало"
       ><img src="/brand/mark.webp" alt="" width="40" height="40" /><span
         >Дизайн-система</span
       ></a
@@ -71,6 +71,6 @@ onBeforeUnmount(() => {
         >{{ link.label }}</a
       >
     </nav>
-    <p class="caption">Прохук · Визуальная система</p>
+    <p class="caption">ПроХук · Визуальная система</p>
   </UiDialog>
 </template>

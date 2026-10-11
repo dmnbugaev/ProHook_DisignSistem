@@ -4,7 +4,7 @@ import { validateRegistration } from "~~/shared/utils/account";
 
 usePageSeo(
   "Регистрация",
-  "Создайте аккаунт Прохук: бонусы, личные данные и доступ к каталогу 18+.",
+  "Создайте аккаунт ПроХук: бонусы, личные данные и доступ к каталогу 18+.",
 );
 const form = reactive({
   lastName: "",
@@ -94,7 +94,7 @@ async function submit() {
     <section class="auth-card auth-card--wide" aria-labelledby="register-title">
       <h1 id="register-title">Регистрация</h1>
       <p class="auth-intro">
-        Личный кабинет Прохук: бонусы за покупки и изображения товаров для
+        Личный кабинет ПроХук: бонусы за покупки и изображения товаров для
         совершеннолетних. Все поля обязательны.
       </p>
       <form

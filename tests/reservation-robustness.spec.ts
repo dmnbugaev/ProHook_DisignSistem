@@ -249,7 +249,7 @@ test("exact stock beats availability bucket on the server", async ({
     consent: true,
     consentTelegram: true,
   };
-  // p2 в store-2: бакет «Мало» разрешил бы 3 шт., точный остаток 2 →
+  // p2 в store-2: бакет «В наличии» разрешил бы 10 шт., точный остаток 2 →
   // сервер обязан отказать в 3 шт. (точные данные бьют бакет).
   const over = await request.post("/api/reservations", {
     data: { ...payload, items: [{ productId: "p2", quantity: 3 }] },

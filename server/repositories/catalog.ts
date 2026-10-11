@@ -148,7 +148,9 @@ export const catalogRepository: CatalogRepository = {
         : product.offers
       ).some(
         (offer) =>
-          offer.availability === "available" || offer.availability === "low",
+          offer.availability === "plenty" ||
+          offer.availability === "available" ||
+          offer.availability === "low",
       );
     const words = query.q.toLocaleLowerCase("ru").split(/\s+/).filter(Boolean);
     const visible = enforceRegionalRestrictions(products, catalogMeta.stores);
@@ -180,13 +182,16 @@ export const catalogRepository: CatalogRepository = {
       );
     });
     // Витринный приоритет для сортировки по умолчанию: вперёд выходят товары
-    // с фотографией и достаточным наличием (availability "available", не
-    // "low") в выбранном магазине — или в любом, если магазин не выбран.
+    // с фотографией и достаточным наличием (2+ шт: "available"/"plenty",
+    // не "low") в выбранном магазине — или в любом, если магазин не выбран.
     const stockRank = (product: Product) => {
       const offers = query.storeId
         ? product.offers.filter((offer) => offer.storeId === query.storeId)
         : product.offers;
-      const plenty = offers.some((offer) => offer.availability === "available");
+      const plenty = offers.some(
+        (offer) =>
+          offer.availability === "plenty" || offer.availability === "available",
+      );
       const hasPhoto = product.images.length > 0;
       if (hasPhoto && plenty) return 0;
       if (hasPhoto) return 1;
@@ -227,7 +232,10 @@ export const catalogRepository: CatalogRepository = {
       const offers = query.storeId
         ? product.offers.filter((offer) => offer.storeId === query.storeId)
         : product.offers;
-      const plenty = offers.some((offer) => offer.availability === "available");
+      const plenty = offers.some(
+        (offer) =>
+          offer.availability === "plenty" || offer.availability === "available",
+      );
       return product.images.length && plenty
         ? 0
         : product.images.length

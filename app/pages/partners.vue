@@ -4,7 +4,7 @@ import { prohookContacts } from "~~/shared/content/prohook";
 
 usePageSeo(
   "Стать партнёром",
-  "Оставьте заявку на сотрудничество с Прохук: расскажите о вашей компании, и мы свяжемся с вами.",
+  "Оставьте заявку на сотрудничество с ПроХук: расскажите о вашей компании, и мы свяжемся с вами.",
   undefined,
   {
     index: true,
@@ -95,7 +95,7 @@ async function submit() {
           <span class="partner-check" aria-hidden="true">✓</span>
           <h2>Заявка отправлена</h2>
           <p>
-            Спасибо за интерес к Прохук. Мы свяжемся с вами по указанному
+            Спасибо за интерес к ПроХук. Мы свяжемся с вами по указанному
             телефону.
           </p>
           <NuxtLink to="/" class="button button--secondary"
@@ -228,7 +228,7 @@ async function submit() {
           }}</UiButton>
         </form>
       </section>
-      <aside class="partner-visual" aria-label="Партнёрство с Прохук">
+      <aside class="partner-visual" aria-label="Партнёрство с ПроХук">
         <span class="partner-wordmark">ПРОХУК</span>
         <img src="/brand/mark-large.webp" alt="" width="600" height="600" />
         <div class="partner-visual__caption">

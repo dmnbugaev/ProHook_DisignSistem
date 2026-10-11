@@ -38,7 +38,7 @@ onBeforeUnmount(() => window.removeEventListener("scroll", onScroll));
     class="site-header app-header"
     :class="{ 'site-header--glass': scrolled || route.path !== '/' }"
   >
-    <NuxtLink to="/" class="brand-link" aria-label="Прохук — главная"
+    <NuxtLink to="/" class="brand-link" aria-label="ПроХук — главная"
       ><img src="/brand/mark.webp" width="40" height="40" alt=""
     /></NuxtLink>
     <nav class="desktop-nav" aria-label="Основная навигация">
@@ -184,6 +184,6 @@ onBeforeUnmount(() => window.removeEventListener("scroll", onScroll));
         ></NuxtLink
       >
     </nav>
-    <p class="caption">Прохук · Каталог товаров</p></UiDialog
+    <p class="caption">ПроХук · Каталог товаров</p></UiDialog
   >
 </template>

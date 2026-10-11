@@ -63,6 +63,7 @@ export function reservationCapForAvailability(
   availability: Availability,
 ): number {
   switch (availability) {
+    case "plenty":
     case "available":
       return RESERVATION_LIMITS.maxItemQuantity;
     case "low":

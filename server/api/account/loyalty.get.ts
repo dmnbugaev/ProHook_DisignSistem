@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
     return {
       status: "unlinked" as const,
       message:
-        "Бонусная карта пока не привязана. Получите карту Прохук в магазине — после этого баланс появится здесь автоматически.",
+        "Бонусная карта пока не привязана. Получите карту ПроХук в магазине — после этого баланс появится здесь автоматически.",
     };
   }
   const pass = await getTeycaPassByUserId(teycaClientId);

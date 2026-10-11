@@ -301,7 +301,7 @@ test("loyalty block explains a missing Teyca card without retry", async ({
       body: JSON.stringify({
         status: "unlinked",
         message:
-          "Бонусная карта пока не привязана. Получите карту Прохук в магазине.",
+          "Бонусная карта пока не привязана. Получите карту ПроХук в магазине.",
       }),
     });
   });

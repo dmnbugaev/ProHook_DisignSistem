@@ -7,7 +7,7 @@ import {
   pluralBonus,
 } from "~~/shared/utils/account";
 
-usePageSeo("Личный кабинет", "Бонусы Прохук и личные данные.");
+usePageSeo("Личный кабинет", "Бонусы ПроХук и личные данные.");
 const { user, staffInbox } = useSessionUser();
 
 // Инбокс сотрудников: свежие резервы и партнёрские заявки. Резервный канал
@@ -185,7 +185,7 @@ async function logout() {
               >Уровень: {{ loyalty.loyaltyLevel }}. </template
             ><template v-if="loyalty.discount"
               >Скидка по карте: {{ loyalty.discount }}. </template
-            >Бонусами можно оплатить до 100% покупки на кассе магазинов Прохук.
+            >Бонусами можно оплатить до 100% покупки на кассе магазинов ПроХук.
           </p>
         </template>
         <p v-else class="account-bonus--empty">{{ loyaltyMessage }}</p>

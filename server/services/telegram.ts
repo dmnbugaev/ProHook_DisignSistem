@@ -2,7 +2,7 @@ import { type Partnership } from "../../shared/utils/partnership";
 
 export function partnershipMessage(data: Partnership, id: string) {
   return [
-    "Новая заявка на партнёрство · Прохук",
+    "Новая заявка на партнёрство · ПроХук",
     `Заявка: ${id}`,
     "",
     `ФИО: ${data.name}`,

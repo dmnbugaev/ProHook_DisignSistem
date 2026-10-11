@@ -19,6 +19,7 @@ const folder = { id: "folder-1", name: "Снеки" };
 const chewFolder = { id: "folder-chew", name: "Жевательный табак" };
 const liquidFolder = { id: "folder-liq", name: "Жидкости" };
 const nbcFolder = { id: "folder-nbc", name: "НБС" };
+const teaFolder = { id: "folder-tea", name: "Китайский чай" };
 const reference = {
   meta: {
     href: "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/folder-1",
@@ -37,6 +38,11 @@ const liquidReference = {
 const nbcReference = {
   meta: {
     href: "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/folder-nbc",
+  },
+};
+const teaReference = {
+  meta: {
+    href: "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/folder-tea",
   },
 };
 const price = (name, value) => ({ priceType: { name }, value });
@@ -94,6 +100,14 @@ const products = [
     salePrices: [price("Цена продажи", 30000)],
     attributes: [{ id: "visible-field", value: true }],
   },
+  {
+    id: "product-7",
+    name: "Сяо Чжун красный чай",
+    archived: false,
+    productFolder: teaReference,
+    salePrices: [price("Цена продажи", 1900)],
+    attributes: [{ id: "visible-field", value: true }],
+  },
 ];
 let hasVisibilityField = true;
 globalThis.fetch = async (input) => {
@@ -113,7 +127,7 @@ globalThis.fetch = async (input) => {
         { id: "internal", name: "РЦ Саратов", pathName: "Саратов" },
       ]
     : path.endsWith("/entity/productfolder")
-      ? [folder, chewFolder, liquidFolder, nbcFolder]
+      ? [folder, chewFolder, liquidFolder, nbcFolder, teaFolder]
       : path.endsWith("/entity/product")
         ? products
         : path.endsWith("/entity/product/metadata/attributes")
@@ -162,6 +176,7 @@ test("visibility field, city prices, retail store mapping and legal policy", asy
     "Жидкость Тестовая 10 мл",
     "Паучи тестовые 4 мг",
     "Полное название публичного товара",
+    "Сяо Чжун красный чай",
   ]);
   assert.equal(snapshot.products[0].name, "Полное название публичного товара");
   assert.equal(
@@ -181,6 +196,20 @@ test("visibility field, city prices, retail store mapping and legal policy", asy
   const pouch = snapshot.products.find((product) => product.id === "product-4");
   // Паучи — регулируемая никотинсодержащая продукция (без табака).
   assert.equal(pouch.legalClass, "REGULATED_POUCH");
+  const tea = snapshot.products.find((product) => product.id === "product-7");
+  // Цена китайского чая в МойСклад — за 1 грамм и не пересчитывается
+  // (владелец, 11.10.2026): 1900 копеек = 19 ₽ / 1 г.
+  assert.equal(tea.unit, "1 г");
+  assert.equal(
+    tea.offers.every((offer) => offer.price === 1900),
+    true,
+  );
+  assert.equal(
+    snapshot.products
+      .filter((product) => product.id !== "product-7")
+      .every((product) => product.unit === "1 шт"),
+    true,
+  );
   const categoryNames = snapshot.meta.categories.map((item) => item.name);
   assert.ok(categoryNames.includes("Жевательный табак"));
   // Категория со скрытой публикацией не публикуется вместе с товарами.
@@ -214,10 +243,12 @@ test("visibility field, city prices, retail store mapping and legal policy", asy
     [140000, 120000, 120000, 120000, 120000, 120000],
   );
   const stocked = await fetchStock(snapshot);
+  // Пороги (владелец, 11.10.2026): 0 — «Скоро», 1 — «Мало»,
+  // 2–3 — «В наличии», 4+ — «Много».
   assert.equal(
     stocked.products[0].offers.find((offer) => offer.storeId === "store-1")
       ?.availability,
-    "low",
+    "available",
   );
   assert.equal(
     stocked.products[0].offers.find((offer) => offer.storeId === "store-2")
@@ -237,6 +268,7 @@ test("without the visibility field, all priced active products are included", as
     "Паучи тестовые 4 мг",
     "Полное название публичного товара",
     "Скрытый",
+    "Сяо Чжун красный чай",
   ]);
   assert.equal(
     snapshot.products.find((product) => product.name === "Скрытый")?.offers
@@ -296,11 +328,11 @@ test("stock uses warehouse IDs despite renamed or duplicate accounting names", a
     ).offers;
     assert.equal(
       offers.find((offer) => offer.storeId === "store-1").availability,
-      "available",
+      "plenty",
     );
     assert.equal(
       offers.find((offer) => offer.storeId === "store-2").availability,
-      "low",
+      "available",
     );
     assert.equal(
       offers.find((offer) => offer.storeId === "hidden-2").availability,

@@ -119,7 +119,7 @@
           "storeId": "store-2",
           "price": 120000,
           "currency": "RUB",
-          "availability": "available"
+          "availability": "plenty"
         },
         {
           "storeId": "store-3",
@@ -145,13 +145,13 @@
           "storeId": "store-1",
           "price": 180000,
           "currency": "RUB",
-          "availability": "available"
+          "availability": "plenty"
         },
         {
           "storeId": "store-2",
           "price": 180000,
           "currency": "RUB",
-          "availability": "low"
+          "availability": "available"
         }
       ],
       "publishedAt": "2026-09-24T12:00:00Z"
@@ -177,13 +177,13 @@
           "storeId": "store-1",
           "price": 60000,
           "currency": "RUB",
-          "availability": "available"
+          "availability": "plenty"
         },
         {
           "storeId": "store-2",
           "price": 60000,
           "currency": "RUB",
-          "availability": "available"
+          "availability": "plenty"
         },
         {
           "storeId": "store-3",
@@ -209,13 +209,13 @@
           "storeId": "store-1",
           "price": 80000,
           "currency": "RUB",
-          "availability": "low"
+          "availability": "available"
         },
         {
           "storeId": "store-2",
           "price": 80000,
           "currency": "RUB",
-          "availability": "available"
+          "availability": "plenty"
         }
       ],
       "publishedAt": "2026-09-22T12:00:00Z"
@@ -235,7 +235,7 @@
           "storeId": "store-3",
           "price": 55000,
           "currency": "RUB",
-          "availability": "available"
+          "availability": "plenty"
         }
       ],
       "publishedAt": "2026-09-21T12:00:00Z"
@@ -285,7 +285,7 @@
     "p1": {
       "store-1": 0,
       "store-2": 12,
-      "store-3": 3
+      "store-3": 1
     },
     "p2": {
       "store-1": 5,

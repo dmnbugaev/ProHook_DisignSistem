@@ -121,7 +121,7 @@ test.describe("mobile interaction audit", () => {
     await expect(picker).not.toBeVisible();
     await expect(
       page.locator(".product-detail__info .availability"),
-    ).toContainText("В наличии");
+    ).toContainText("Много в наличии");
   });
 
   test("keyboard: tab order reaches main controls, focus is visible", async ({

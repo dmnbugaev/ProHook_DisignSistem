@@ -88,7 +88,7 @@ async function fallbackToMoySkladTask(
   data: Partnership,
 ) {
   const created = await notifyStaffViaMoySklad(
-    `Прохук · партнёрство ${application.publicId}`,
+    `ПроХук · партнёрство ${application.publicId}`,
     partnershipMessage(data, application.publicId),
   );
   if (!created) return;

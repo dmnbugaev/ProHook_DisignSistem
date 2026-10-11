@@ -1,8 +1,8 @@
-<template>
+вы<template>
   <UiContainer as="section" class="hero" aria-labelledby="hero-title">
     <div class="hero__copy">
       <p class="edition">
-        <span class="edition__dot" />Прохук / Визуальная система
+        <span class="edition__dot" />ПроХук / Визуальная система
       </p>
       <h1 id="hero-title">
         Характер.<br />
@@ -34,7 +34,7 @@
         <img
           class="hero__mark"
           src="/brand/mark-large.webp"
-          alt="Фирменный знак Прохук"
+          alt="Фирменный знак ПроХук"
           width="720"
           height="720"
           fetchpriority="high"

@@ -1,8 +1,8 @@
 <template>
   <UiContainer as="section" class="hero" aria-labelledby="hero-title">
     <div class="hero__copy">
-      <p class="edition"><span class="edition__dot" />Прохук / Каталог сети</p>
-      <h1 id="hero-title">Прохук.<br />Больше, чем<br />вейпшоп.</h1>
+      <p class="edition"><span class="edition__dot" />ПроХук / Каталог сети</p>
+      <h1 id="hero-title">ПроХук.<br />Больше, чем<br />вейпшоп.</h1>
       <p class="hero__intro">
         Информационный каталог товаров.<br />Выберите магазин, чтобы посмотреть
         ассортимент и наличие.
@@ -16,7 +16,7 @@
         <img
           class="hero__mark"
           src="/brand/mark-large.webp"
-          alt="Фирменный знак Прохук"
+          alt="Фирменный знак ПроХук"
           width="720"
           height="720"
           fetchpriority="high"
@@ -28,7 +28,7 @@
       </div>
     </div>
     <div class="hero__bottom">
-      <span>Каталог Прохук</span
+      <span>Каталог ПроХук</span
       ><span
         >Категории / Магазины
         <span class="small-mark" aria-hidden="true">✳</span></span

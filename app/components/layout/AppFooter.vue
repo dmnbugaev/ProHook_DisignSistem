@@ -20,13 +20,13 @@ function footerPhoneClick() {
           src="/brand/lockup.webp"
           width="120"
           height="120"
-          alt="Прохук"
+          alt="ПроХук"
           loading="lazy"
         />
-        <p class="caption">Прохук · Сеть магазинов</p>
+        <p class="caption">ПроХук · Сеть магазинов</p>
       </div>
       <nav aria-label="Навигация в подвале">
-        <h2>Прохук</h2>
+        <h2>ПроХук</h2>
         <NuxtLink to="/about">О нас</NuxtLink
         ><NuxtLink to="/stores">Магазины</NuxtLink
         ><NuxtLink to="/contacts">Контакты</NuxtLink
@@ -52,7 +52,7 @@ function footerPhoneClick() {
           {{ prohookContacts.hours }}<br />
           Информация на сайте предназначена для лиц старше 18 лет.
         </p>
-        <nav class="footer-socials" aria-label="Социальные сети Прохук">
+        <nav class="footer-socials" aria-label="Социальные сети ПроХук">
           <a
             :href="prohookContacts.vk"
             class="text-link"
@@ -83,7 +83,7 @@ function footerPhoneClick() {
     </div>
     <div class="footer-bottom">
       <p class="footer-bottom__legal">
-        <span>© 2026 Прохук · {{ sellerRequisites.shortName }}</span>
+        <span>© 2026 ПроХук · {{ sellerRequisites.shortName }}</span>
         <span>ИНН {{ sellerRequisites.inn }}</span>
         <span>ОГРНИП {{ sellerRequisites.ogrnip }}</span>
       </p>

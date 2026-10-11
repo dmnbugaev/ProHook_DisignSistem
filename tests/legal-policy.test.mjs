@@ -70,7 +70,8 @@ test("root category classification", () => {
   assert.equal(classifyRootCategory("КАЛЬЯНЫ"), "REGULATED_HOOKAH");
   // Безтабачные паучи (подтверждено владельцем) — оборот разрешён.
   assert.equal(classifyRootCategory("жевательный табак"), "REGULATED_POUCH");
-  assert.equal(classifyRootCategory("СИГАРЕТЫ"), "BANNED_FROM_SITE");
+  // Сигареты публикуются по решению владельца 11.10.2026 (ранее скрыты).
+  assert.equal(classifyRootCategory("СИГАРЕТЫ"), "REGULATED_TOBACCO");
   assert.equal(classifyRootCategory("нбс"), "BANNED_FROM_SITE");
   // Пищевые ароматизаторы — публикация подтверждена владельцем 10.10.2026.
   assert.equal(classifyRootCategory("Ароматизаторы"), "UNREGULATED");

@@ -2,16 +2,16 @@
   <UiContainer as="section" class="section"
     ><div class="feature-block">
       <div>
-        <p class="eyebrow">Прохук / О сети</p>
+        <p class="eyebrow">ПроХук / О сети</p>
         <h2>Магазин рядом.<br />Каталог под рукой.</h2>
       </div>
       <div>
         <p>
-          Прохук — сеть специализированных магазинов. В каталоге собраны
+          ПроХук — сеть специализированных магазинов. В каталоге собраны
           устройства, расходные материалы, аксессуары, напитки и снеки. Сведения
           о наличии доступны по выбранной точке.
         </p>
-        <NuxtLink to="/about" class="text-link">О Прохук ↗</NuxtLink>
+        <NuxtLink to="/about" class="text-link">О ПроХук ↗</NuxtLink>
       </div>
     </div>
     <div class="advantages">

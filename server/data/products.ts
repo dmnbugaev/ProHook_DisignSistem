@@ -77,7 +77,9 @@ export const products: Product[] = Array.from({ length: 28 }, (_, index) => {
           ? "unavailable"
           : (index + storeIndex) % 4 === 0
             ? "low"
-            : "available",
+            : (index + storeIndex) % 5 === 0
+              ? "plenty"
+              : "available",
     })),
     legalClass: "UNREGULATED",
     publishedAt: `2026-09-${String(index + 1).padStart(2, "0")}T12:00:00Z`,

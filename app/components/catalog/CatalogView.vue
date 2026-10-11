@@ -30,7 +30,7 @@ const title = computed(() =>
 const description = computed(
   () =>
     category.value?.description ??
-    "Товары Прохук: категории, цены и наличие по магазинам.",
+    "Товары ПроХук: категории, цены и наличие по магазинам.",
 );
 usePageSeo(title, description);
 const parents = computed(
@@ -120,7 +120,7 @@ onMounted(() => {
       ← Назад{{ parent ? `: ${parent.name}` : " в каталог" }}</NuxtLink
     >
     <div class="page-heading">
-      <p class="eyebrow">Прохук / Каталог</p>
+      <p class="eyebrow">ПроХук / Каталог</p>
       <h1>{{ title }}</h1>
       <p>{{ description }}</p>
     </div>
@@ -135,7 +135,7 @@ onMounted(() => {
         v-for="child in children"
         :key="child.id"
         :to="`/catalog/${child.slug}`"
-        >{{ child.name }} ↗</NuxtLink
+        >{{ child.name }}</NuxtLink
       >
     </nav>
     <div class="catalog-store">

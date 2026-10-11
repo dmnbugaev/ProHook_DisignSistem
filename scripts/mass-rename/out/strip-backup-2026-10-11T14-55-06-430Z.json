@@ -1,0 +1,366 @@
+[
+  {
+    "id": "0df37ed9-752f-11f1-0a80-152a000a2391",
+    "folder": "Снеки / Kinder Surprise",
+    "baseName": "Kinder Surprise Joy Spider Man",
+    "siteName": "Снек Kinder Surprise Joy Spider-Man",
+    "next": "Kinder Surprise Joy Spider-Man"
+  },
+  {
+    "id": "2876ab1b-b14b-11f1-0a80-1074002575f7",
+    "folder": "Кальяны / Табак для кальяна",
+    "baseName": "Element земля 25g",
+    "siteName": "Табак для кальяна Element Земля, 25 г",
+    "next": "Element Земля, 25 г"
+  },
+  {
+    "id": "346b7943-a054-11f1-0a80-18c70006d2ae",
+    "folder": "Снеки / Kinder Surprise",
+    "baseName": "Kinder Surprise Joy One Piece",
+    "siteName": "Снек Kinder Surprise Joy One Piece",
+    "next": "Kinder Surprise Joy One Piece"
+  },
+  {
+    "id": "35f995d8-b136-11f1-0a80-035000252c43",
+    "folder": "Кальяны / Аксессуары для кальяна",
+    "baseName": "Njn N1",
+    "siteName": "Аксессуар для кальяна NJN N1",
+    "next": "NJN N1"
+  },
+  {
+    "id": "3eef590d-5d9a-11f1-0a80-17a9002e89fe",
+    "folder": "Напитки",
+    "baseName": "Toxic Waste Energy Sour Apple (Токсик Вейст Энерджи Кислое Яблоко) 500мл",
+    "siteName": "Напиток Toxic Waste Energy Sour Apple, 500 мл",
+    "next": "Toxic Waste Energy Sour Apple, 500 мл"
+  },
+  {
+    "id": "5674417f-f2ca-11f0-0a80-1472000b84a3",
+    "folder": "Жевательный табак",
+    "baseName": "ARQA",
+    "siteName": "Жевательный табак ARQA",
+    "next": "ARQA"
+  },
+  {
+    "id": "5c04cf6d-537d-11f1-0a80-04d30010c8b4",
+    "folder": "Снеки / Kinder Surprise",
+    "baseName": "Kinder Surprise Star Wars",
+    "siteName": "Снек Kinder Surprise Star Wars",
+    "next": "Kinder Surprise Star Wars"
+  },
+  {
+    "id": "5d71b47f-be57-11f1-0a80-0652001af0bf",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Банановая жвачка",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, банановая жвачка",
+    "next": "Inflave Onyx Pro Strong 28000, банановая жвачка"
+  },
+  {
+    "id": "5d768e25-be57-11f1-0a80-0652001af0c2",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Яблоко Красная смородина",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, яблоко красная смородина",
+    "next": "Inflave Onyx Pro Strong 28000, яблоко красная смородина"
+  },
+  {
+    "id": "5d7ad4d8-be57-11f1-0a80-0652001af0c5",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Земляника Мята",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, земляника мята",
+    "next": "Inflave Onyx Pro Strong 28000, земляника мята"
+  },
+  {
+    "id": "5d7fe90f-be57-11f1-0a80-0652001af0c8",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Вишня Лайм",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, вишня лайм",
+    "next": "Inflave Onyx Pro Strong 28000, вишня лайм"
+  },
+  {
+    "id": "5d846995-be57-11f1-0a80-0652001af0cb",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Виноград Алоэ",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, виноград алоэ",
+    "next": "Inflave Onyx Pro Strong 28000, виноград алоэ"
+  },
+  {
+    "id": "5d89a655-be57-11f1-0a80-0652001af0ce",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Манговый лимонад",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, манговый лимонад",
+    "next": "Inflave Onyx Pro Strong 28000, манговый лимонад"
+  },
+  {
+    "id": "5d8dd014-be57-11f1-0a80-0652001af0d1",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Клубничный мохито",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, клубничный мохито",
+    "next": "Inflave Onyx Pro Strong 28000, клубничный мохито"
+  },
+  {
+    "id": "5d92e1af-be57-11f1-0a80-0652001af0d4",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Клубника Сицилийский апельсин",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, клубника сицилийский апельсин",
+    "next": "Inflave Onyx Pro Strong 28000, клубника сицилийский апельсин"
+  },
+  {
+    "id": "5d97c8b3-be57-11f1-0a80-0652001af0d7",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Лесная черника",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, лесная черника",
+    "next": "Inflave Onyx Pro Strong 28000, лесная черника"
+  },
+  {
+    "id": "5d9c887c-be57-11f1-0a80-0652001af0da",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Мятное драже",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, мятное драже",
+    "next": "Inflave Onyx Pro Strong 28000, мятное драже"
+  },
+  {
+    "id": "5da1062d-be57-11f1-0a80-0652001af0dd",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Холодная мята",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, холодная мята",
+    "next": "Inflave Onyx Pro Strong 28000, холодная мята"
+  },
+  {
+    "id": "5da5a86e-be57-11f1-0a80-0652001af0e0",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Клюква Апельсин",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, клюква апельсин",
+    "next": "Inflave Onyx Pro Strong 28000, клюква апельсин"
+  },
+  {
+    "id": "5daa3574-be57-11f1-0a80-0652001af0e3",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Зеленое яблоко Лемонграсс",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, зеленое яблоко лемонграсс",
+    "next": "Inflave Onyx Pro Strong 28000, зеленое яблоко лемонграсс"
+  },
+  {
+    "id": "5daf0121-be57-11f1-0a80-0652001af0e6",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Малиновый лимонад",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, малиновый лимонад",
+    "next": "Inflave Onyx Pro Strong 28000, малиновый лимонад"
+  },
+  {
+    "id": "5db37ca8-be57-11f1-0a80-0652001af0e9",
+    "folder": "Одноразовые ЭС / INFLAVE / ONYX PRO 28000 STRONG",
+    "baseName": "INFLAVE ONYX PRO STRONG 28000 - Кислая черная смородина",
+    "siteName": "Одноразовая ЭС Inflave Onyx Pro Strong 28000, кислая черная смородина",
+    "next": "Inflave Onyx Pro Strong 28000, кислая черная смородина"
+  },
+  {
+    "id": "6eeffa9d-9240-11f1-0a80-005f0006f0ab",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Арбуз Мята Лед / Ледяной Арбуз Мята",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, арбуз мята лед",
+    "next": "Funky Lands x Lost Mary Viper 30000, арбуз мята лед"
+  },
+  {
+    "id": "6ef35c93-9240-11f1-0a80-005f0006f0af",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Гранатовый всплеск / Гранатовый взрыв",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, гранатовый всплеск",
+    "next": "Funky Lands x Lost Mary Viper 30000, гранатовый всплеск"
+  },
+  {
+    "id": "6ef6602d-9240-11f1-0a80-005f0006f0b3",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Грушевый Лимонад",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, грушевый лимонад",
+    "next": "Funky Lands x Lost Mary Viper 30000, грушевый лимонад"
+  },
+  {
+    "id": "6efb5b7c-9240-11f1-0a80-005f0006f0b7",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Кислая Ежевика лед",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, кислая ежевика лед",
+    "next": "Funky Lands x Lost Mary Viper 30000, кислая ежевика лед"
+  },
+  {
+    "id": "6efe9220-9240-11f1-0a80-005f0006f0bb",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Кислая Клубника Питайя",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, кислая клубника питайя",
+    "next": "Funky Lands x Lost Mary Viper 30000, кислая клубника питайя"
+  },
+  {
+    "id": "6f01a9fc-9240-11f1-0a80-005f0006f0bf",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Кислое яблоко с вишней",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, кислое яблоко с вишней",
+    "next": "Funky Lands x Lost Mary Viper 30000, кислое яблоко с вишней"
+  },
+  {
+    "id": "6f04f41c-9240-11f1-0a80-005f0006f0c3",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Кислый виноград со льдом",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, кислый виноград со льдом",
+    "next": "Funky Lands x Lost Mary Viper 30000, кислый виноград со льдом"
+  },
+  {
+    "id": "6f081021-9240-11f1-0a80-005f0006f0c7",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Китайский Зелёный Чай",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, китайский зелёный чай",
+    "next": "Funky Lands x Lost Mary Viper 30000, китайский зелёный чай"
+  },
+  {
+    "id": "6f0b2b80-9240-11f1-0a80-005f0006f0cb",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Клубника Киви",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, клубника киви",
+    "next": "Funky Lands x Lost Mary Viper 30000, клубника киви"
+  },
+  {
+    "id": "6f0e606b-9240-11f1-0a80-005f0006f0cf",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Леденец Кислая Ежевика",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, леденец кислая ежевика",
+    "next": "Funky Lands x Lost Mary Viper 30000, леденец кислая ежевика"
+  },
+  {
+    "id": "6f1180a3-9240-11f1-0a80-005f0006f0d3",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Ледяной арбуз",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, ледяной арбуз",
+    "next": "Funky Lands x Lost Mary Viper 30000, ледяной арбуз"
+  },
+  {
+    "id": "6f14d40e-9240-11f1-0a80-005f0006f0d7",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Лимон Лайм Грейпфрут",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, лимон лайм грейпфрут",
+    "next": "Funky Lands x Lost Mary Viper 30000, лимон лайм грейпфрут"
+  },
+  {
+    "id": "6f17f75d-9240-11f1-0a80-005f0006f0db",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Лимон Лайм Чай со льдом",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, лимон лайм чай со льдом",
+    "next": "Funky Lands x Lost Mary Viper 30000, лимон лайм чай со льдом"
+  },
+  {
+    "id": "6f1b5a9e-9240-11f1-0a80-005f0006f0df",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Малина Апельсин",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, малина апельсин",
+    "next": "Funky Lands x Lost Mary Viper 30000, малина апельсин"
+  },
+  {
+    "id": "6f1e6b3a-9240-11f1-0a80-005f0006f0e3",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Малина Клубника",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, малина клубника",
+    "next": "Funky Lands x Lost Mary Viper 30000, малина клубника"
+  },
+  {
+    "id": "6f219244-9240-11f1-0a80-005f0006f0e7",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Черника Малина Лед",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, черника малина лед",
+    "next": "Funky Lands x Lost Mary Viper 30000, черника малина лед"
+  },
+  {
+    "id": "6f249319-9240-11f1-0a80-005f0006f0eb",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Черника Роза Мята / Ледяная Голубая Роза",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, черника роза мята",
+    "next": "Funky Lands x Lost Mary Viper 30000, черника роза мята"
+  },
+  {
+    "id": "6f291c4c-9240-11f1-0a80-005f0006f0ef",
+    "folder": "Одноразовые ЭС / Funky Lands x Lost Mary / VIPER 30000",
+    "baseName": "ОЭСДН Funky Lands x Lost Mary VIPER 30000 - Ягодный чай",
+    "siteName": "Одноразовая ЭС Funky Lands x Lost Mary Viper 30000, ягодный чай",
+    "next": "Funky Lands x Lost Mary Viper 30000, ягодный чай"
+  },
+  {
+    "id": "8f64e8b1-97b2-11f1-0a80-036300063378",
+    "folder": "Одноразовые ЭС / IZI / IZI QM 10 000 PUFFS",
+    "baseName": "ЭСДН IZI QM 10 000 PUFFS ЗЕЛЕНЫЙ ЧАЙ МЯТА",
+    "siteName": "Одноразовая ЭС IZI QM 10000, зеленый чай мята",
+    "next": "IZI QM 10000, зеленый чай мята"
+  },
+  {
+    "id": "8f6888a9-97b2-11f1-0a80-03630006337c",
+    "folder": "Одноразовые ЭС / IZI / IZI QM 10 000 PUFFS",
+    "baseName": "ЭСДН IZI QM 10 000 PUFFS КИСЛЫЙ ЛИМОН",
+    "siteName": "Одноразовая ЭС IZI QM 10000, кислый лимон",
+    "next": "IZI QM 10000, кислый лимон"
+  },
+  {
+    "id": "8f6c5581-97b2-11f1-0a80-036300063380",
+    "folder": "Одноразовые ЭС / IZI / IZI QM 10 000 PUFFS",
+    "baseName": "ЭСДН IZI QM 10 000 PUFFS КИСЛЫЙ ПОМЕЛО",
+    "siteName": "Одноразовая ЭС IZI QM 10000, кислый помело",
+    "next": "IZI QM 10000, кислый помело"
+  },
+  {
+    "id": "8f710629-97b2-11f1-0a80-036300063384",
+    "folder": "Одноразовые ЭС / IZI / IZI QM 10 000 PUFFS",
+    "baseName": "ЭСДН IZI QM 10 000 PUFFS МЯТА",
+    "siteName": "Одноразовая ЭС IZI QM 10000, мята",
+    "next": "IZI QM 10000, мята"
+  },
+  {
+    "id": "8f74bf0c-97b2-11f1-0a80-036300063388",
+    "folder": "Одноразовые ЭС / IZI / IZI QM 10 000 PUFFS",
+    "baseName": "ЭСДН IZI QM 10 000 PUFFS ТЕМНАЯ СЛИВА",
+    "siteName": "Одноразовая ЭС IZI QM 10000, темная слива",
+    "next": "IZI QM 10000, темная слива"
+  },
+  {
+    "id": "8f78bb56-97b2-11f1-0a80-03630006338c",
+    "folder": "Одноразовые ЭС / IZI / IZI QM 10 000 PUFFS",
+    "baseName": "ЭСДН IZI QM 10 000 PUFFS ХВОЙНЫЙ ЧАЙ",
+    "siteName": "Одноразовая ЭС IZI QM 10000, хвойный чай",
+    "next": "IZI QM 10000, хвойный чай"
+  },
+  {
+    "id": "92b4b823-9576-11f1-0a80-131300150414",
+    "folder": "Напитки / Monster Energy",
+    "baseName": "Hапиток Monster Energy MIXXD Punch 500 мл",
+    "siteName": "Напиток Monster Energy Mixxd Punch, 500 мл",
+    "next": "Monster Energy Mixxd Punch, 500 мл"
+  },
+  {
+    "id": "af075ad8-f2cd-11f0-0a80-0456000c6bf5",
+    "folder": "Жевательный табак",
+    "baseName": "Siberia ШВЕЦИЯ РЕПЛИКА",
+    "siteName": "Жевательный табак Siberia Швеция, реплика",
+    "next": "Siberia Швеция, реплика"
+  },
+  {
+    "id": "b41c33de-f2cb-11f0-0a80-0750000c8283",
+    "folder": "Жевательный табак",
+    "baseName": "KASTA",
+    "siteName": "Жевательный табак Kasta",
+    "next": "Kasta"
+  },
+  {
+    "id": "b5c1bc22-1862-11f1-0a80-019600056b0f",
+    "folder": "Устройства / Brusko",
+    "baseName": "Устройcтво Brusko Minican 5 (Без картриджа)",
+    "siteName": "Устройство Brusko Minican 5 без картриджа",
+    "next": "Brusko Minican 5 без картриджа"
+  },
+  {
+    "id": "c403393c-752e-11f1-0a80-152a000a1356",
+    "folder": "Снеки / Kinder Surprise",
+    "baseName": "Kinder Surprise Joy Stranger Things",
+    "siteName": "Снек Kinder Surprise Joy Stranger Things",
+    "next": "Kinder Surprise Joy Stranger Things"
+  },
+  {
+    "id": "d90ba54b-752e-11f1-0a80-1db8000b295b",
+    "folder": "Снеки / Kinder Surprise",
+    "baseName": "Kinder Surprise Joy Marvel",
+    "siteName": "Снек Kinder Surprise Joy Marvel",
+    "next": "Kinder Surprise Joy Marvel"
+  }
+]

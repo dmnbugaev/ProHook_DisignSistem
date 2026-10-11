@@ -271,6 +271,7 @@ button.text-link {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
+  font-weight: var(--weight-bold);
 }
 .catalog-store {
   display: flex;

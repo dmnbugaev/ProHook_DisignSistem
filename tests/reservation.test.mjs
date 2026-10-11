@@ -198,6 +198,7 @@ test("normalizeSelectionItems merges duplicates, keeps totals and drops garbage"
 });
 
 test("availability buckets cap reservation quantity conservatively", () => {
+  assert.equal(reservationCapForAvailability("plenty"), 10);
   assert.equal(reservationCapForAvailability("available"), 10);
   assert.equal(reservationCapForAvailability("low"), 3);
   assert.equal(reservationCapForAvailability("unknown"), 3);

@@ -220,7 +220,7 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
       cityId: cityFor(item)!,
       name: item.name,
       // Нейтральный фолбэк: адрес точки показывается отдельной строкой.
-      description: item.description?.trim() || "Магазин сети Прохук",
+      description: item.description?.trim() || "Магазин сети ПроХук",
       ...(storeAddresses[item.id] || item.address?.trim()
         ? { address: storeAddresses[item.id] || item.address!.trim() }
         : {}),
@@ -344,13 +344,14 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
           src: `/api/products/${item.id}/images/${index}`,
           alt: `${name} — изображение ${index + 1}`,
         })),
-        // Фасовка по корневой категории: китайский чай продаётся порционно
-        // по 10 г (владелец, 10.10.2026), остальной ассортимент — по 1 шт.
+        // Единица цены по корневой категории: цена китайского чая в МойСклад
+        // указана за 1 грамм (владелец, 11.10.2026), остальной ассортимент —
+        // за 1 шт. Цена не пересчитывается.
         unit:
           rootFolderName(idOf(item.productFolder), folderMap)
             ?.trim()
             .toLocaleLowerCase("ru") === "китайский чай"
-            ? "10 г"
+            ? "1 г"
             : "1 шт",
         // Описание берётся из МойСклад как есть; пустое не подменяется
         // заглушкой — карточка просто не показывает блок «О товаре».
@@ -457,9 +458,11 @@ export async function fetchStock(snapshot: CatalogSnapshot): Promise<{
           availability:
             amount <= 0
               ? ("unavailable" as const)
-              : amount <= 3
+              : amount <= 1
                 ? ("low" as const)
-                : ("available" as const),
+                : amount <= 3
+                  ? ("available" as const)
+                  : ("plenty" as const),
         };
       }),
     };

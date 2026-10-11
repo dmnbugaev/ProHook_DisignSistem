@@ -19,7 +19,9 @@ const soldOut = computed(() => {
     offers.length > 0 &&
     !offers.some(
       (offer) =>
-        offer.availability === "available" || offer.availability === "low",
+        offer.availability === "plenty" ||
+        offer.availability === "available" ||
+        offer.availability === "low",
     )
   );
 });

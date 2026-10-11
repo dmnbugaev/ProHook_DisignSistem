@@ -23,7 +23,7 @@ const colors = [
       <div class="logo-specimen">
         <img
           src="/brand/lockup.webp"
-          alt="Прохук — полный логотип"
+          alt="ПроХук — полный логотип"
           width="360"
           height="360"
           loading="lazy"

@@ -61,7 +61,7 @@ const breadcrumbs = computed(() => [
 ]);
 usePageSeo(
   () => product.value?.name ?? "Товар",
-  () => product.value?.description || "Товар из каталога Прохук.",
+  () => product.value?.description || "Товар из каталога ПроХук.",
   () => product.value?.images[0]?.src ?? "/brand/lockup.webp",
 );
 // Переключение между товарами: стрелки ←/→ с клавиатуры в дополнение к

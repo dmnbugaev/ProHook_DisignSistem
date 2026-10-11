@@ -1,5 +1,6 @@
 import type { Product } from "../types/product";
 export const availabilityLabels = {
+  plenty: "Много в наличии",
   available: "В наличии",
   low: "Мало в наличии",
   /** Нулевой остаток: ассортимент пополняется, поэтому оптимистичная метка. */

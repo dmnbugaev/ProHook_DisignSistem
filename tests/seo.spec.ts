@@ -186,7 +186,7 @@ test("SSR главной для краулеров: без витрины кат
   expect(html).not.toContain("product-card");
   expect(html).not.toContain("Подставка");
   // Информационные секции главной доступны без гейта.
-  expect(html).toContain("Прохук");
+  expect(html).toContain("ПроХук");
   expect(html.toLowerCase()).toContain("<h1");
   expect(html).toContain("/stores");
 });
