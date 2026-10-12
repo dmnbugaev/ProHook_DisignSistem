@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { availabilityLabels, formatPrice } from "~~/shared/utils/product";
+import {
+  availabilityLabels,
+  formatPrice,
+  splitProductDescription,
+} from "~~/shared/utils/product";
 // Валидация до рендера и независимо от age gate: несуществующий товар
 // отвечает 404 всем, включая ботов (см. комментарий в catalog/[category].vue).
 definePageMeta({
@@ -35,6 +39,11 @@ const inList = computed(
 );
 const category = computed(() =>
   meta.value?.categories.find((item) => item.id === product.value?.categoryId),
+);
+// Совместимость приходит из МойСклад дописанной в конец описания —
+// показываем её отдельным блоком под текстом «О товаре».
+const about = computed(() =>
+  splitProductDescription(product.value?.description ?? ""),
 );
 const { data: related } = await useProducts(() => ({
   category: category.value?.slug,
@@ -224,7 +233,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
       </p>
       <section v-if="product.description" class="product-description">
         <h2>О товаре</h2>
-        <p>{{ product.description }}</p>
+        <p v-if="about.main">{{ about.main }}</p>
+        <p v-if="about.compatibility" class="product-description__compat">
+          <span class="product-description__compat-label"
+            >Совместимость:&nbsp;</span
+          >{{ about.compatibility }}
+        </p>
       </section>
       <section class="product-offers">
         <h2>По магазинам</h2>

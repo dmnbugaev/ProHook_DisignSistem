@@ -85,6 +85,26 @@ test("store changes availability and city price without losing the product", asy
   await expect(info.locator(".availability")).toHaveText("Мало в наличии");
 });
 
+test("product page separates compatibility from the description", async ({
+  page,
+}) => {
+  await open(page, "/product/stands-01");
+  const section = page.locator(".product-description");
+  await expect(section.locator("p").first()).toHaveText(
+    "Лаконичная подставка под устройство и флакон.",
+  );
+  // Совместимость приходит из МойСклад дописанной в описание — страница
+  // показывает её отдельным блоком с новой строки.
+  const compat = section.locator(".product-description__compat");
+  await expect(compat).toHaveText(
+    "Совместимость: Стойки ПроХук S и M, органайзер ПроХук XL.",
+  );
+  // Совместимость начинается с новой строки — ниже абзаца описания.
+  const paragraph = await section.locator("p").first().boundingBox();
+  const compatBox = await compat.boundingBox();
+  expect(compatBox.y).toBeGreaterThanOrEqual(paragraph.y + paragraph.height);
+});
+
 test("instant filters: availability is on by default, photo filter removed", async ({
   page,
 }) => {

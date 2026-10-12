@@ -963,6 +963,18 @@ button.text-link {
   max-width: 75ch;
   color: var(--text-secondary);
 }
+/* Совместимость из МойСклад — отдельным блоком с разделителем; pre-line
+   сохраняет переносы многострочных списков моделей. */
+.product-description__compat {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--separator);
+  white-space: pre-line;
+}
+.product-description__compat-label {
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+}
 .product-offers > p {
   margin-top: var(--space-4);
 }
