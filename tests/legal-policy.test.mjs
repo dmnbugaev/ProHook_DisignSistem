@@ -189,6 +189,83 @@ test("applyLegalPolicy hides banned and unclassified, keeps owner-written descri
   assert.deepEqual(twice.meta.categories, result.meta.categories);
 });
 
+test("energy drink folders under Напитки are hidden, soda folders stay", () => {
+  // Решение владельца 11.10.2026: напитки публикуются «все, кроме
+  // энергетиков» — скрыты четыре папки энергетиков под корнем «Напитки».
+  const categories = [
+    {
+      id: "drinks",
+      name: "Напитки",
+      slug: "drinks",
+      description: "",
+      parentId: null,
+    },
+    {
+      id: "7b4b66ef-37d4-11f1-0a80-1a0f003cd8b1",
+      name: "Monster Energy",
+      slug: "monster",
+      description: "",
+      parentId: "drinks",
+    },
+    {
+      id: "17a5d0a0-453c-11f1-0a80-0b9c00222c40",
+      name: "LitEnergy",
+      slug: "lit",
+      description: "",
+      parentId: "drinks",
+    },
+    {
+      id: "17d01010-453c-11f1-0a80-0b9c00222c6a",
+      name: "Scandalist",
+      slug: "scandalist",
+      description: "",
+      parentId: "drinks",
+    },
+    {
+      id: "d71e934e-43b6-11f1-0a80-14b8002312bf",
+      name: "HQD",
+      slug: "hqd-drinks",
+      description: "",
+      parentId: "drinks",
+    },
+    {
+      id: "cola",
+      name: "Coca Cola",
+      slug: "cola",
+      description: "",
+      parentId: "drinks",
+    },
+  ];
+  const products = [
+    product({
+      id: "monster-1",
+      categoryId: "7b4b66ef-37d4-11f1-0a80-1a0f003cd8b1",
+    }),
+    product({
+      id: "lit-1",
+      categoryId: "17a5d0a0-453c-11f1-0a80-0b9c00222c40",
+    }),
+    product({
+      id: "scandalist-1",
+      categoryId: "17d01010-453c-11f1-0a80-0b9c00222c6a",
+    }),
+    product({
+      id: "hqd-drink-1",
+      categoryId: "d71e934e-43b6-11f1-0a80-14b8002312bf",
+    }),
+    product({ id: "cola-1", categoryId: "cola" }),
+  ];
+  const result = applyLegalPolicy(snapshot(categories, products));
+  assert.deepEqual(
+    result.products.map((item) => item.id),
+    ["cola-1"],
+  );
+  assert.deepEqual(
+    result.meta.categories.map((item) => item.name),
+    ["Напитки", "Coca Cola"],
+  );
+});
+
 test("regional restrictions activate by date and filter store offers", () => {
   const saratovBan = REGIONAL_RESTRICTIONS.find((item) =>
     item.regions.includes("saratov"),
