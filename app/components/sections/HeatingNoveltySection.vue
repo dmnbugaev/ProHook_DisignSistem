@@ -116,7 +116,10 @@ const heatingCategorySlug = computed(() => {
   justify-items: center;
   align-items: center;
   padding: 12px 0;
-  background: rgba(255, 255, 255, 0.04);
+  /* Непрозрачный фон: стик в конце пролёта заезжает под устройство и
+     должен исчезать в нём, а не просвечивать (rgba 4% белого над
+     чёрным ≈ #0a0a0a). */
+  background: #0a0a0a;
   z-index: 1;
 }
 .heating-device__mark {
@@ -158,8 +161,11 @@ const heatingCategorySlug = computed(() => {
   background: var(--accent);
   will-change: transform, opacity;
   animation: heating-stick-arrive 3.6s cubic-bezier(0.22, 0.61, 0.24, 1)
-    infinite;
+    infinite backwards;
 }
+/* backwards: до старта отложенного цикла (delay 1.2/2.4 с) стик держит
+   кадр 0% (за сценой, прозрачный) — иначе первую секунду после загрузки
+   все стики висят видимыми в базовом положении. */
 .heating-stick--2 {
   animation-delay: 1.2s;
 }
