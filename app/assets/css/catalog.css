@@ -1696,3 +1696,57 @@ button.text-link {
     margin-block: calc(var(--space-3) * -1);
   }
 }
+
+/* Ненавязчивое подтверждение 18+ на страницах каталога: страница с
+ * общедоступным ассортиментом уже открыта, блок предлагает полный
+ * каталог (решение владельца 13.10.2026). */
+.age-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-block: var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--surface-subtle);
+}
+.age-notice__body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.age-notice__badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  font-size: 14px;
+  font-weight: var(--weight-extrabold);
+}
+.age-notice__text {
+  font-size: var(--font-caption);
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+.age-notice__title {
+  font-size: var(--font-body);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+.age-notice .button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .age-notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

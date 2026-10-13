@@ -1,9 +1,26 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // Юридические инварианты сайта: возрастной гейт не пропускает контент в
 // SSR-HTML, запрещённые категории не публикуются, на страницах каталога нет
 // лексики дистанционной продажи и стимулирования, юридические страницы
 // доступны без подтверждения возраста.
+
+/** Клик по кнопке подтверждения 18+ после окончания гидрации Vue. */
+async function confirmAgeByButton(page: Page) {
+  // SSR-разметка отвечает на ассерты и до гидрации, а клик по кнопке
+  // AgeNotice теряется, если Vue ещё не подключил обработчики.
+  await page.waitForFunction(
+    () =>
+      (
+        document.getElementById("__nuxt") as HTMLElement & {
+          __vue_app__?: { $nuxt?: { isHydrating: boolean } };
+        }
+      )?.__vue_app__?.$nuxt?.isHydrating === false,
+    undefined,
+    { timeout: 10_000 },
+  );
+  await page.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+}
 
 test("catalog content is absent from server HTML until age is confirmed", async ({
   page,
@@ -36,6 +53,10 @@ test("catalog content is absent from server HTML until age is confirmed", async 
 test("banned and unclassified categories are never published; pouches are published as regulated", async ({
   request,
 }) => {
+  // Состав каталога (в отличие от общедоступной выдачи) виден только с
+  // подтверждением 18+ — передаём его заголовком (request-фикстура не
+  // разделяет cookie контекста).
+  const headers = { cookie: "prohook-age-confirmed=true" };
   const meta = await (await request.get("/api/catalog/meta")).json();
   const names = meta.categories.map(
     (category: { name: string }) => category.name,
@@ -46,7 +67,9 @@ test("banned and unclassified categories are never published; pouches are publis
   expect(names).toContain("Ароматизаторы");
   // Паучи (подтверждено владельцем) публикуются как регулируемая категория.
   expect(names).toContain("Жевательный табак");
-  const list = await (await request.get("/api/products?limit=24")).json();
+  const list = await (
+    await request.get("/api/products?limit=24&available=0", { headers })
+  ).json();
   expect(list.total).toBe(6);
   const pouch = list.items.find(
     (item: { slug: string }) => item.slug === "chew-01",
@@ -57,6 +80,91 @@ test("banned and unclassified categories are never published; pouches are publis
   expect(pouch.description).toBe("Не публикуется для регулируемого класса.");
   const banned = await request.get("/api/products/nbc-01");
   expect(banned.status()).toBe(404);
+});
+
+test("unregulated assortment is reachable before age confirmation; regulated stays gated", async ({
+  page,
+  request,
+}) => {
+  // Решение владельца 13.10.2026: напитки, снеки, лапша, китайский чай,
+  // ароматизаторы и глицерин видны без подтверждения 18+ и без аккаунта.
+  // В фикстуре общедоступны «Блокноты» (под корнем «Напитки») и
+  // «Ароматизатор тестовый»; «Подставки» (корень «Другое») и паучи — нет.
+  const list = await (await request.get("/api/products?available=0")).json();
+  expect(list.total).toBe(3);
+  expect(list.items.map((item: { slug: string }) => item.slug).sort()).toEqual([
+    "aroma-01",
+    "notebooks-01",
+    "notebooks-02",
+  ]);
+  // Регулируемый товар существует, но до подтверждения — 403 (не 404:
+  // страница товара показывает блок подтверждения); отсутствующий — 404.
+  expect((await request.get("/api/products/stands-01")).status()).toBe(403);
+  expect((await request.get("/api/products/missing")).status()).toBe(404);
+  expect(
+    (
+      await request.get("/api/products/stands-01", {
+        headers: { cookie: "prohook-age-confirmed=true" },
+      })
+    ).status(),
+  ).toBe(200);
+  // Изображения общедоступных товаров не требуют взрослой сессии в API;
+  // прямой URL изображения регулируемого товара закрыт 403.
+  const notebookPublic = list.items.find(
+    (item: { slug: string }) => item.slug === "notebooks-01",
+  );
+  expect(notebookPublic.images.length).toBe(1);
+  expect(notebookPublic.imagesRestricted).toBeUndefined();
+  expect((await request.get("/api/products/p1/images/0")).status()).toBe(403);
+
+  // Страница каталога рендерится без модального гейта: карточки
+  // общедоступных товаров видны, регулируемые не показываются.
+  await page.goto("/catalog");
+  await expect(
+    page.getByRole("dialog", { name: "Вам уже исполнилось 18 лет?" }),
+  ).not.toBeVisible();
+  await expect(page.locator(".product-card")).toHaveCount(3);
+  // Навигация категорий до подтверждения — только общедоступные корни.
+  await expect(
+    page.getByRole("navigation", { name: "Категории каталога" }),
+  ).toContainText("Напитки");
+  await expect(page.getByText("Другое")).toHaveCount(0);
+  await expect(page.getByText("Жевательный табак")).toHaveCount(0);
+  await expect(page.getByText("Подставка 02")).toHaveCount(0);
+  // Подтверждение по кнопке на странице открывает полный каталог
+  // без перезагрузки.
+  await confirmAgeByButton(page);
+  await expect(page.getByText("Подставка 02").first()).toBeVisible();
+
+  // Карточка общедоступного товара открыта анонимно (с изображением),
+  // регулируемого — показывает блок подтверждения, а не 404.
+  await page.context().clearCookies({ name: "prohook-age-confirmed" });
+  await page.goto("/product/notebooks-01");
+  await expect(page.getByRole("heading", { name: "Блокнот 01" })).toBeVisible();
+  await expect(page.locator(".product-gallery img").first()).toBeVisible();
+  await page.goto("/product/stands-01");
+  await expect(page.getByRole("heading", { name: "Подставка 01" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("note").getByText("Карточка доступна после"),
+  ).toBeVisible();
+  await confirmAgeByButton(page);
+  // Подтверждение запускает дозагрузку товара — под нагрузкой полного
+  // прогона она может выходить за дефолтные 5 секунд.
+  await expect(page.getByRole("heading", { name: "Подставка 01" })).toBeVisible(
+    { timeout: 15000 },
+  );
+
+  // Регулируемая категория до подтверждения — блок 18+ вместо выдачи.
+  await page.context().clearCookies({ name: "prohook-age-confirmed" });
+  await page.goto("/catalog/objects");
+  await expect(
+    page
+      .getByRole("note")
+      .getByText("Эта часть каталога доступна после подтверждения"),
+  ).toBeVisible();
+  await expect(page.locator(".product-card")).toHaveCount(0);
 });
 
 test("legal pages are reachable without the age gate", async ({ page }) => {

@@ -3,10 +3,6 @@ import { getCatalogSnapshot } from "../../../../services/catalog-cache";
 import { canViewProductImages } from "../../../../utils/session";
 
 export default defineEventHandler(async (event) => {
-  // Серверный возрастной гейт: прямой URL изображения не открывается без
-  // сессии совершеннолетнего пользователя (cookie гейта — не подтверждение).
-  if (!(await canViewProductImages(event)))
-    throw createError({ statusCode: 403, statusMessage: "Adults only" });
   const slug = getRouterParam(event, "slug") || "";
   const index = Number(getRouterParam(event, "index"));
   const catalog = await getCatalogSnapshot();
@@ -18,6 +14,12 @@ export default defineEventHandler(async (event) => {
     index >= product.images.length
   )
     throw createError({ statusCode: 404, statusMessage: "Image not found" });
+  // Серверный возрастной гейт: изображения регулируемых товаров не
+  // открываются без сессии совершеннолетнего пользователя (cookie гейта —
+  // не подтверждение). Общедоступные товары (возрастное ограничение не
+  // действует, решение владельца 13.10.2026) доступны всем.
+  if (!product.agePublic && !(await canViewProductImages(event)))
+    throw createError({ statusCode: 403, statusMessage: "Adults only" });
   try {
     const response = await fetchProductImage(slug, index);
     setHeader(
@@ -25,12 +27,20 @@ export default defineEventHandler(async (event) => {
       "Content-Type",
       response.headers.get("content-type") || "image/jpeg",
     );
-    // Ответ зависит от сессии — общий кеш прокси не должен его захватывать.
-    setHeader(
-      event,
-      "Cache-Control",
-      "private, max-age=300, stale-while-revalidate=3600",
-    );
+    if (product.agePublic) {
+      // Ответ не зависит от сессии — можно кешировать публично.
+      setHeader(
+        event,
+        "Cache-Control",
+        "public, max-age=3600, stale-while-revalidate=86400",
+      );
+    } else {
+      setHeader(
+        event,
+        "Cache-Control",
+        "private, max-age=300, stale-while-revalidate=3600",
+      );
+    }
     return Buffer.from(await response.arrayBuffer());
   } catch {
     throw createError({ statusCode: 502, statusMessage: "Image unavailable" });

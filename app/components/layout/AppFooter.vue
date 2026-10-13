@@ -3,9 +3,15 @@ import { prohookContacts } from "~~/shared/content/prohook";
 import { sellerRequisites } from "~~/shared/content/legal";
 
 const { data } = await useCatalogMeta();
-const categories = computed(
-  () =>
-    data.value?.categories.filter((item) => !item.parentId).slice(0, 8) ?? [],
+const ageConfirmed = useAgeConfirmed();
+// До подтверждения 18+ в подвале только общедоступные корневые категории —
+// как в навигации каталога (регулируемые разделы за гейтом).
+const categories = computed(() =>
+  (
+    data.value?.categories.filter(
+      (item) => !item.parentId && (ageConfirmed.value || item.agePublic),
+    ) ?? []
+  ).slice(0, 8),
 );
 const { openSettings: openConsentSettings } = useConsentSettings();
 function footerPhoneClick() {

@@ -3,11 +3,15 @@ import type { Product } from "../../shared/types/product";
 
 /**
  * Серверное скрытие изображений для пользователей без подтверждённого
- * совершеннолетия (не вошёл или младше 18). Срез выполняется на уровне
- * API каталога, а сам прокси изображений дополнительно проверяет сессию —
- * прямой URL без взрослой сессии возвращает 403.
+ * совершеннолетия (не вошёл или младше 18). Общедоступные товары
+ * (agePublic: напитки, снеки, лапша, чай, ароматизаторы, глицерин —
+ * решение владельца 13.10.2026) изображения сохраняют: их витрина не
+ * ограничена по возрасту. Срез выполняется на уровне API каталога, а сам
+ * прокси изображений дополнительно проверяет доступ — прямой URL
+ * регулируемого товара без взрослой сессии возвращает 403.
  */
 export function restrictProductImages<T extends Product>(product: T): T {
+  if (product.agePublic) return product;
   return { ...product, images: [], imagesRestricted: true };
 }
 
@@ -24,7 +28,7 @@ export function restrictMetaImages(meta: CatalogMeta): CatalogMeta {
     categories: meta.categories.map((category) => ({
       ...category,
       // undefined выпадает из JSON-ответа, а UI проверяет на truthy.
-      image: undefined,
+      image: category.agePublic ? category.image : undefined,
     })),
   };
 }

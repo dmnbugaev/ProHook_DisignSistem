@@ -5,8 +5,10 @@ import { createJiti } from "jiti";
 const jiti = createJiti(import.meta.url);
 const {
   classifyRootCategory,
+  AGE_PUBLIC_ROOT_CATEGORIES,
   HIDDEN_SUBCATEGORY_IDS,
   HIDDEN_PRODUCT_NAME_PREFIXES,
+  isAgePublicRootCategory,
 } = await jiti.import("../shared/legal/classification.ts");
 const { applyLegalPolicy, enforceRegionalRestrictions } = await jiti.import(
   "../shared/legal/catalog-policy.ts",
@@ -72,8 +74,9 @@ test("root category classification", () => {
   assert.equal(classifyRootCategory("жевательный табак"), "REGULATED_POUCH");
   // Сигареты публикуются по решению владельца 11.10.2026 (ранее скрыты).
   assert.equal(classifyRootCategory("СИГАРЕТЫ"), "REGULATED_TOBACCO");
-  // Снеки скрыты по решению владельца 11.10.2026.
-  assert.equal(classifyRootCategory("Снеки"), "BANNED_FROM_SITE");
+  // Снеки публикуются (решение 11.10 — убрать; отменено 13.10.2026) и
+  // входят в общедоступный ассортимент.
+  assert.equal(classifyRootCategory("Снеки"), "UNREGULATED");
   assert.equal(classifyRootCategory("нбс"), "BANNED_FROM_SITE");
   // Пищевые ароматизаторы — публикация подтверждена владельцем 10.10.2026.
   assert.equal(classifyRootCategory("Ароматизаторы"), "UNREGULATED");
@@ -264,6 +267,178 @@ test("energy drink folders under Напитки are hidden, soda folders stay", 
     result.meta.categories.map((item) => item.name),
     ["Напитки", "Coca Cola"],
   );
+});
+
+test("age-public assortment is exactly the owner list of 13.10.2026", () => {
+  // Решение владельца 13.10.2026: лапша, китайский чай, ароматизаторы,
+  // глицерин, снеки и напитки (без энергетиков — те скрыты папками)
+  // видны до подтверждения 18+. Состав множества проверяем явно:
+  // случайное расширение списка — юридически чувствительно.
+  assert.deepEqual([...AGE_PUBLIC_ROOT_CATEGORIES].sort(), [
+    "ароматизаторы",
+    "глицерин",
+    "китайский чай",
+    "лапша быстрого приготовления",
+    "напитки",
+    "снеки",
+  ]);
+  // Нормализация как в classifyRootCategory.
+  assert.equal(isAgePublicRootCategory("  Напитки "), true);
+  assert.equal(isAgePublicRootCategory("Китайский  Чай"), true);
+  // Регулируемые и неизвестные корни общедоступными не становятся.
+  assert.equal(isAgePublicRootCategory("Жидкости"), false);
+  assert.equal(isAgePublicRootCategory("Зажигалки"), false);
+  assert.equal(isAgePublicRootCategory("Новая категория"), false);
+  assert.equal(isAgePublicRootCategory(undefined), false);
+});
+
+test("applyLegalPolicy marks categories and products with agePublic by root", () => {
+  const categories = [
+    {
+      id: "drinks",
+      name: "Напитки",
+      slug: "drinks",
+      description: "",
+      parentId: null,
+    },
+    {
+      id: "cola",
+      name: "Coca Cola",
+      slug: "cola",
+      description: "",
+      parentId: "drinks",
+    },
+    {
+      id: "noodle",
+      name: "Лапша быстрого приготовления",
+      slug: "noodle",
+      description: "",
+      parentId: null,
+    },
+    {
+      id: "tea",
+      name: "Китайский чай",
+      slug: "tea",
+      description: "",
+      parentId: null,
+    },
+    {
+      id: "glycerin",
+      name: "Глицерин",
+      slug: "glycerin",
+      description: "",
+      parentId: null,
+    },
+    {
+      id: "snack",
+      name: "Снеки",
+      slug: "snack",
+      description: "",
+      parentId: null,
+    },
+    {
+      id: "aroma",
+      name: "Ароматизаторы",
+      slug: "aroma",
+      description: "",
+      parentId: null,
+    },
+    {
+      id: "liq",
+      name: "Жидкости",
+      slug: "liq",
+      description: "",
+      parentId: null,
+    },
+    {
+      id: "chew",
+      name: "Жевательный табак",
+      slug: "chew",
+      description: "",
+      parentId: null,
+    },
+  ];
+  const products = [
+    product({ id: "cola-1", categoryId: "cola" }),
+    product({ id: "noodle-1", categoryId: "noodle" }),
+    product({ id: "tea-1", categoryId: "tea" }),
+    product({ id: "glycerin-1", categoryId: "glycerin" }),
+    product({ id: "snack-1", categoryId: "snack" }),
+    product({ id: "aroma-1", categoryId: "aroma" }),
+    product({ id: "liq-1", categoryId: "liq" }),
+    product({ id: "chew-1", categoryId: "chew" }),
+  ];
+  const result = applyLegalPolicy(snapshot(categories, products));
+  const flag = (id) => result.products.find((item) => item.id === id).agePublic;
+  // Подкатегория наследует доступность корня (Coca Cola ← Напитки).
+  assert.equal(flag("cola-1"), true);
+  assert.equal(flag("noodle-1"), true);
+  assert.equal(flag("tea-1"), true);
+  assert.equal(flag("glycerin-1"), true);
+  assert.equal(flag("snack-1"), true);
+  assert.equal(flag("aroma-1"), true);
+  // Регулируемые классы остаются за гейтом.
+  assert.equal(flag("liq-1"), false);
+  assert.equal(flag("chew-1"), false);
+  const categoryFlag = (slug) =>
+    result.meta.categories.find((item) => item.slug === slug).agePublic;
+  assert.equal(categoryFlag("cola"), true);
+  assert.equal(categoryFlag("aroma"), true);
+  assert.equal(categoryFlag("liq"), false);
+  // Идемпотентность флага.
+  const twice = applyLegalPolicy(result);
+  assert.deepEqual(
+    twice.products.map((item) => [item.id, item.agePublic]),
+    result.products.map((item) => [item.id, item.agePublic]),
+  );
+});
+
+test("image restriction keeps photos of age-public products", async () => {
+  // Серверный срез изображений: общедоступные товары сохраняют фото для
+  // всех (включая анонимов), регулируемые — только для adult-сессий.
+  const { restrictProductImages, restrictMetaImages } = await jiti.import(
+    "../server/utils/product-images.ts",
+  );
+  const publicProduct = product({
+    id: "cola-1",
+    categoryId: "cola",
+    agePublic: true,
+    images: [{ id: "i", src: "/api/products/p/0", alt: "" }],
+  });
+  const restricted = restrictProductImages(publicProduct);
+  assert.equal(restricted.images.length, 1);
+  assert.equal(restricted.imagesRestricted, undefined);
+  const regulated = product({
+    id: "liq-1",
+    categoryId: "liq",
+    agePublic: false,
+    images: [{ id: "i", src: "/api/products/q/0", alt: "" }],
+  });
+  const stripped = restrictProductImages(regulated);
+  assert.deepEqual(stripped.images, []);
+  assert.equal(stripped.imagesRestricted, true);
+  // Обложки категорий: у общедоступных остаются, у остальных срезаются.
+  const meta = {
+    categories: [
+      {
+        ...publicProduct,
+        id: "cola",
+        slug: "cola",
+        agePublic: true,
+        image: "/api/products/p/0",
+      },
+      {
+        ...regulated,
+        id: "liq",
+        slug: "liq",
+        agePublic: false,
+        image: "/api/products/q/0",
+      },
+    ],
+  };
+  const metaResult = restrictMetaImages(meta);
+  assert.equal(metaResult.categories[0].image, "/api/products/p/0");
+  assert.equal(metaResult.categories[1].image, undefined);
 });
 
 test("regional restrictions activate by date and filter store offers", () => {

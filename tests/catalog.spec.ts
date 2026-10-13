@@ -1,14 +1,35 @@
 import { test, expect, type Page } from "@playwright/test";
 
 // Подтверждение 18+ сохраняется в cookie на год. Для детерминизма тестов
-// чистим cookie перед каждым заходом. Информационные страницы (/, /about,
-// /stores, /partners) гейт не показывают: подтверждаем возраст на каталоге
-// и переходим на целевую страницу.
+// выставляем cookie напрямую: на /catalog нет модального гейта (общедоступный
+// ассортимент открыт анонимно), а клик по кнопке AgeNotice до гидрации Vue
+// теряется. Само подтверждение кнопкой покрыто в legal.spec.
+async function waitForHydration(page: Page) {
+  // Полный каталог гидратируется дольше load-события: взаимодействия
+  // (ввод в фильтры цены) до гидрации затираются v-model.
+  await page.waitForFunction(
+    () =>
+      (
+        document.getElementById("__nuxt") as HTMLElement & {
+          __vue_app__?: { $nuxt?: { isHydrating: boolean } };
+        }
+      )?.__vue_app__?.$nuxt?.isHydrating === false,
+    undefined,
+    { timeout: 10_000 },
+  );
+}
 async function open(page: Page, path = "/catalog") {
   await page.context().clearCookies({ name: "prohook-age-confirmed" });
-  await page.goto("/catalog");
-  await page.getByRole("button", { name: "Мне 18 лет или больше" }).click();
-  if (path !== "/catalog") await page.goto(path);
+  await page.context().addCookies([
+    {
+      name: "prohook-age-confirmed",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
+  await page.goto(path);
+  await waitForHydration(page);
 }
 
 test.beforeEach(async ({ context }) => {
@@ -176,7 +197,11 @@ test("category descendants, search, missing image and API pagination", async ({
       name: "Изображение доступно только совершеннолетним пользователям",
     }),
   ).toBeVisible();
-  const response = await request.get("/api/products?limit=2&page=2");
+  // Полный состав каталога (6 позиций фикстуры) — только с подтверждением
+  // 18+; анонимный запрос вернул бы общедоступные 3.
+  const response = await request.get("/api/products?limit=2&page=2", {
+    headers: { cookie: "prohook-age-confirmed=true" },
+  });
   expect(response.ok()).toBe(true);
   expect(await response.json()).toMatchObject({
     total: 6,
@@ -209,7 +234,11 @@ test("page in URL survives the price-filter sync (pagination regression)", async
 });
 
 test("adjacent API returns category neighbours", async ({ request }) => {
-  const response = await request.get("/api/products/stands-01/adjacent");
+  // Соседи регулируемого товара до подтверждения 18+ не отдаются (403).
+  const headers = { cookie: "prohook-age-confirmed=true" };
+  const response = await request.get("/api/products/stands-01/adjacent", {
+    headers,
+  });
   expect(response.ok()).toBe(true);
   const { prev, next } = await response.json();
   expect(prev).toBeNull();

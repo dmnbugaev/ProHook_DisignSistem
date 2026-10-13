@@ -1,7 +1,10 @@
 import type { CatalogMeta } from "../../shared/types/catalog";
 import type { Product } from "../../shared/types/product";
 import type { Store } from "../../shared/types/store";
-import { applyLegalPolicy } from "../../shared/legal/catalog-policy";
+import {
+  applyLegalPolicy,
+  type PolicyCategory,
+} from "../../shared/legal/catalog-policy";
 import { storeAddresses } from "../data/store-addresses";
 import { storeHours } from "../data/store-hours";
 import { storeLicenses } from "../data/store-licenses";
@@ -267,7 +270,9 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
       id = idOf(folderMap.get(id)?.productFolder);
     }
   }
-  const categories: CatalogMeta["categories"] = folders
+  // legalClass и agePublic назначаются ниже централизованно
+  // (applyLegalPolicy).
+  const categories: PolicyCategory[] = folders
     .filter((folder) => usedFolders.has(folder.id) && !folder.archived)
     .map((folder) => ({
       id: folder.id,
@@ -277,7 +282,6 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
       parentId: idOf(folder.productFolder) ?? null,
     }));
   const categoryNames = new Map(categories.map((item) => [item.id, item.name]));
-  // legalClass назначается ниже централизованно (applyLegalPolicy).
   const products = visible
     .map((item) => {
       const siteNameValue = item.attributes?.find(

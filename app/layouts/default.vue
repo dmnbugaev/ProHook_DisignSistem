@@ -5,7 +5,11 @@
 // аккаунт (регистрация сама запрашивает дату рождения) и информационные
 // разделы, индексируемые поисковыми системами (/, /about, /stores,
 // /partners) — каталогозависимые секции на них скрываются на уровне самих
-// страниц (см. pages/index.vue).
+// страниц (см. pages/index.vue). Страницы каталога (/catalog, /product,
+// /search) рендерятся и до подтверждения: сервер отдаёт туда только
+// общедоступный ассортимент, а полный каталог открывается блоком
+// подтверждения на самой странице (AgeNotice) — модальный гейт на них
+// не показывается (решение владельца 13.10.2026).
 const PUBLIC_ROUTES = [
   "/",
   "/about",
@@ -19,6 +23,7 @@ const PUBLIC_ROUTES = [
   "/register",
   "/account",
 ];
+const CATALOG_ROUTES = /^\/(catalog|product|search)(?:\/|$)/;
 const ageCookie = useCookie<boolean | null>("prohook-age-confirmed", {
   maxAge: 60 * 60 * 24 * 365,
   sameSite: "lax",
@@ -30,7 +35,15 @@ watch(ageConfirmed, (value) => {
 const route = useRoute();
 const showcase = computed(() => route.path === "/design-system");
 const publicRoute = computed(() => PUBLIC_ROUTES.includes(route.path));
-const contentVisible = computed(() => ageConfirmed.value || publicRoute.value);
+const catalogRoute = computed(() => CATALOG_ROUTES.test(route.path));
+const contentVisible = computed(
+  () => ageConfirmed.value || publicRoute.value || catalogRoute.value,
+);
+// Модальный гейт остаётся только на маршрутах вне публичных и каталогных
+// (например, /reserve): там контент по-прежнему скрыт целиком.
+const gated = computed(
+  () => !ageConfirmed.value && !publicRoute.value && !catalogRoute.value,
+);
 const { data: meta } = await useCatalogMeta();
 const { store, pickerOpen, pickerDismissed, autoDetected, detect } =
   useStoreSelection();
@@ -67,11 +80,7 @@ onBeforeUnmount(() => noticeTimer && clearTimeout(noticeTimer));
 
 <template>
   <div>
-    <div
-      id="top"
-      :class="{ 'app-shell': !showcase }"
-      :inert="!ageConfirmed && !publicRoute"
-    >
+    <div id="top" :class="{ 'app-shell': !showcase }" :inert="gated">
       <a class="skip-link" href="#main">Перейти к содержимому</a>
       <SiteHeader v-if="showcase" />
       <template v-else>
@@ -89,8 +98,8 @@ onBeforeUnmount(() => noticeTimer && clearTimeout(noticeTimer));
       <SiteFooter v-if="showcase" />
       <AppFooter v-else />
     </div>
-    <AgeGate v-if="!publicRoute" v-model="ageConfirmed" />
-    <StorePicker v-if="ageConfirmed && !showcase" />
+    <AgeGate v-if="gated" v-model="ageConfirmed" />
+    <StorePicker v-if="(ageConfirmed || catalogRoute) && !showcase" />
     <!-- Баннер согласия на cookie: до подтверждения 18+ не показываем,
          чтобы не складывать два поверхностных слоя поверх гейта. -->
     <CookieConsent v-if="contentVisible || showcase" />

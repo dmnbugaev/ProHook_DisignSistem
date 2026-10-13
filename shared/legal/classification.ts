@@ -113,8 +113,10 @@ export const ROOT_CATEGORY_CLASSES: Record<string, LegalClass> = {
   глицерин: "ACCESSORY",
   зажигалки: "UNREGULATED",
   напитки: "UNREGULATED",
-  // Решение владельца 11.10.2026: категорию «Снеки» с сайта убрать.
-  снеки: "BANNED_FROM_SITE",
+  // Решение владельца 11.10.2026 — «Снеки» убрать; отменено 13.10.2026:
+  // снеки публикуются и входят в общедоступный ассортимент (см.
+  // AGE_PUBLIC_ROOT_CATEGORIES ниже).
+  снеки: "UNREGULATED",
   "лапша быстрого приготовления": "UNREGULATED",
   "китайский чай": "UNREGULATED",
   другое: "UNREGULATED",
@@ -146,6 +148,28 @@ export const ROOT_CATEGORY_CLASSES: Record<string, LegalClass> = {
 export function classifyRootCategory(name: string | undefined): LegalClass {
   const key = (name ?? "").trim().toLocaleLowerCase("ru").replace(/\s+/g, " ");
   return ROOT_CATEGORY_CLASSES[key] ?? "PENDING_REVIEW";
+}
+
+/**
+ * Общедоступный ассортимент — виден в каталоге ДО подтверждения 18+ и без
+ * входа в аккаунт (решение владельца 13.10.2026): продукты питания и
+ * бытовые позиции, продажа которых не ограничена по возрасту. Подкатегории
+ * наследуют доступность корня. Энергетики под «Напитками» уже скрыты
+ * (HIDDEN_SUBCATEGORY_IDS). Регулируемые классы остаются за гейтом.
+ */
+export const AGE_PUBLIC_ROOT_CATEGORIES: ReadonlySet<string> = new Set([
+  "напитки",
+  "снеки",
+  "лапша быстрого приготовления",
+  "китайский чай",
+  "ароматизаторы",
+  "глицерин",
+]);
+
+/** Категория (по имени корня) видна без подтверждения 18+. */
+export function isAgePublicRootCategory(name: string | undefined): boolean {
+  const key = (name ?? "").trim().toLocaleLowerCase("ru").replace(/\s+/g, " ");
+  return AGE_PUBLIC_ROOT_CATEGORIES.has(key);
 }
 
 /**

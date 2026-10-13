@@ -1,5 +1,6 @@
 import { parseCatalogQuery } from "../../../../shared/utils/catalog-query";
 import { catalogRepository } from "../../../repositories/catalog";
+import { hasAgeConfirmation } from "../../../utils/age-gate";
 
 export interface AdjacentProduct {
   slug: string;
@@ -17,11 +18,17 @@ export default defineEventHandler(async (event) => {
   );
   if (!product)
     throw createError({ statusCode: 404, statusMessage: "Product not found" });
-  const list = await catalogRepository.list({
-    ...parseCatalogQuery({}),
-    category: product.categoryId,
-    limit: 100000,
-  });
+  // Регулируемый товар до подтверждения 18+ не отдаёт и соседей — их
+  // названия принадлежат той же (закрытой) категории.
+  if (!hasAgeConfirmation(event) && !product.agePublic)
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Age confirmation required",
+    });
+  const list = await catalogRepository.list(
+    { ...parseCatalogQuery({}), category: product.categoryId, limit: 100000 },
+    { agePublicOnly: !hasAgeConfirmation(event) },
+  );
   const index = list.items.findIndex((item) => item.id === product.id);
   if (index < 0) return { prev: null, next: null };
   const pick = (item?: (typeof list.items)[number]): AdjacentProduct | null =>

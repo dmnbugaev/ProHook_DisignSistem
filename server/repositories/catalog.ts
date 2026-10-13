@@ -13,8 +13,20 @@ export interface CatalogRepository {
   getMeta(): Promise<CatalogMeta>;
   getProduct(slug: string): Promise<Product | undefined>;
   getProductById(id: string): Promise<Product | undefined>;
-  list(query: CatalogQuery): Promise<ProductList>;
-  suggest(query: CatalogQuery, limit?: number): Promise<SuggestItem[]>;
+  list(query: CatalogQuery, options?: ListOptions): Promise<ProductList>;
+  suggest(
+    query: CatalogQuery,
+    limit?: number,
+    options?: ListOptions,
+  ): Promise<SuggestItem[]>;
+}
+
+/**
+ * Ограничение выборки общедоступным ассортиментом: сервер применяет его,
+ * когда запрос пришёл без подтверждения 18+ (см. utils/age-gate.ts).
+ */
+export interface ListOptions {
+  agePublicOnly?: boolean;
 }
 
 export interface SuggestItem {
@@ -107,7 +119,7 @@ export const catalogRepository: CatalogRepository = {
       (product) => product.id === id,
     );
   },
-  async list(query) {
+  async list(query, options) {
     const { meta: catalogMeta, products } = await getCatalogSnapshot();
     if (
       query.storeId &&
@@ -153,7 +165,11 @@ export const catalogRepository: CatalogRepository = {
           offer.availability === "low",
       );
     const words = query.q.toLocaleLowerCase("ru").split(/\s+/).filter(Boolean);
-    const visible = enforceRegionalRestrictions(products, catalogMeta.stores);
+    let visible = enforceRegionalRestrictions(products, catalogMeta.stores);
+    // Без подтверждения 18+ выдача ограничена общедоступным ассортиментом;
+    // totals/pageCount считаются по той же выборке, что и items.
+    if (options?.agePublicOnly)
+      visible = visible.filter((item) => item.agePublic);
     // Выборка по ids (список выбранных товаров): другие фильтры не нужны,
     // отсутствующие id молча пропускаются — список чистится на клиенте.
     if (query.ids) {
@@ -220,7 +236,7 @@ export const catalogRepository: CatalogRepository = {
       pageCount,
     };
   },
-  async suggest(query, limit = 8) {
+  async suggest(query, limit = 8, options) {
     const { meta: catalogMeta, products } = await getCatalogSnapshot();
     if (query.storeId) {
       if (!catalogMeta.stores.some((store) => store.id === query.storeId))
@@ -242,7 +258,10 @@ export const catalogRepository: CatalogRepository = {
           ? 1
           : 2;
     };
-    return enforceRegionalRestrictions(products, catalogMeta.stores)
+    let visible = enforceRegionalRestrictions(products, catalogMeta.stores);
+    if (options?.agePublicOnly)
+      visible = visible.filter((item) => item.agePublic);
+    return visible
       .filter((product) => {
         const haystack =
           `${product.name} ${product.categoryName ?? ""} ${product.sku}`.toLocaleLowerCase(

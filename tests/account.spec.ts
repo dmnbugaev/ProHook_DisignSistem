@@ -89,9 +89,30 @@ async function login(page: Page, phone: string, password: string) {
 }
 
 async function confirmAge(page: Page, path = "/catalog") {
+  // Cookie напрямую: на страницах каталога нет модального гейта, а клик
+  // по кнопке AgeNotice до гидрации Vue теряется (см. legal.spec).
   await page.context().clearCookies({ name: "prohook-age-confirmed" });
+  await page.context().addCookies([
+    {
+      name: "prohook-age-confirmed",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
   await page.goto(path);
-  await page.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+  // Дальнейшие взаимодействия (галерея товара, фильтры) должны попадать
+  // в гидратированное приложение.
+  await page.waitForFunction(
+    () =>
+      (
+        document.getElementById("__nuxt") as HTMLElement & {
+          __vue_app__?: { $nuxt?: { isHydrating: boolean } };
+        }
+      )?.__vue_app__?.$nuxt?.isHydrating === false,
+    undefined,
+    { timeout: 10_000 },
+  );
 }
 
 test("registration creates a session and opens the account", async ({
@@ -325,21 +346,40 @@ test("loyalty block survives an expired session", async ({ page }) => {
   ).toBeVisible({ timeout: 15000 });
 });
 
-test("anonymous catalog hides product images server-side", async ({
+test("anonymous catalog hides regulated product images server-side", async ({
   request,
 }) => {
-  const list = await (await request.get("/api/products?limit=5")).json();
-  expect(list.items.length).toBeGreaterThan(0);
-  for (const product of list.items) {
+  // Решение владельца 13.10.2026: общедоступный ассортимент анониму виден
+  // вместе с изображениями; регулируемые товары — только текст и цена.
+  const publicList = await (
+    await request.get("/api/products?limit=24&available=0")
+  ).json();
+  expect(publicList.items.length).toBeGreaterThan(0);
+  for (const product of publicList.items) {
+    expect(product.imagesRestricted).toBeUndefined();
+  }
+  const full = await (
+    await request.get("/api/products?limit=24&available=0", {
+      headers: { cookie: "prohook-age-confirmed=true" },
+    })
+  ).json();
+  const regulated = full.items.filter(
+    (product: { agePublic: boolean }) => !product.agePublic,
+  );
+  expect(regulated.length).toBeGreaterThan(0);
+  for (const product of regulated) {
     expect(product.images).toEqual([]);
     expect(product.imagesRestricted).toBe(true);
   }
   const meta = await (await request.get("/api/catalog/meta")).json();
   for (const category of meta.categories)
     expect(category.image).toBeUndefined();
-  // Прямой URL изображения недоступен без сессии совершеннолетнего.
-  const image = await request.get(`/api/products/${list.items[0].id}/images/0`);
-  expect(image.status()).toBe(403);
+  // Прямой URL изображения регулируемого товара недоступен без сессии
+  // совершеннолетнего (stands-01 — регулируемый товар с изображениями
+  // в фикстуре); общедоступного — проходит гейт (дальше МойСклад, 502
+  // в тестах).
+  const regulatedImage = await request.get(`/api/products/p1/images/0`);
+  expect(regulatedImage.status()).toBe(403);
 });
 
 test("adult session unlocks product images", async ({ page }) => {
@@ -370,15 +410,26 @@ test("under-18 account keeps catalog text but never images", async ({
       "Изображения товаров доступны только совершеннолетним пользователям.",
     ),
   ).toBeVisible();
-  const list = await (await page.request.get("/api/products?limit=5")).json();
-  expect(list.items[0].images).toEqual([]);
-  expect(list.items[0].imagesRestricted).toBe(true);
-  const image = await page.request.get(
-    `/api/products/${list.items[0].id}/images/0`,
+  // Подтверждение 18+ (cookie-декларация) открывает состав каталога, но
+  // не изображения регулируемых товаров: сессия младше 18 не adult.
+  await page.context().addCookies([
+    {
+      name: "prohook-age-confirmed",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
+  const list = await (await page.request.get("/api/products?limit=24")).json();
+  const regulated = list.items.find(
+    (item: { slug: string }) => item.slug === "stands-01",
   );
+  expect(regulated.images).toEqual([]);
+  expect(regulated.imagesRestricted).toBe(true);
+  const image = await page.request.get(`/api/products/p1/images/0`);
   expect(image.status()).toBe(403);
   // Каталог по-прежнему читаем: текст и цены на месте.
-  await confirmAge(page, "/catalog");
+  await page.goto("/catalog");
   await expect(page.locator(".product-card").first()).toBeVisible();
   await expect(
     page.locator(".image-placeholder--restricted").first(),

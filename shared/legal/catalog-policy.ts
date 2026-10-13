@@ -6,6 +6,7 @@ import {
   HIDDEN_SUBCATEGORY_IDS,
   LEGAL_CLASS_POLICIES,
   classifyRootCategory,
+  isAgePublicRootCategory,
   type LegalClass,
 } from "./classification";
 import {
@@ -13,9 +14,22 @@ import {
   type RegionalRestriction,
 } from "./regional-restrictions";
 
+/**
+ * Категория на входе политики: agePublic (как и legalClass у товаров)
+ * назначается применением политики, источник из МойСклад его не несёт.
+ */
+export type PolicyCategory = Omit<Category, "agePublic"> & {
+  agePublic?: boolean;
+};
+
 interface PolicyInput {
-  meta: CatalogMeta;
-  products: Array<Omit<Product, "legalClass"> & { legalClass?: LegalClass }>;
+  meta: Omit<CatalogMeta, "categories"> & { categories: PolicyCategory[] };
+  products: Array<
+    Omit<Product, "legalClass" | "agePublic"> & {
+      legalClass?: LegalClass;
+      agePublic?: boolean;
+    }
+  >;
 }
 
 /** Снимок после применения политики: каждый товар имеет legalClass. */
@@ -24,11 +38,11 @@ export interface PolicySnapshot {
   products: Product[];
 }
 
-/** Возвращает юридический класс товара по цепочке категорий до корня. */
-export function legalClassOf(
+/** Имя корневой категории по цепочке родителей. */
+function rootCategoryName(
   categoryId: string,
-  categoriesById: Map<string, Category>,
-): LegalClass {
+  categoriesById: Map<string, PolicyCategory>,
+): string | undefined {
   let current = categoriesById.get(categoryId);
   const visited = new Set<string>();
   let rootName: string | undefined = current?.name;
@@ -37,13 +51,21 @@ export function legalClassOf(
     current = categoriesById.get(current.parentId);
     if (current) rootName = current.name;
   }
-  return classifyRootCategory(rootName);
+  return rootName;
+}
+
+/** Возвращает юридический класс товара по цепочке категорий до корня. */
+export function legalClassOf(
+  categoryId: string,
+  categoriesById: Map<string, PolicyCategory>,
+): LegalClass {
+  return classifyRootCategory(rootCategoryName(categoryId, categoriesById));
 }
 
 /** Скрыта ли категория решением владельца (вместе со всеми потомками). */
 export function isHiddenByOwner(
   categoryId: string,
-  categoriesById: Map<string, Category>,
+  categoriesById: Map<string, PolicyCategory>,
 ): boolean {
   let current = categoriesById.get(categoryId);
   const visited = new Set<string>();
@@ -60,8 +82,9 @@ export function isHiddenByOwner(
  * Применяет юридическую политику к снимку каталога: исключает товары и
  * категории классов PENDING_REVIEW/BANNED_FROM_SITE, исключает категории
  * из чёрного списка владельца (HIDDEN_SUBCATEGORY_IDS, вместе с потомками
- * и товарами), назначает товарам legalClass. Идемпотентно: повторное
- * применение ничего не меняет.
+ * и товарами), назначает товарам legalClass и признак общедоступности
+ * agePublic (виден без подтверждения 18+, см. AGE_PUBLIC_ROOT_CATEGORIES).
+ * Идемпотентно: повторное применение ничего не меняет.
  */
 export function applyLegalPolicy<T extends PolicyInput>(
   snapshot: T,
@@ -70,14 +93,20 @@ export function applyLegalPolicy<T extends PolicyInput>(
     snapshot.meta.categories.map((item) => [item.id, item]),
   );
   const classByCategory = new Map<string, LegalClass>();
-  for (const category of snapshot.meta.categories)
-    classByCategory.set(category.id, legalClassOf(category.id, categoriesById));
+  const agePublicByCategory = new Map<string, boolean>();
+  for (const category of snapshot.meta.categories) {
+    const rootName = rootCategoryName(category.id, categoriesById);
+    classByCategory.set(category.id, classifyRootCategory(rootName));
+    agePublicByCategory.set(category.id, isAgePublicRootCategory(rootName));
+  }
 
-  const categories = snapshot.meta.categories.filter(
-    (item) =>
-      LEGAL_CLASS_POLICIES[classByCategory.get(item.id)!].publishCategories &&
-      !isHiddenByOwner(item.id, categoriesById),
-  );
+  const categories = snapshot.meta.categories
+    .filter(
+      (item) =>
+        LEGAL_CLASS_POLICIES[classByCategory.get(item.id)!].publishCategories &&
+        !isHiddenByOwner(item.id, categoriesById),
+    )
+    .map((item) => ({ ...item, agePublic: agePublicByCategory.get(item.id)! }));
   const products = snapshot.products
     .map((product) => {
       const legalClass =
@@ -86,6 +115,7 @@ export function applyLegalPolicy<T extends PolicyInput>(
       return {
         ...product,
         legalClass,
+        agePublic: agePublicByCategory.get(product.categoryId) === true,
         description: policy.publishDescription ? product.description : "",
       };
     })

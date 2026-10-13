@@ -13,7 +13,11 @@ definePageMeta({
     try {
       await useRequestFetch()(`/api/products/${encodeURIComponent(slug)}`);
       return true;
-    } catch {
+    } catch (error) {
+      // 403 — регулируемый товар до подтверждения 18+: маршрут
+      // рендерится, страница показывает блок подтверждения возраста.
+      // 404 — товара нет, и бот, и посетитель получают настоящий 404.
+      if ((error as { statusCode?: number }).statusCode === 403) return true;
       return createError({ statusCode: 404, message: "Товар не найден" });
     }
   },
@@ -31,6 +35,12 @@ if (error.value?.statusCode === 404)
     statusMessage: "Not Found",
     message: "Товар не найден",
   });
+const ageConfirmed = useAgeConfirmed();
+// Регулируемый товар до подтверждения 18+: API отвечает 403, карточку
+// заменяет блок подтверждения (общедоступные товары открываются всем).
+const gated = computed(
+  () => !ageConfirmed.value && error.value?.statusCode === 403,
+);
 const { data: meta } = await useCatalogMeta();
 const { store, pickerOpen } = useStoreSelection();
 const { add, remove, quantityOf } = useSelectionList();
@@ -53,13 +63,20 @@ const { data: related } = await useProducts(() => ({
 }));
 // «Предыдущий / Следующий товар» — по выдаче категории в том же порядке,
 // в котором пользователь видел её в каталоге.
-const { data: adjacent } = await useFetch<{
+const { data: adjacent, refresh: refreshAdjacent } = await useFetch<{
   prev: { slug: string; name: string } | null;
   next: { slug: string; name: string } | null;
 }>(
   () =>
     `/api/products/${encodeURIComponent(String(route.params.slug))}/adjacent`,
 );
+// Подтверждение возраста по кнопке на странице: cookie пишет layout,
+// здесь дозагружаем товар и навигацию без перезагрузки.
+watch(ageConfirmed, (value) => {
+  if (!value) return;
+  void refresh();
+  void refreshAdjacent();
+});
 const breadcrumbs = computed(() => [
   { label: "Главная", to: "/" },
   { label: "Каталог", to: "/catalog" },
@@ -95,6 +112,11 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
   <UiContainer class="page-shell">
     <UiBreadcrumbs :items="breadcrumbs" />
     <UiSkeleton v-if="status === 'pending'" />
+    <AgeNotice
+      v-else-if="gated"
+      title="Товар для лиц 18+"
+      text="Карточка доступна после подтверждения совершеннолетнего возраста."
+    />
     <UiEmptyState
       v-else-if="error || !product"
       title="Не удалось загрузить товар"
@@ -254,7 +276,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
           </li>
         </ul>
       </section>
-      <section v-if="related?.items.length" class="section">
+      <section v-if="!gated && related?.items.length" class="section">
         <div class="section-heading">
           <h2>Рядом по характеру.</h2>
           <NuxtLink

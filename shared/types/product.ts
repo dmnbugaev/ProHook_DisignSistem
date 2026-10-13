@@ -31,6 +31,12 @@ export interface Product {
   offers: StoreOffer[];
   /** Юридический класс (см. shared/legal/classification.ts). */
   legalClass: LegalClass;
+  /**
+   * Товар общедоступен: виден и без подтверждения 18+ (продукты питания
+   * и бытовые позиции — AGE_PUBLIC_ROOT_CATEGORIES). Изображения таких
+   * товаров сервер отдаёт без взрослой сессии.
+   */
+  agePublic: boolean;
   publishedAt: string;
   /**
    * true, когда изображения скрыты сервером: пользователь не вошёл
