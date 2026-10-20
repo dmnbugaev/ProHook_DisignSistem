@@ -38,49 +38,56 @@
         "slug": "objects",
         "name": "Другое",
         "description": "Тестовая категория",
-        "parentId": null
+        "parentId": null,
+        "productCount": 2
       },
       {
         "id": "stands",
         "slug": "stands",
         "name": "Подставки",
         "description": "Тестовая категория",
-        "parentId": "objects"
+        "parentId": "objects",
+        "productCount": 2
       },
       {
         "id": "stationery",
         "slug": "stationery",
         "name": "Напитки",
         "description": "Тестовая категория",
-        "parentId": null
+        "parentId": null,
+        "productCount": 2
       },
       {
         "id": "notebooks",
         "slug": "notebooks",
         "name": "Блокноты",
         "description": "Тестовая категория",
-        "parentId": "stationery"
+        "parentId": "stationery",
+        "productCount": 2
       },
       {
         "id": "chew",
         "slug": "chew",
         "name": "Жевательный табак",
         "description": "Безтабачные никотиновые паучи (регулируемая категория)",
-        "parentId": null
+        "parentId": null,
+        "productCount": 1
       },
       {
         "id": "aroma",
         "slug": "aroma",
         "name": "Ароматизаторы",
         "description": "Категория до юридической классификации",
-        "parentId": null
+        "parentId": null,
+        "productCount": 1
       },
       {
         "id": "nbc",
         "slug": "nbc",
         "name": "НБС",
         "description": "Запрещённая к публикации категория",
-        "parentId": null
+        "parentId": null,
+        "productCount": 1
       }
     ],
     "brands": [],

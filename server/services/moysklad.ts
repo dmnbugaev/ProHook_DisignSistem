@@ -78,6 +78,8 @@ interface MsProduct {
   productFolder?: MsReference;
   salePrices?: MsPrice[];
   images?: { meta?: MsMeta };
+  /** Дата создания позиции в МойСклад («YYYY-MM-DD HH:mm:ss»). */
+  created?: string;
   updated?: string;
   attributes?: Array<{
     id?: string;
@@ -306,6 +308,10 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
         ]),
       );
       const imageCount = Math.min(5, item.images?.meta?.size ?? 0);
+      // Версия изображений: updated товара меняется при замене/добавлении
+      // фото в МойСклад — ?v= в URL принудительно обновляет браузерный кэш,
+      // пока прокси отдаёт старую картинку из кэша на время refresh-цикла.
+      const imageVersion = (item.updated ?? "").replace(/[^\d]/g, "");
       const offers = stores.flatMap((store) => {
         const price =
           prices.get(store.cityId === "moscow" ? "Москва" : "Цена продажи") ??
@@ -345,7 +351,7 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
         categoryName: categoryNames.get(categoryId) ?? "Каталог",
         images: Array.from({ length: imageCount }, (_, index) => ({
           id: `${item.id}-${index}`,
-          src: `/api/products/${item.id}/images/${index}`,
+          src: `/api/products/${item.id}/images/${index}${imageVersion ? `?v=${imageVersion}` : ""}`,
           alt: `${name} — изображение ${index + 1}`,
         })),
         // Единица цены по корневой категории: цена китайского чая в МойСклад
@@ -362,7 +368,13 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
         description: item.description?.trim() ?? "",
         attributes,
         offers,
-        publishedAt: item.updated ? item.updated.replace(" ", "T") + "Z" : "",
+        // Новинкой считается только созданная позиция: дата создания, а не
+        // обновления — редактирование товара в МойСклад не должно поднимать
+        // его в «Новинках» (решение владельца 20.10.2026).
+        publishedAt: (() => {
+          const created = item.created ?? item.updated;
+          return created ? created.replace(" ", "T") + "Z" : "";
+        })(),
       };
     })
     .filter((item) => item.offers.length > 0);
@@ -388,7 +400,9 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
   const categoryById = new Map(
     classified.meta.categories.map((category) => [category.id, category]),
   );
-  const rootCounts = new Map<string, number>();
+  // Товары считаются по каждой категории цепочки (у родителя — вместе с
+  // подкатегориями): числа показываются в навигации каталога.
+  const counts = new Map<string, number>();
   for (const product of classified.products) {
     let id: string | null = product.categoryId;
     const visited = new Set<string>();
@@ -398,13 +412,15 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
       if (!category) break;
       if (!category.image && product.images[0])
         category.image = product.images[0].src;
-      if (!category.parentId) rootCounts.set(id, (rootCounts.get(id) ?? 0) + 1);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
       id = category.parentId;
     }
   }
+  for (const category of classified.meta.categories)
+    category.productCount = counts.get(category.id) ?? 0;
   classified.meta.categories.sort((a, b) =>
     !a.parentId && !b.parentId
-      ? (rootCounts.get(b.id) ?? 0) - (rootCounts.get(a.id) ?? 0) ||
+      ? (b.productCount ?? 0) - (a.productCount ?? 0) ||
         a.name.localeCompare(b.name, "ru")
       : a.name.localeCompare(b.name, "ru"),
   );

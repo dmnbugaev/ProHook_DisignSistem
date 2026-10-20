@@ -10,9 +10,11 @@ defineProps<{ categories: Category[] }>();
     </div>
     <div class="brand-grid">
       <NuxtLink
-        v-for="category in categories"
+        v-for="(category, index) in categories"
         :key="category.id"
         :to="`/catalog/${category.slug}`"
+        data-reveal
+        :style="{ '--reveal-step': index % 3 }"
         >{{ category.name }}<span aria-hidden="true">↗</span></NuxtLink
       >
     </div></UiContainer

@@ -158,14 +158,20 @@ onMounted(() => {
       <CatalogCategories :categories="parents" :selected="category?.slug" />
       <nav
         v-if="children.length"
-        class="subcategory-links"
+        class="subcategory-chips"
         aria-label="Подкатегории"
       >
         <NuxtLink
           v-for="child in children"
           :key="child.id"
           :to="`/catalog/${child.slug}`"
-          >{{ child.name }}</NuxtLink
+          >{{ child.name
+          }}<span
+            v-if="child.productCount !== undefined"
+            class="subcategory-chips__count"
+            aria-hidden="true"
+            >{{ child.productCount }}</span
+          ></NuxtLink
         >
       </nav>
       <div class="catalog-store">
@@ -184,7 +190,31 @@ onMounted(() => {
         ></UiEmptyState
       >
       <div v-else class="catalog-layout">
-        <aside class="catalog-sidebar" aria-label="Фильтры">
+        <aside class="catalog-sidebar" aria-label="Фильтры и разделы">
+          <nav v-if="children.length" class="sidebar-subcategories">
+            <h2>Разделы</h2>
+            <!-- Ссылка на категорию-контекст: на родительской странице это
+                 сама страница, на вложенной — возврат к родителю выдачи. -->
+            <NuxtLink
+              v-if="category"
+              :to="`/catalog/${category.slug}`"
+              aria-current="page"
+              >Все товары категории</NuxtLink
+            >
+            <NuxtLink
+              v-for="child in children"
+              :key="child.id"
+              :to="`/catalog/${child.slug}`"
+              :aria-current="category?.slug === child.slug ? 'page' : undefined"
+              >{{ child.name
+              }}<span
+                v-if="child.productCount !== undefined"
+                class="sidebar-subcategories__count"
+                aria-hidden="true"
+                >{{ child.productCount }}</span
+              ></NuxtLink
+            >
+          </nav>
           <h2>
             Фильтры <UiBadge v-if="activeCount">{{ activeCount }}</UiBadge>
           </h2>

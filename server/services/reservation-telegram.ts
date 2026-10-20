@@ -4,6 +4,7 @@ import {
   type StoredReservation,
 } from "./reservation-store";
 import { notifyStaffViaMoySklad } from "./moysklad-notify";
+import { telegramSilenced } from "../utils/telegram-silence";
 
 /**
  * Telegram-уведомления о запросах на резерв (бот @prohook_bunker_site_bot).
@@ -169,6 +170,15 @@ export async function dispatchReservationNotification(
   reservation: StoredReservation,
   request: typeof fetch = fetch,
 ): Promise<void> {
+  // Тестовое окружение (TELEGRAM_SILENT): ни отправок, ни fallback-задач
+  // в МойСклад — уведомления о заявках в тестах не уходят вовсе.
+  if (telegramSilenced()) {
+    console.info(
+      "Reservation telegram dispatch silenced for tests:",
+      reservation.publicId,
+    );
+    return;
+  }
   const token = reservationBotToken();
   const chatIds = parseReservationChatIds(
     process.env.TELEGRAM_RESERVATION_CHAT_IDS,

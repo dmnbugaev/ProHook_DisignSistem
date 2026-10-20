@@ -3,7 +3,7 @@ import { prohookContacts } from "~~/shared/content/prohook";
 </script>
 <template>
   <UiContainer as="section" class="section"
-    ><div class="contact-section">
+    ><div class="contact-section" data-reveal>
       <h2>Остаёмся на связи.</h2>
       <div>
         <p>

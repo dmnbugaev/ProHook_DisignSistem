@@ -8,6 +8,7 @@
     "preview": "NITRO_HOST=127.0.0.1 nuxt preview",
     "catalog:sync": "node scripts/sync-catalog.mjs",
     "stores:geocode": "node scripts/geocode-stores.mjs",
+    "promo:webhook": "node scripts/set-promo-webhook.mjs",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "test": "playwright test",

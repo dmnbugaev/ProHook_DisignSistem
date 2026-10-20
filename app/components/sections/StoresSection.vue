@@ -7,7 +7,7 @@ const { store, city, pickerOpen } = useStoreSelection();
       <h2>Ближе к вам.</h2>
       <p>Выберите город и точку, <br />чтобы посмотреть её коллекцию.</p>
     </div>
-    <div class="store-feature">
+    <div class="store-feature" data-reveal>
       <div>
         <span class="caption">{{ city?.name ?? "Ваш город" }}</span>
         <h3>{{ store?.name ?? "Начните с магазина" }}</h3>

@@ -192,9 +192,10 @@ test("applyLegalPolicy hides banned and unclassified, keeps owner-written descri
   assert.deepEqual(twice.meta.categories, result.meta.categories);
 });
 
-test("energy drink folders under Напитки are hidden, soda folders stay", () => {
-  // Решение владельца 11.10.2026: напитки публикуются «все, кроме
-  // энергетиков» — скрыты четыре папки энергетиков под корнем «Напитки».
+test("energy drink folders under Напитки publish behind the 18+ gate, soda stays public", () => {
+  // Решение владельца 20.10.2026: частичная отмена решения 11.10 — папки
+  // энергетиков под корнем «Напитки» возвращаются на сайт, но не наследуют
+  // общедоступность корня (видны только после подтверждения 18+).
   const categories = [
     {
       id: "drinks",
@@ -232,6 +233,13 @@ test("energy drink folders under Напитки are hidden, soda folders stay", 
       parentId: "drinks",
     },
     {
+      id: "monster-sub",
+      name: "Monster Ultra",
+      slug: "monster-ultra",
+      description: "",
+      parentId: "7b4b66ef-37d4-11f1-0a80-1a0f003cd8b1",
+    },
+    {
       id: "cola",
       name: "Coca Cola",
       slug: "cola",
@@ -256,17 +264,51 @@ test("energy drink folders under Напитки are hidden, soda folders stay", 
       id: "hqd-drink-1",
       categoryId: "d71e934e-43b6-11f1-0a80-14b8002312bf",
     }),
+    // Вложенная папка энергетика наследует гейт вместе с веткой.
+    product({ id: "monster-ultra-1", categoryId: "monster-sub" }),
     product({ id: "cola-1", categoryId: "cola" }),
   ];
   const result = applyLegalPolicy(snapshot(categories, products));
-  assert.deepEqual(
-    result.products.map((item) => item.id),
-    ["cola-1"],
-  );
+  // Все позиции публикуются (скрытых папок больше нет)…
+  assert.deepEqual(result.products.map((item) => item.id).sort(), [
+    "cola-1",
+    "hqd-drink-1",
+    "lit-1",
+    "monster-1",
+    "monster-ultra-1",
+    "scandalist-1",
+  ]);
   assert.deepEqual(
     result.meta.categories.map((item) => item.name),
-    ["Напитки", "Coca Cola"],
+    [
+      "Напитки",
+      "Monster Energy",
+      "LitEnergy",
+      "Scandalist",
+      "HQD",
+      "Monster Ultra",
+      "Coca Cola",
+    ],
   );
+  // …но энергетики (и их вложенные папки) не видны до подтверждения 18+.
+  const gated = new Set([
+    "7b4b66ef-37d4-11f1-0a80-1a0f003cd8b1",
+    "17a5d0a0-453c-11f1-0a80-0b9c00222c40",
+    "17d01010-453c-11f1-0a80-0b9c00222c6a",
+    "d71e934e-43b6-11f1-0a80-14b8002312bf",
+    "monster-sub",
+  ]);
+  for (const category of result.meta.categories) {
+    assert.equal(
+      category.agePublic,
+      !gated.has(category.id),
+      `${category.name}: agePublic`,
+    );
+  }
+  for (const item of result.products) {
+    const expectPublic = !gated.has(item.categoryId);
+    assert.equal(item.agePublic, expectPublic, `${item.id}: agePublic`);
+  }
 });
 
 test("age-public assortment is exactly the owner list of 13.10.2026", () => {

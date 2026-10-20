@@ -51,6 +51,9 @@ const products = [
     id: "product-1",
     name: "Публичный",
     archived: false,
+    // Редактирование 20.10 меняет только updated — новинкой быть не должно.
+    created: "2026-01-10 08:00:00",
+    updated: "2026-10-20 14:53:39",
     productFolder: reference,
     salePrices: [price("Цена продажи", 120000), price("Москва", 140000)],
     attributes: [
@@ -104,6 +107,8 @@ const products = [
     id: "product-7",
     name: "Сяо Чжун красный чай",
     archived: false,
+    // У старых выгрузок поля created может не быть — фолбэк на updated.
+    updated: "2026-09-01 10:00:00",
     productFolder: teaReference,
     salePrices: [price("Цена продажи", 1900)],
     attributes: [{ id: "visible-field", value: true }],
@@ -258,6 +263,21 @@ test("visibility field, city prices, retail store mapping and legal policy", asy
   // Точные остатки для запросов на резерв: server-only, в API не публикуются.
   assert.equal(stocked.stockDetail["product-1"]["store-1"], 2);
   assert.equal(stocked.stockDetail["product-1"]["store-2"], 0);
+});
+
+test("publishedAt берётся из created — редактирование не делает товар новинкой", async () => {
+  const snapshot = await fetchCatalog();
+  const edited = snapshot.products.find(
+    (product) => product.id === "product-1",
+  );
+  // created 10.01, а updated 20.10: новинки считаются по дате создания
+  // (решение владельца 20.10.2026 — в «Новинках» только новые позиции).
+  assert.equal(edited.publishedAt, "2026-01-10T08:00:00Z");
+  const legacy = snapshot.products.find(
+    (product) => product.id === "product-7",
+  );
+  // Нет created (старая выгрузка) — фолбэк на updated.
+  assert.equal(legacy.publishedAt, "2026-09-01T10:00:00Z");
 });
 
 test("without the visibility field, all priced active products are included", async () => {

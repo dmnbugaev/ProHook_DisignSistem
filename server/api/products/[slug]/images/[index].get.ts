@@ -28,11 +28,12 @@ export default defineEventHandler(async (event) => {
       response.headers.get("content-type") || "image/jpeg",
     );
     if (product.agePublic) {
-      // Ответ не зависит от сессии — можно кешировать публично.
+      // Ответ не зависит от сессии — можно кешировать публично. Актуальность
+      // обеспечивает ?v= в URL (версия меняется вместе с фото в МойСклад).
       setHeader(
         event,
         "Cache-Control",
-        "public, max-age=3600, stale-while-revalidate=86400",
+        "public, max-age=86400, stale-while-revalidate=604800",
       );
     } else {
       setHeader(

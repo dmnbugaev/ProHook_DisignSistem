@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 import { resolve } from "node:path";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+// Свой порт для e2e-сервера: 3000 на машине владельца обычно занят
+// параллельным проектом Bunker — тесты обязаны поднимать СВОЙ сервер
+// (реальное окружение с чужими/промышленными ключами исключено).
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 // Cookie-согласие «только необходимые» предустановлено всем контекстам:
 // баннер согласия закрывает нижнюю часть экрана на каждой странице и
@@ -44,7 +47,7 @@ export default defineConfig({
   webServer: {
     command: process.env.PLAYWRIGHT_BASE_URL
       ? `npm run preview -- --port ${new URL(baseURL).port || "3000"}`
-      : "npm run dev",
+      : `npm run dev -- --port ${new URL(baseURL).port || "3000"}`,
     url: baseURL,
     env: {
       MOYSKLAD_SNAPSHOT_PATH: resolve("tests/fixtures/catalog.json"),
@@ -63,14 +66,35 @@ export default defineConfig({
       // подняты: все спецификации идут с одного 127.0.0.1.
       ACCOUNT_DATA_DIR: resolve("test-results/account-data"),
       RESERVATION_DATA_DIR: resolve("test-results/reservation-data"),
+      // Промо-блок: демо-карточки в изолированном хранилище; ключей бота
+      // нет — поллинг и Telegram-отправки в e2e исключены.
+      PROMO_DATA_DIR: resolve("test-results/promo-data"),
+      PROMO_SEED_DEMO: "1",
       SESSION_COOKIE_INSECURE: "1",
       AUTH_RATE_LIMIT_REGISTER: "1000",
       AUTH_RATE_LIMIT_LOGIN: "1000",
       RESERVATION_RATE_LIMIT_MAX: "1000",
+      // Уведомления о заявках в e2e не уходят (мандат владельца 20.10.2026).
+      // npm run dev сам загружает реальный .env с токенами ботов, поэтому:
+      // (а) TELEGRAM_SILENT=1 — жёсткий рубильник диспетчеров (см.
+      //     server/utils/telegram-silence.ts);
+      // (б) все Telegram-переменные затираются пустыми значениями — dotenv
+      //     не перезаписывает уже выставленные переменные.
+      TELEGRAM_SILENT: "1",
+      TELEGRAM_BOT_TOKEN: "",
+      NUXT_TELEGRAM_BOT_TOKEN: "",
+      NUXT_TELEGRAM_CHAT_ID: "",
+      TELEGRAM_RESERVATION_CHAT_IDS: "",
+      TELEGRAM_PROMO_BOT_TOKEN: "",
+      TELEGRAM_PROMO_CHAT_IDS: "",
+      TELEGRAM_PROMO_POLLING: "0",
       // Капча и Telegram-уведомления в e2e отключены (нет ключей);
       // их логика покрыта unit-тестами (tests/reservation.test.mjs).
     },
-    reuseExistingServer: !process.env.CI && !process.env.PLAYWRIGHT_BASE_URL,
+    // Всегда поднимаем собственный сервер: переиспользование чужого dev
+    // (с реальными ключами из .env — отправка заявок!) или соседнего проекта
+    // на 3000 молча направляло бы тесты не туда. Занятый порт — громкий отказ.
+    reuseExistingServer: false,
     timeout: 120000,
   },
 });

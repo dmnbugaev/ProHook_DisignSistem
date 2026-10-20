@@ -262,15 +262,92 @@ button.text-link {
   background: var(--accent);
   border-color: var(--ink);
 }
-.subcategory-links {
+/* Чипы подкатегорий: пилюли с количеством товаров, на мобильных — лента с
+   горизонтальным прокрутом. Счётчик aria-hidden — имя ссылки не шумит. */
+.subcategory-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-6);
+  gap: var(--space-2);
+  margin-block: var(--space-2) var(--space-4);
 }
-.subcategory-links a {
+.subcategory-chips a {
   display: inline-flex;
-  min-height: 44px;
   align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+  font-size: 14px;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-control);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.subcategory-chips a:hover,
+.subcategory-chips a:focus-visible {
+  border-color: var(--ink);
+  box-shadow: var(--shadow-button-hover);
+}
+.subcategory-chips [aria-current="page"] {
+  background: var(--accent);
+  border-color: var(--ink);
+}
+.subcategory-chips__count,
+.category-links__count,
+.sidebar-subcategories__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  font-size: 12px;
+  font-weight: var(--weight-bold);
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+.category-links a {
+  gap: var(--space-2);
+}
+.category-links [aria-current="page"] .category-links__count,
+.subcategory-chips [aria-current="page"] .subcategory-chips__count,
+.sidebar-subcategories [aria-current="page"] .sidebar-subcategories__count {
+  background: var(--ink);
+  color: var(--background);
+}
+/* Разделы категории в сайдбаре фильтров: вертикальный список с числами. */
+.sidebar-subcategories {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--separator);
+}
+.sidebar-subcategories h2 {
+  font-size: var(--h3-size);
+  margin-bottom: var(--space-3);
+  padding-top: var(--space-2);
+}
+.sidebar-subcategories a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: var(--space-1) var(--space-2);
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: var(--radius-control);
+}
+.sidebar-subcategories a:hover,
+.sidebar-subcategories a:focus-visible {
+  background: var(--surface-subtle);
+}
+.sidebar-subcategories [aria-current="page"] {
+  background: var(--accent);
   font-weight: var(--weight-bold);
 }
 .catalog-store {
@@ -394,12 +471,19 @@ button.text-link {
   font-size: 20px;
 }
 .catalog-toolbar {
+  position: sticky;
+  /* Под липкой шапкой (top 8px + высота ~80px): сортировка и счётчик
+     остаются под рукой при прокрутке выдачи. */
+  top: 96px;
+  z-index: 10;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-4);
   margin-bottom: var(--space-6);
+  padding-block: var(--space-2);
+  background: var(--background);
 }
 .catalog-toolbar > p {
   align-self: center;
@@ -1429,6 +1513,17 @@ button.text-link {
   .category-links a {
     flex: 0 0 auto;
     white-space: nowrap;
+  }
+  .subcategory-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: var(--space-2);
+  }
+  .subcategory-chips a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
   }
   .page-shell {
     padding-top: var(--space-24);

@@ -33,12 +33,24 @@ export default defineConfig({
       MOYSKLAD_SNAPSHOT_PATH: resolve("tests/fixtures/catalog.json"),
       ACCOUNT_DATA_DIR: resolve("test-results/account-data"),
       RESERVATION_DATA_DIR: resolve("test-results/reservation-data"),
+      // Уведомления о заявках в аудит-прогонах не уходят (как в основном
+      // e2e-конфиге — мандат владельца 20.10.2026).
+      TELEGRAM_SILENT: "1",
+      TELEGRAM_BOT_TOKEN: "",
+      NUXT_TELEGRAM_BOT_TOKEN: "",
+      NUXT_TELEGRAM_CHAT_ID: "",
+      TELEGRAM_RESERVATION_CHAT_IDS: "",
+      TELEGRAM_PROMO_BOT_TOKEN: "",
+      TELEGRAM_PROMO_CHAT_IDS: "",
+      TELEGRAM_PROMO_POLLING: "0",
       SESSION_COOKIE_INSECURE: "1",
       AUTH_RATE_LIMIT_REGISTER: "1000",
       AUTH_RATE_LIMIT_LOGIN: "1000",
       RESERVATION_RATE_LIMIT_MAX: "1000",
     },
-    reuseExistingServer: !process.env.CI,
+    // Собственный сервер всегда: чужой dev с реальными ключами обошёл бы
+    // глушение (см. комментарий в playwright.config.ts).
+    reuseExistingServer: false,
     timeout: 120000,
   },
 });

@@ -2,6 +2,7 @@ import type { CatalogMeta } from "../types/catalog";
 import type { Category } from "../types/category";
 import type { Product } from "../types/product";
 import {
+  AGE_GATED_SUBCATEGORY_EXCEPTIONS,
   HIDDEN_PRODUCT_NAME_PREFIXES,
   HIDDEN_SUBCATEGORY_IDS,
   LEGAL_CLASS_POLICIES,
@@ -79,6 +80,26 @@ export function isHiddenByOwner(
 }
 
 /**
+ * Подкатегория-исключение из общедоступного ассортимента: корень agePublic,
+ * но ветка (вместе с потомками) видна только после подтверждения 18+
+ * (решение владельца 20.10.2026 — энергетики под «Напитками»).
+ */
+export function isAgeGatedException(
+  categoryId: string,
+  categoriesById: Map<string, PolicyCategory>,
+): boolean {
+  let current = categoriesById.get(categoryId);
+  const visited = new Set<string>();
+  while (current) {
+    if (AGE_GATED_SUBCATEGORY_EXCEPTIONS.has(current.id)) return true;
+    if (!current.parentId || visited.has(current.parentId)) return false;
+    visited.add(current.id);
+    current = categoriesById.get(current.parentId);
+  }
+  return false;
+}
+
+/**
  * Применяет юридическую политику к снимку каталога: исключает товары и
  * категории классов PENDING_REVIEW/BANNED_FROM_SITE, исключает категории
  * из чёрного списка владельца (HIDDEN_SUBCATEGORY_IDS, вместе с потомками
@@ -97,7 +118,13 @@ export function applyLegalPolicy<T extends PolicyInput>(
   for (const category of snapshot.meta.categories) {
     const rootName = rootCategoryName(category.id, categoriesById);
     classByCategory.set(category.id, classifyRootCategory(rootName));
-    agePublicByCategory.set(category.id, isAgePublicRootCategory(rootName));
+    agePublicByCategory.set(
+      category.id,
+      // Исключения (энергетики под «Напитками») не наследуют общедоступность
+      // корня — только после подтверждения 18+.
+      isAgePublicRootCategory(rootName) &&
+        !isAgeGatedException(category.id, categoriesById),
+    );
   }
 
   const categories = snapshot.meta.categories

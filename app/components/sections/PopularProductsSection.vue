@@ -9,7 +9,7 @@ const { data, error, status, refresh } = await useProducts(() => ({
 <template>
   <UiContainer as="section" class="section"
     ><div class="section-heading">
-      <h2>Недавно обновлено.</h2>
+      <h2>Новинки.</h2>
       <NuxtLink to="/catalog" class="text-link section-heading__link"
         >Весь каталог ↗</NuxtLink
       >

@@ -6,6 +6,12 @@ import type {
 import type { Product } from "../../shared/types/product";
 import { enforceRegionalRestrictions } from "../../shared/legal/catalog-policy";
 import { getOffer } from "../../shared/utils/product";
+import {
+  compileSearchDocument,
+  matchSearchQuery,
+  tokenizeSearchQuery,
+  type CompiledSearchDocument,
+} from "../../shared/utils/search";
 import { storeLocations } from "../../shared/content/stores";
 import { getCatalogSnapshot } from "../services/catalog-cache";
 
@@ -91,6 +97,21 @@ export function distanceKm(
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 
+/**
+ * Кэш поисковых документов: компиляция один раз на объект товара; после
+ * обновления снимка объекты пересоздаются и кэш перестраивается сам.
+ */
+const searchDocuments = new WeakMap<Product, CompiledSearchDocument>();
+
+function searchDocument(product: Product): CompiledSearchDocument {
+  let compiled = searchDocuments.get(product);
+  if (!compiled) {
+    compiled = compileSearchDocument(product);
+    searchDocuments.set(product, compiled);
+  }
+  return compiled;
+}
+
 export const catalogRepository: CatalogRepository = {
   async getMeta() {
     const meta = (await getCatalogSnapshot()).meta;
@@ -164,7 +185,7 @@ export const catalogRepository: CatalogRepository = {
           offer.availability === "available" ||
           offer.availability === "low",
       );
-    const words = query.q.toLocaleLowerCase("ru").split(/\s+/).filter(Boolean);
+    const words = tokenizeSearchQuery(query.q);
     let visible = enforceRegionalRestrictions(products, catalogMeta.stores);
     // Без подтверждения 18+ выдача ограничена общедоступным ассортиментом;
     // totals/pageCount считаются по той же выборке, что и items.
@@ -179,23 +200,27 @@ export const catalogRepository: CatalogRepository = {
         .filter((product): product is Product => Boolean(product));
       return { items, total: items.length, page: 1, pageCount: 1 };
     }
+    // Релевантность поиска (умный матчинг с опечатками/раскладкой/транслитом):
+    // без запроса скор не нужен, сортировки пользователя не переопределяются.
+    const scored = new Map<Product, number>();
     const filtered = visible.filter((product) => {
-      const haystack =
-        `${product.name} ${product.categoryName ?? ""} ${product.sku}`.toLocaleLowerCase(
-          "ru",
-        );
-      return (
+      if (!(
         (!category || categoryIds.has(product.categoryId)) &&
         (!query.storeId ||
           product.offers.some((offer) => offer.storeId === query.storeId)) &&
-        words.every((word) => haystack.includes(word)) &&
         (query.minPrice === undefined ||
           price(product) >= query.minPrice * 100) &&
         (query.maxPrice === undefined ||
           price(product) <= query.maxPrice * 100) &&
         (!query.available || available(product)) &&
         product.id !== query.excludeId
-      );
+      ))
+        return false;
+      if (!words.length) return true;
+      const score = matchSearchQuery(words, searchDocument(product));
+      if (score === null) return false;
+      scored.set(product, score);
+      return true;
     });
     // Витринный приоритет для сортировки по умолчанию: вперёд выходят товары
     // с фотографией и достаточным наличием (2+ шт: "available"/"plenty",
@@ -221,7 +246,15 @@ export const catalogRepository: CatalogRepository = {
         return price(b) - price(a) || a.id.localeCompare(b.id);
       if (query.sort === "newest")
         return b.publishedAt.localeCompare(a.publishedAt);
+      // Сортировка по умолчанию в поиске — по релевантности, затем витринный
+      // приоритет (фото + наличие) и свежесть. В каталоге без запроса скор
+      // отсутствует и порядок не меняется.
+      const relevance =
+        words.length && !query.sort
+          ? (scored.get(b) ?? 0) - (scored.get(a) ?? 0)
+          : 0;
       return (
+        relevance ||
         stockRank(a) - stockRank(b) ||
         b.publishedAt.localeCompare(a.publishedAt) ||
         a.name.localeCompare(b.name, "ru")
@@ -242,7 +275,7 @@ export const catalogRepository: CatalogRepository = {
       if (!catalogMeta.stores.some((store) => store.id === query.storeId))
         throw createError({ statusCode: 400, statusMessage: "Unknown store" });
     }
-    const words = query.q.toLocaleLowerCase("ru").split(/\s+/).filter(Boolean);
+    const words = tokenizeSearchQuery(query.q);
     if (!words.length) return [];
     const stockRank = (product: Product) => {
       const offers = query.storeId
@@ -262,32 +295,28 @@ export const catalogRepository: CatalogRepository = {
     if (options?.agePublicOnly)
       visible = visible.filter((item) => item.agePublic);
     return visible
-      .filter((product) => {
-        const haystack =
-          `${product.name} ${product.categoryName ?? ""} ${product.sku}`.toLocaleLowerCase(
-            "ru",
+      .map((product) => ({
+        product,
+        // Умный матчинг: опечатки, раскладка, транслит; null — не подошло.
+        score: matchSearchQuery(words, searchDocument(product)),
+        price: ((): number | null => {
+          const offer = query.storeId
+            ? getOffer(product, query.storeId)
+            : undefined;
+          return (
+            offer?.price ??
+            (product.offers.length
+              ? Math.min(...product.offers.map((item) => item.price))
+              : null)
           );
-        return words.every((word) => haystack.includes(word));
-      })
-      .map((product) => {
-        const name = product.name.toLocaleLowerCase("ru");
-        const offer = query.storeId
-          ? getOffer(product, query.storeId)
-          : undefined;
-        const price =
-          offer?.price ??
-          (product.offers.length
-            ? Math.min(...product.offers.map((item) => item.price))
-            : null);
-        return {
-          product,
-          score: words.every((word) => name.startsWith(word)) ? 0 : 1,
-          price,
-        };
-      })
+        })(),
+      }))
+      .filter(
+        (item): item is typeof item & { score: number } => item.score !== null,
+      )
       .sort(
         (a, b) =>
-          a.score - b.score ||
+          b.score - a.score ||
           stockRank(a.product) - stockRank(b.product) ||
           b.product.publishedAt.localeCompare(a.product.publishedAt),
       )

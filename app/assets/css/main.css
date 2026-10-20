@@ -385,6 +385,18 @@ legend {
   column-gap: 48px;
   padding-top: 172px;
 }
+/* Первый экран (только главная): герой тянется до нижней кромки окна.
+   Точную высоту — окно минус плашка и шапка над героем — ставит
+   HeroSection в --hero-min; до гидрации и без JS работает оценка
+   calc(100dvh - 132px). Основной ряд центрируется в свободном месте,
+   статистика и маркиза прижаты к низу экрана. */
+.hero--screen {
+  min-height: calc(100vh - 132px);
+  min-height: calc(100dvh - 132px);
+  min-height: var(--hero-min, calc(100dvh - 132px));
+  grid-template-rows: 1fr auto auto;
+  align-items: center;
+}
 .edition {
   display: flex;
   align-items: center;
@@ -454,6 +466,7 @@ legend {
   font-size: 24px;
   color: var(--ink);
 }
+/* Полоса-подвал героя дизайн-системы (главная использует маркизу ниже). */
 .hero__bottom {
   grid-column: 1/-1;
   display: flex;
@@ -469,6 +482,745 @@ legend {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+/* Кинетическая типографика: строки заголовка выезжают из-под маски
+   каскадом (backwards — до старта задержки строка скрыта в from-кадре,
+   при prefers-reduced-motion базовое состояние видно без анимации). */
+.hero__line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+.hero__line-inner {
+  display: block;
+  animation: hero-line-in 0.72s cubic-bezier(0.22, 0.61, 0.24, 1) backwards;
+}
+.hero__line:nth-child(2) .hero__line-inner {
+  animation-delay: 0.14s;
+}
+.hero__line:nth-child(3) .hero__line-inner {
+  animation-delay: 0.28s;
+}
+@keyframes hero-line-in {
+  from {
+    transform: translateY(112%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.hero .edition,
+.hero__intro,
+.hero__copy > .button {
+  animation: hero-fade-up 0.6s ease-out backwards;
+}
+.hero .edition {
+  animation-delay: 0.05s;
+}
+.hero__intro {
+  animation-delay: 0.42s;
+}
+.hero__copy > .button {
+  animation-delay: 0.54s;
+}
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Параллакс слоёв при прокрутке (var ставит HeroSection) и наклон знака
+   за курсором (--tilt-*, только pointer: fine). */
+.hero__art {
+  transform: translateY(calc(var(--hero-parallax, 0) * 34px));
+}
+.hero__copy {
+  transform: translateY(calc(var(--hero-parallax, 0) * 14px));
+}
+.hero__art-field {
+  transform: perspective(700px) rotateX(var(--tilt-x, 0deg))
+    rotateY(var(--tilt-y, 0deg));
+  transition: transform 240ms ease;
+  will-change: transform;
+}
+/* ===== Кинетический знак (только главная; design-system живёт на базовых
+   классах без анимаций). «Прорыв»: талисман (HeroMascot, персонаж по
+   эскизу владельца) ломится сквозь серую стену — плита дрожит и
+   расходится трещинами от точки удара, разлетается четырьмя осколками
+   с ударной волной и щепками; под ней жёлтое ядро, из пролома ударом
+   вышибает знак ПроХука, талисман вскидывает руку-«победу», глаза
+   радуются. Хронометраж: дрожь 0.13с → трещины 0.2с → прорыв 0.55с
+   (осколки/волна/щепки, прыжок талисмана) → посадка ~1.05с → знак
+   1.15с → «победа» 1.6с → глаза 1.85с → тихий idle. Все базовые
+   состояния — финальные кадры: глобальный kill-switch
+   prefers-reduced-motion оставляет статичную финальную композицию. ===== */
+.hero--kinetic .hero__art {
+  animation: hero-fade-up 0.6s ease-out 0.1s backwards;
+}
+.hero--kinetic .hero__art-field {
+  overflow: hidden;
+  transform: perspective(760px) rotateX(var(--tilt-x, 0deg))
+    rotateY(var(--tilt-y, 0deg));
+  transition: transform 520ms cubic-bezier(0.22, 0.9, 0.32, 1.08);
+  /* Приседание плиты в момент удара печати знака (~1.55с). */
+  animation: hero-plate-thud 0.42s ease-out 1.55s backwards;
+}
+/* Ядро: жёлтая плита со знаком — то, что скрыто за стеной до вскрытия. */
+.hero__core {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--accent);
+  display: grid;
+  place-items: center;
+}
+/* Стена: четыре осколка тем же серым, что плита (до прорыва — ровная
+   поверхность). Перед ударом плита дрожит и вздувается, потом осколки
+   разлетаются наружу с ускорением тяжести и гаснут. */
+.hero__wall {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  animation: hero-wall-tremble 0.42s linear 0.13s;
+}
+.hero__shard {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-subtle);
+  filter: drop-shadow(0 2px 10px rgb(0 0 0 / 0.16));
+  opacity: 0;
+}
+.hero__shard--n {
+  clip-path: polygon(0 0, 100% 0, 50% 50%);
+  animation: hero-shard-fly-n 0.6s cubic-bezier(0.45, 0, 0.85, 0.55) 0.55s
+    backwards;
+}
+.hero__shard--e {
+  clip-path: polygon(100% 0, 100% 100%, 50% 50%);
+  animation: hero-shard-fly-e 0.6s cubic-bezier(0.45, 0, 0.85, 0.55) 0.61s
+    backwards;
+}
+.hero__shard--s {
+  clip-path: polygon(0 100%, 100% 100%, 50% 50%);
+  animation: hero-shard-fly-s 0.6s cubic-bezier(0.45, 0, 0.85, 0.55) 0.67s
+    backwards;
+}
+.hero__shard--w {
+  clip-path: polygon(0 0, 0 100%, 50% 50%);
+  animation: hero-shard-fly-w 0.6s cubic-bezier(0.45, 0, 0.85, 0.55) 0.73s
+    backwards;
+}
+@keyframes hero-wall-tremble {
+  0%,
+  100% {
+    transform: none;
+  }
+  12% {
+    transform: translate(0.5%, 0.3%) rotate(0.2deg);
+  }
+  24% {
+    transform: translate(-0.45%, -0.2%) rotate(-0.18deg);
+  }
+  36% {
+    transform: translate(0.55%, 0.25%) rotate(0.22deg);
+  }
+  48% {
+    transform: translate(-0.5%, 0.35%) rotate(-0.15deg);
+  }
+  60% {
+    transform: translate(0.6%, -0.25%) rotate(0.25deg);
+  }
+  72% {
+    transform: translate(-0.55%, 0.3%) rotate(-0.2deg);
+  }
+  84% {
+    transform: translate(0.65%, 0.4%) rotate(0.28deg) scale(1.003);
+  }
+  94% {
+    transform: translate(0.7%, 0.45%) rotate(0.3deg) scale(1.006);
+  }
+}
+@keyframes hero-shard-fly-n {
+  from,
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-36%) rotate(-9deg);
+  }
+}
+@keyframes hero-shard-fly-e {
+  from,
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(36%, 8%) rotate(15deg);
+  }
+}
+@keyframes hero-shard-fly-s {
+  from,
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(38%) rotate(9deg);
+  }
+}
+@keyframes hero-shard-fly-w {
+  from,
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(-36%, 6%) rotate(-14deg);
+  }
+}
+/* Трещины: рвут плиту от точки прорыва (24,78 — центр талисмана)
+   штрихом в последний момент дрожи и гаснут вместе с разлётом. */
+.hero__cracks {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.hero__crack {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+.hero__crack--1 {
+  animation:
+    hero-crack-draw 0.34s ease-out 0.2s backwards,
+    hero-crack-fade 0.26s ease-in 0.58s forwards;
+}
+.hero__crack--2 {
+  animation:
+    hero-crack-draw 0.34s ease-out 0.25s backwards,
+    hero-crack-fade 0.26s ease-in 0.6s forwards;
+}
+.hero__crack--3 {
+  animation:
+    hero-crack-draw 0.34s ease-out 0.22s backwards,
+    hero-crack-fade 0.26s ease-in 0.59s forwards;
+}
+.hero__crack--4 {
+  animation:
+    hero-crack-draw 0.34s ease-out 0.28s backwards,
+    hero-crack-fade 0.26s ease-in 0.61s forwards;
+}
+.hero__crack--5 {
+  animation:
+    hero-crack-draw 0.34s ease-out 0.24s backwards,
+    hero-crack-fade 0.26s ease-in 0.6s forwards;
+}
+@keyframes hero-crack-draw {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  70%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+@keyframes hero-crack-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+/* Ударная волна: два кольца от точки прорыва. */
+.hero__shock {
+  position: absolute;
+  left: 24%;
+  top: 78%;
+  z-index: 3;
+  width: 30%;
+  aspect-ratio: 1;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.hero__shock--a {
+  animation: hero-shock-wave 0.5s cubic-bezier(0.16, 0.8, 0.3, 1) 0.55s
+    backwards;
+}
+.hero__shock--b {
+  border-width: 2px;
+  animation: hero-shock-wave 0.42s cubic-bezier(0.16, 0.8, 0.3, 1) 0.64s
+    backwards;
+}
+@keyframes hero-shock-wave {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.12);
+  }
+  10% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.7);
+  }
+}
+/* Щепки: жёлтые обломки ядра и серые — стены, летят из точки прорыва. */
+.hero__chips {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.hero__chip {
+  position: absolute;
+  left: 24%;
+  top: 78%;
+  width: 3%;
+  aspect-ratio: 1.3;
+  opacity: 0;
+}
+.hero__chip--1 {
+  background: var(--accent);
+  animation: hero-chip-fly-1 0.58s cubic-bezier(0.18, 0.6, 0.5, 1) 0.55s
+    backwards;
+}
+.hero__chip--2 {
+  background: var(--surface-subtle);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  animation: hero-chip-fly-2 0.62s cubic-bezier(0.18, 0.6, 0.5, 1) 0.56s
+    backwards;
+}
+.hero__chip--3 {
+  background: var(--accent);
+  animation: hero-chip-fly-3 0.55s cubic-bezier(0.18, 0.6, 0.5, 1) 0.58s
+    backwards;
+}
+.hero__chip--4 {
+  background: var(--surface-subtle);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  animation: hero-chip-fly-4 0.6s cubic-bezier(0.18, 0.6, 0.5, 1) 0.57s
+    backwards;
+}
+.hero__chip--5 {
+  background: var(--accent);
+  animation: hero-chip-fly-5 0.62s cubic-bezier(0.18, 0.6, 0.5, 1) 0.55s
+    backwards;
+}
+.hero__chip--6 {
+  background: var(--surface-subtle);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  animation: hero-chip-fly-6 0.56s cubic-bezier(0.18, 0.6, 0.5, 1) 0.6s
+    backwards;
+}
+@keyframes hero-chip-fly-1 {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(110px, -130px) rotate(200deg);
+  }
+}
+@keyframes hero-chip-fly-2 {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-90px, -150px) rotate(-160deg);
+  }
+}
+@keyframes hero-chip-fly-3 {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(150px, -60px) rotate(240deg);
+  }
+}
+@keyframes hero-chip-fly-4 {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-140px, -40px) rotate(-220deg);
+  }
+}
+@keyframes hero-chip-fly-5 {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(70px, -180px) rotate(160deg);
+  }
+}
+@keyframes hero-chip-fly-6 {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-40px, -170px) rotate(-120deg);
+  }
+}
+/* Знак: вышибается из пролома ударом (после прорыва и посадки
+   талисмана) и парит; hover приподнимает через scale на обёртке —
+   свойства компонуются. */
+.hero--kinetic .hero__mark-wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  animation: hero-mark-float 7s ease-in-out 2.3s infinite;
+  transition: scale 0.5s cubic-bezier(0.3, 1.4, 0.4, 1);
+}
+.hero--kinetic .hero__art-field:hover .hero__mark-wrap,
+.hero--kinetic .hero__art-field:focus-visible .hero__mark-wrap {
+  scale: 1.03;
+}
+.hero--kinetic .hero__mark {
+  animation: hero-mark-press 0.66s cubic-bezier(0.2, 0.75, 0.25, 1) 1.15s
+    backwards;
+}
+@keyframes hero-mark-press {
+  0% {
+    transform: scale(1.55);
+    filter: blur(7px);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  62% {
+    transform: scale(0.965);
+    filter: blur(0);
+  }
+  82% {
+    transform: scale(1.015);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes hero-mark-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -1.4%;
+  }
+}
+@keyframes hero-plate-thud {
+  0%,
+  100% {
+    scale: 1;
+  }
+  35% {
+    scale: 0.992;
+  }
+}
+/* ===== Талисман (HeroMascot): персонаж по эскизу владельца — жёлтая
+   маска, тёмные заплатки глаз, клинки крестом за спиной, рука-«победа».
+   Геометрия — inline-SVG в компоненте; здесь хореография прорыва:
+   вылет из пролома с перелётом и squash-посадкой, клинки и голова
+   доводятся пружиной, после печати знака — вскид руки, глаза
+   радуются, искры. Пивоты — transform-origin в координатах viewBox
+   (transform-box: view-box). ===== */
+.hero__mascot {
+  position: absolute;
+  left: 4%;
+  bottom: 3%;
+  z-index: 1;
+  width: 40%;
+  aspect-ratio: 1;
+  animation: mascot-bob 3.4s ease-in-out 2.7s infinite;
+}
+.mascot__leap {
+  position: absolute;
+  inset: 0;
+  animation: hero-mascot-burst 0.62s cubic-bezier(0.2, 0.85, 0.3, 1.18) 0.55s
+    backwards;
+}
+@keyframes hero-mascot-burst {
+  0% {
+    transform: translateY(42%) scale(0.3) rotate(-14deg);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  58% {
+    transform: translateY(-8%) scale(1.17) rotate(5deg);
+  }
+  80% {
+    transform: translateY(2%) scale(0.94, 1.05) rotate(-2deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+/* Клинки за спиной: доводка после посадки + лёгкое дыхание в idle. */
+.mascot__gear {
+  transform-box: view-box;
+  transform-origin: 128px 105px;
+  animation:
+    mascot-gear-settle 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.25) 0.62s backwards,
+    mascot-gear-sway 3.8s ease-in-out 3.1s infinite;
+}
+@keyframes mascot-gear-settle {
+  0% {
+    transform: rotate(-9deg);
+  }
+  60% {
+    transform: rotate(3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@keyframes mascot-gear-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-2.5deg);
+  }
+}
+/* Голова: сбрасывает удар приземления. */
+.mascot__head {
+  transform-box: view-box;
+  transform-origin: 128px 148px;
+  animation: mascot-head-wobble 0.55s cubic-bezier(0.2, 0.8, 0.3, 1.2) 0.64s
+    backwards;
+}
+@keyframes mascot-head-wobble {
+  0% {
+    transform: rotate(8deg);
+  }
+  55% {
+    transform: rotate(-4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+/* Левая рука ловит равновесие на посадке. */
+.mascot__arm--left {
+  transform-box: view-box;
+  transform-origin: 64px 169px;
+  animation: mascot-arm-catch 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.2) 0.62s
+    backwards;
+}
+@keyframes mascot-arm-catch {
+  0% {
+    transform: rotate(-16deg);
+  }
+  55% {
+    transform: rotate(5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+/* Правая рука: до вскипа согнута через голову (замах после прорыва),
+   после печати знака проносится над макушкой в «победу» с перелётом. */
+.mascot__arm--right {
+  transform-box: view-box;
+  transform-origin: 187px 166px;
+  animation: mascot-arm-victory 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.3) 1.6s
+    backwards;
+}
+@keyframes mascot-arm-victory {
+  0% {
+    transform: rotate(-26deg);
+  }
+  65% {
+    transform: rotate(6deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+/* Глаза: после вскипа руки щёлки становятся радостными дугами
+   (перекрёстный fade — базовое состояние = финальный кадр). */
+.mascot__eyes--normal {
+  opacity: 0;
+  animation: mascot-eyes-out 0.22s ease-out 1.85s backwards;
+}
+.mascot__eyes--happy {
+  animation: mascot-eyes-in 0.22s ease-out 1.85s backwards;
+}
+@keyframes mascot-eyes-out {
+  from {
+    opacity: 1;
+  }
+}
+@keyframes mascot-eyes-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Искры у вскинутой руки. */
+.mascot__spark {
+  fill: var(--ink);
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: mascot-spark 0.5s ease-out 2.05s backwards;
+}
+.mascot__spark--2 {
+  animation-delay: 2.16s;
+}
+@keyframes mascot-spark {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35) rotate(45deg);
+  }
+}
+@keyframes mascot-bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 2.5%;
+  }
+}
+/* Статистика сети со счётчиками. */
+.hero__stats {
+  grid-column: 1/-1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  border-top: 1px solid var(--ink);
+  margin-top: 56px;
+  padding-top: 24px;
+}
+.hero__stat {
+  display: grid;
+  gap: 4px;
+}
+.hero__stat strong {
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: var(--weight-extrabold);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.hero__stat span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+/* Бегущая строка внизу героя: две одинаковые группы, сдвиг на 50% — шов
+   не виден (паттерн age-marquee). */
+.hero__marquee {
+  grid-column: 1/-1;
+  overflow: hidden;
+  border-bottom: 1px solid var(--ink);
+  margin-top: 40px;
+  padding: 14px 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-secondary);
+}
+.hero__marquee-track {
+  display: flex;
+  width: max-content;
+  animation: hero-marquee-scroll 36s linear infinite;
+  will-change: transform;
+}
+.hero__marquee-track > span {
+  white-space: nowrap;
+}
+.hero__marquee-track i {
+  font-style: normal;
+  color: var(--accent);
+  -webkit-text-stroke: 1px var(--ink);
+  padding: 0 18px;
+}
+@keyframes hero-marquee-scroll {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+/* Появление секций при прокрутке: скрытое состояние включается только
+   когда JS-плагин отметил документ (без JS/в SSR всё видно). */
+html.js-reveal [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s cubic-bezier(0.22, 0.61, 0.24, 1);
+  transition-delay: calc(var(--reveal-step, 0) * 70ms);
+}
+html.js-reveal [data-reveal].reveal-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.js-reveal [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 .small-mark {
   color: var(--ink);
@@ -1471,6 +2223,11 @@ legend {
     padding-top: 116px;
     gap: 32px;
   }
+  /* На узких экранах контент героя выше окна — «первый экран» здесь не
+     ряд с 1fr, все строки по контенту. */
+  .hero--screen {
+    grid-template-rows: none;
+  }
   .hero h1 {
     font-size: clamp(44px, 11.8vw, 70px);
     line-height: 1.045;
@@ -1496,6 +2253,11 @@ legend {
   .hero__corner {
     width: 25%;
   }
+  .hero__mascot {
+    left: 2%;
+    bottom: 2%;
+    width: 44%;
+  }
   .hero__art-caption {
     margin-top: 12px;
   }
@@ -1508,6 +2270,24 @@ legend {
   .hero__bottom > :last-child {
     flex-shrink: 0;
     gap: 6px;
+  }
+  .hero__stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 20px;
+  }
+  .hero__stat {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .hero__stat strong {
+    font-size: 28px;
+  }
+  .hero__marquee {
+    margin-top: 24px;
+    font-size: 11px;
   }
   .section-heading {
     grid-template-columns: 1fr;

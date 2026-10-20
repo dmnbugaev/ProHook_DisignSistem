@@ -12,7 +12,13 @@ defineProps<{ categories: Category[]; selected?: string }>();
       :key="category.id"
       :to="`/catalog/${category.slug}`"
       :aria-current="selected === category.slug ? 'page' : undefined"
-      >{{ category.name }}</NuxtLink
+      >{{ category.name
+      }}<span
+        v-if="category.productCount !== undefined"
+        class="category-links__count"
+        aria-hidden="true"
+        >{{ category.productCount }}</span
+      ></NuxtLink
     >
   </nav>
 </template>

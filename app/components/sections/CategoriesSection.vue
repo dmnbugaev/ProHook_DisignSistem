@@ -9,11 +9,13 @@ defineProps<{ categories: Category[] }>();
       <p>От большого к деталям. <br />Выберите направление.</p>
     </div>
     <div class="category-grid">
-      <CategoryCard
+      <div
         v-for="(category, index) in categories"
         :key="category.id"
-        :category="category"
-        :index="index"
-      /></div
+        data-reveal
+        :style="{ '--reveal-step': index % 3 }"
+      >
+        <CategoryCard :category="category" :index="index" />
+      </div></div
   ></UiContainer>
 </template>

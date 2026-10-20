@@ -9,6 +9,7 @@ import {
   type StoredPartnership,
 } from "./partnership-store";
 import { notifyStaffViaMoySklad } from "./moysklad-notify";
+import { telegramSilenced } from "../utils/telegram-silence";
 
 /**
  * Доставка заявок на партнёрство в Telegram — best-effort с повторами,
@@ -42,6 +43,15 @@ export async function dispatchPartnershipNotification(
   chatIds: string[],
   request: typeof fetch = fetch,
 ): Promise<void> {
+  // Тестовое окружение (TELEGRAM_SILENT): ни отправок, ни fallback-задач
+  // в МойСклад — уведомления о заявках в тестах не уходят вовсе.
+  if (telegramSilenced()) {
+    console.info(
+      "Partnership telegram dispatch silenced for tests:",
+      application.publicId,
+    );
+    return;
+  }
   if (!botToken || chatIds.length === 0) {
     await fallbackToMoySkladTask(application, data);
     return;
