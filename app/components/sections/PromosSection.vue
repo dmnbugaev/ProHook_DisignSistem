@@ -285,7 +285,21 @@ onBeforeUnmount(() => {
             aria-label="Предыдущая карточка"
             @click="prev"
           >
-            ←
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M19 12H5m0 0 6-6m-6 6 6 6"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
           </button>
           <button
             type="button"
@@ -293,7 +307,21 @@ onBeforeUnmount(() => {
             aria-label="Следующая карточка"
             @click="next"
           >
-            →
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 12h14m0 0-6-6m6 6-6 6"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
           </button>
           <div
             class="promos__progress"
@@ -365,7 +393,7 @@ onBeforeUnmount(() => {
   /* Центрирование снапа: карточка шириной контента, поля с боков — не меньше
      гуттера. Проценты в flex-basis считались бы от контент-бокса (зависит от
      этих же полей) — поэтому ширина задана константой, а не переменной. */
-  padding-inline: max(var(--gutter), calc((100% - 680px) / 2));
+  padding-inline: max(var(--gutter), calc((100% - 920px) / 2));
   padding-block: var(--space-2);
   scrollbar-width: none;
   outline: none;
@@ -394,10 +422,15 @@ onBeforeUnmount(() => {
   outline-offset: 4px;
 }
 .promo-card {
-  flex: 0 0 min(680px, 100%);
+  /* Широкая карточка под портретное фото: 45% от 920px = 414×552 — фото
+     остаётся героем карточки, а текст получает полноценную колонку.
+     Константа 920px продублирована в padding-inline ленты (см. ниже). */
+  flex: 0 0 min(920px, 100%);
   scroll-snap-align: center;
+  /* Фото — вертикальное 3:4, рядом с ним текст (на мобиле — фото сверху);
+     полноразмерный портрет над текстом сделал бы карточку 900+ px высотой. */
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   border-radius: var(--radius-card);
   overflow: hidden;
   /* Соседние карточки заметно меньше сфокусированной — акцент внимания. */
@@ -421,8 +454,14 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(255, 255, 255, 0.16);
 }
 .promo-card__image {
-  width: 100%;
-  aspect-ratio: 16 / 7;
+  /* Портретная рамка 3:4 (снимки из Telegram чаще вертикальные): ширина
+     фиксирована долей карточки, высота — из соотношения; если текст длиннее,
+     карточка растёт и фото дорезается cover-ом без искажения. min-width: 0
+     обязателен: у <img> автоматический flex-минимум равен внутренней ширине
+     снимка (1000+ px) и после загрузки растягивает фото на всю карточку. */
+  flex: 0 0 45%;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
   display: block;
 }
@@ -451,7 +490,7 @@ onBeforeUnmount(() => {
   color: var(--ink);
 }
 .promo-card h3 {
-  font-size: clamp(26px, 2.8vw, 36px);
+  font-size: clamp(26px, 2.8vw, 40px);
   font-weight: var(--weight-extrabold);
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -498,12 +537,14 @@ onBeforeUnmount(() => {
   gap: var(--space-4);
   margin-top: var(--space-6);
 }
-/* Стрелки максимально тихие: только глиф, без рамок и заливок; при
-   наведении — жёлтая плашка с чёрной стрелкой (язык кнопок сайта). */
+/* Стрелки максимально тихие: только SVG-стрелка, без рамок и заливок; при
+   наведении — жёлтая плашка с чёрной стрелкой (язык кнопок сайта).
+   Стрелка — именно SVG, не текстовый глиф: путь симметричен viewBox, и сетка
+   .icon-button центрирует её в квадрате пиксельно (глифы «←»/«→» сидят
+   в строке асимметрично). */
 .promos__arrow {
   border: 1px solid transparent;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 24px;
   flex: 0 0 auto;
   transition:
     color var(--duration-fast) ease,
@@ -573,6 +614,14 @@ onBeforeUnmount(() => {
   .promos__track {
     --promo-fade: 32px;
     gap: var(--space-4);
+  }
+  /* Узкий экран: фото на всю ширину карточки, текст под ним. */
+  .promo-card {
+    flex-direction: column;
+  }
+  .promo-card__image {
+    flex-basis: auto;
+    width: 100%;
   }
   .promo-card h3 {
     font-size: 22px;

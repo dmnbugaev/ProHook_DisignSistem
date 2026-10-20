@@ -2,11 +2,15 @@
 /**
  * Талисман ПроХука — оригинальный персонаж по эскизу владельца:
  * жёлтая маска с тёмными «заплатками» глаз, два клинка за спиной,
- * вскинутая рука-«победа». Геометрия — inline-SVG в координатах
- * viewBox 256; вся хореография прорыва стены — в блоке «Вскрытие»
- * main.css, пивоты задаются transform-origin в координатах viewBox
- * (transform-box: view-box). Глаза — две группы (обычные щёлки и
- * радостные дуги), CSS их перекрёстно переключает после вскипа руки.
+ * шея между маской и торсом. Обе руки двухзвенные (плечо → локоть →
+ * кисть): каждый сустав — своя группа с transform-origin в
+ * координатах viewBox, позы решены обратной кинематикой (хореография
+ * и треки — в блоке «Прорыв» main.css). Правая рука после прорыва
+ * вкладывает клинок в ножны за спиной (эфес остаётся над правым
+ * плечом — видимый клинок уходит за торс) и машет ладонью, затем
+ * обе руки складываются в «сердечко» у груди. Кисть вложена в
+ * предплечье — пальцы всегда смотрят вдоль него. Здесь только
+ * геометрия; рука рисуется перед головой, клинки — за торсом.
  */
 </script>
 <template>
@@ -14,31 +18,34 @@
     <div class="mascot__leap">
       <svg class="mascot__figure" viewBox="0 0 256 256">
         <defs>
-          <g id="mascot-swords" style="stroke: var(--ink)" stroke-width="4">
-            <g transform="rotate(-25 80 110)">
-              <rect
-                x="70"
-                y="48"
-                width="20"
-                height="106"
-                rx="9"
-                fill="#415968"
-              />
-              <path d="M73 67l14-10M73 90l14-10M73 113l14-10M73 136l14-10" />
-            </g>
-            <g transform="rotate(25 176 110)">
-              <rect
-                x="166"
-                y="48"
-                width="20"
-                height="106"
-                rx="9"
-                fill="#415968"
-              />
-              <path
-                d="M169 57l14 10M169 80l14 10M169 103l14 10M169 126l14 10"
-              />
-            </g>
+          <!-- Клинок вертикально, остриём вверх, центрирован на x=176:
+               слева позиционируется <use>-трансформом (крест за спиной),
+               правый живёт своей группой и анимируется в ножны. -->
+          <g
+            id="mascot-sword"
+            style="stroke: var(--ink)"
+            stroke-width="3.5"
+            stroke-linejoin="round"
+          >
+            <rect x="169" y="38" width="14" height="86" rx="7" fill="#415968" />
+            <path d="M172 58l8-6M172 80l8-6M172 102l8-6" fill="none" />
+            <rect
+              x="159"
+              y="124"
+              width="34"
+              height="9"
+              rx="4.5"
+              fill="#C4D3DC"
+            />
+            <rect
+              x="170.5"
+              y="133"
+              width="11"
+              height="20"
+              rx="5"
+              fill="#49392C"
+            />
+            <circle cx="176" cy="160" r="7.5" fill="#C4D3DC" />
           </g>
           <g
             id="mascot-torso"
@@ -46,6 +53,13 @@
             stroke-width="5"
             stroke-linejoin="round"
           >
+            <!-- Шея: соединяет маску и торс, видна в разветвлении слева
+                 и справа от нижней кромки маски. -->
+            <path
+              d="M116 134L140 134L147 164L109 164Z"
+              fill="#172124"
+              stroke-width="4"
+            />
             <path
               d="M82 147Q48 147 42 183L33 240Q33 250 48 250H208Q223 250 223 238L214 183Q208 147 174 147L150 153H106Z"
               fill="#172124"
@@ -59,6 +73,24 @@
               style="fill: var(--accent)"
             />
             <path d="M127 160V242" fill="none" />
+            <!-- Дужка ножен на правом плече: не лента через грудь
+                 (толстая портупея поперёк торса читалась как третья
+                 рука), а короткий ремень у плеча — клинок за спиной
+                 подсказывает видимый эфес над плечом. -->
+            <path
+              d="M177 157Q189 140 201 154"
+              style="stroke: var(--ink)"
+              stroke-width="14"
+              fill="none"
+              stroke-linecap="round"
+            />
+            <path
+              d="M177 157Q189 140 201 154"
+              stroke="#49392C"
+              stroke-width="9"
+              fill="none"
+              stroke-linecap="round"
+            />
             <path
               d="M73 211Q97 202 119 216M137 216Q159 202 183 211"
               stroke="#BCB900"
@@ -121,15 +153,27 @@
           </g>
         </defs>
 
-        <!-- Клинки крестом за спиной. -->
+        <!-- Клинки за спиной: левый закреплён крестом, правый после
+             прорыва уходит в ножны (базовое состояние = в ножнах,
+             эфес над правым плечом). -->
         <g class="mascot__gear">
-          <use href="#mascot-swords" />
+          <g class="mascot__sword mascot__sword--l">
+            <use
+              href="#mascot-sword"
+              transform="translate(-96,9) rotate(-25,176,101)"
+            />
+          </g>
+          <g class="mascot__sword mascot__sword--r">
+            <use href="#mascot-sword" />
+          </g>
         </g>
-        <!-- Корпус. -->
+        <!-- Корпус: торс с дужкой ножен и шеей. -->
         <g class="mascot__body">
           <use href="#mascot-torso" />
         </g>
-        <!-- Голова: маска + переключаемые глаза. -->
+        <!-- Голова: маска + переключаемые глаза. Руки рисуются ПЕРЕД
+             головой: правая кисть при вкладывании держится у эфеса
+             над плечом, маску не пересекает. -->
         <g class="mascot__head">
           <use href="#mascot-mask" />
           <g class="mascot__eyes mascot__eyes--normal">
@@ -139,43 +183,72 @@
             <use href="#mascot-eyes-happy" />
           </g>
         </g>
-        <!-- Левая рука — ловит равновесие на посадке. -->
-        <g
-          class="mascot__arm mascot__arm--left"
-          style="stroke: var(--ink)"
-          stroke-width="5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M64 169Q39 170 35 205Q34 224 58 228L91 216" fill="#172124" />
-          <path d="M55 187L48 211L72 218L88 210" style="fill: var(--accent)" />
+        <!-- Правая рука — двухзвенная; нарисована в финальной позе
+             «сердечка» (локоть у пояса, кисть у груди). -->
+        <g class="mascot__arm mascot__arm--right">
+          <!-- Плечо: капсула сустав-локоть (сдвоенный штрих = кант). -->
+          <path class="m-bone m-bone--ink" d="M183 167L181 210" />
+          <path class="m-bone m-bone--suit" d="M183 167L181 210" />
+          <g class="mascot__fore">
+            <!-- Предплечье: локоть-запястье + жёлтая повязка. -->
+            <path class="m-bone m-bone--ink" d="M181 210L155 172" />
+            <path class="m-bone m-bone--suit" d="M181 210L155 172" />
+            <path class="m-band" d="M162 195L174 187" />
+            <!-- Кисть: перчатка с пальцами накрест, повёрнута вдоль
+                 предплечья (пальцы к центру груди). -->
+            <g class="mascot__hand" transform="rotate(-34,155,172)">
+              <rect
+                class="m-glove"
+                x="141"
+                y="148"
+                width="26"
+                height="24"
+                rx="11"
+              />
+              <path class="m-finger m-finger--ink" d="M146 150L142 130" />
+              <path class="m-finger m-finger--suit" d="M146 150L142 130" />
+              <path class="m-finger m-finger--ink" d="M159 158L145 136" />
+              <path class="m-finger m-finger--suit" d="M159 158L145 136" />
+            </g>
+          </g>
         </g>
-        <!-- Правая рука — вскидывает «победу» после прорыва. -->
-        <g
-          class="mascot__arm mascot__arm--right"
-          style="stroke: var(--ink)"
-          stroke-width="5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path
-            d="M187 166Q207 166 213 144L217 89L196 84L188 127L176 153Z"
-            fill="#172124"
-          />
-          <path
-            d="M193 155L202 125L215 132L210 158Z"
-            style="fill: var(--accent)"
-          />
-          <path
-            d="M194 92Q183 77 178 59Q176 53 181 51Q186 50 195 65L187 35Q185 29 191 27Q197 26 199 32L209 54L204 27Q203 20 209 20Q216 20 216 27L220 51L222 34Q223 28 229 31Q233 34 231 41L232 66Q234 79 216 100Z"
-            style="fill: var(--accent)"
-          />
+        <!-- Левая рука — зеркальная двухзвенная; нарисована в стойке
+             (рука вдоль тела, кисть у пояса), в «сердечко» приходит
+             анимацией (база CSS = финальная поза). -->
+        <g class="mascot__arm mascot__arm--left">
+          <path class="m-bone m-bone--ink" d="M71 166L37 193" />
+          <path class="m-bone m-bone--suit" d="M71 166L37 193" />
+          <g class="mascot__fore">
+            <path class="m-bone m-bone--ink" d="M37 193L75 220" />
+            <path class="m-bone m-bone--suit" d="M37 193L75 220" />
+            <path class="m-band" d="M52 213L61 201" />
+            <g class="mascot__hand" transform="rotate(125,75,220)">
+              <rect
+                class="m-glove"
+                x="61"
+                y="196"
+                width="26"
+                height="24"
+                rx="11"
+              />
+              <path class="m-finger m-finger--ink" d="M66 198L62 178" />
+              <path class="m-finger m-finger--suit" d="M66 198L62 178" />
+              <path class="m-finger m-finger--ink" d="M79 206L65 184" />
+              <path class="m-finger m-finger--suit" d="M79 206L65 184" />
+            </g>
+          </g>
         </g>
-        <!-- Искры у вскинутой руки. -->
-        <path class="mascot__spark" d="M162 34L166 26L170 34L166 42Z" />
+        <!-- Сердечко между кистями у груди: вспыхивает, когда обе
+             руки сложились, и тихо пульсирует в idle. -->
+        <path
+          class="mascot__heart"
+          d="M128 160C121 154 110 151 110 142C110 135 116.5 132 122 135.5C124.5 137 126.5 139 128 141C129.5 139 131.5 137 134 135.5C139.5 132 146 135 146 142C146 151 135 154 128 160Z"
+        />
+        <!-- Искры у сердечка. -->
+        <path class="mascot__spark" d="M96 132L100 124L104 132L100 140Z" />
         <path
           class="mascot__spark mascot__spark--2"
-          d="M242 78L246 70L250 78L246 86Z"
+          d="M152 128L156 120L160 128L156 136Z"
         />
       </svg>
     </div>

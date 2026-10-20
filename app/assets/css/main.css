@@ -553,10 +553,13 @@ legend {
    эскизу владельца) ломится сквозь серую стену — плита дрожит и
    расходится трещинами от точки удара, разлетается четырьмя осколками
    с ударной волной и щепками; под ней жёлтое ядро, из пролома ударом
-   вышибает знак ПроХука, талисман вскидывает руку-«победу», глаза
-   радуются. Хронометраж: дрожь 0.13с → трещины 0.2с → прорыв 0.55с
+   вышибает знак ПроХука; талисман вкладывает клинок в ножны за
+   спиной, макает кисть в ядро и круговым проносом руки показывает
+   «сердечко», глаза радуются. Хронометраж: дрожь 0.13с → трещины 0.2с → прорыв 0.55с
    (осколки/волна/щепки, прыжок талисмана) → посадка ~1.05с → знак
-   1.15с → «победа» 1.6с → глаза 1.85с → тихий idle. Все базовые
+   1.15с → клинок в ножны за спиной 1.95–2.5с → кисть макает в ядро
+   ~3с (рябь) → пронос вверх 3.3–3.7с → сердечко 3.75с → глаза
+   радуются 3.8с → тихий idle. Все базовые
    состояния — финальные кадры: глобальный kill-switch
    prefers-reduced-motion оставляет статичную финальную композицию. ===== */
 .hero--kinetic .hero__art {
@@ -970,12 +973,15 @@ legend {
   }
 }
 /* ===== Талисман (HeroMascot): персонаж по эскизу владельца — жёлтая
-   маска, тёмные заплатки глаз, клинки крестом за спиной, рука-«победа».
-   Геометрия — inline-SVG в компоненте; здесь хореография прорыва:
-   вылет из пролома с перелётом и squash-посадкой, клинки и голова
-   доводятся пружиной, после печати знака — вскид руки, глаза
-   радуются, искры. Пивоты — transform-origin в координатах viewBox
-   (transform-box: view-box). ===== */
+   маска, тёмные заплатки глаз, шея, клинки за спиной. Геометрия —
+   inline-SVG в компоненте; здесь хореография прорыва: вылет из
+   пролома с перелётом и squash-посадкой в боевой стойке (обе руки
+   двухзвенные и активные — ни одной «висящей», иначе силуэт читается
+   как три руки), после печати знака правая рука вкладывает клинок в
+   ножны за спиной (эфес остаётся над плечом), машет ладонью, затем
+   обе руки складывают «сердечко» у груди, глаза радуются. Пивоты —
+   transform-origin в координатах viewBox (transform-box: view-box).
+   ===== */
 .hero__mascot {
   position: absolute;
   left: 4%;
@@ -983,7 +989,7 @@ legend {
   z-index: 1;
   width: 40%;
   aspect-ratio: 1;
-  animation: mascot-bob 3.4s ease-in-out 2.7s infinite;
+  animation: mascot-bob 3.4s ease-in-out 4.6s infinite;
 }
 .mascot__leap {
   position: absolute;
@@ -1009,13 +1015,14 @@ legend {
     transform: translateY(0) scale(1) rotate(0deg);
   }
 }
-/* Клинки за спиной: доводка после посадки + лёгкое дыхание в idle. */
+/* Клинки за спиной: доводка после посадки + лёгкое дыхание в idle
+   (после вкладывания правого в ножны амплитуда не будоражит эфес). */
 .mascot__gear {
   transform-box: view-box;
   transform-origin: 128px 105px;
   animation:
     mascot-gear-settle 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.25) 0.62s backwards,
-    mascot-gear-sway 3.8s ease-in-out 3.1s infinite;
+    mascot-gear-sway 4.2s ease-in-out 3.4s infinite;
 }
 @keyframes mascot-gear-settle {
   0% {
@@ -1034,7 +1041,33 @@ legend {
     transform: rotate(0deg);
   }
   50% {
-    transform: rotate(-2.5deg);
+    transform: rotate(-1.6deg);
+  }
+}
+/* Правый клинок: из креста за спиной дугой уходит в ножны —
+   разворачивается против часовой через вертикаль и ложится за спину
+   наискось, эфес (навершие+рукоять+гарда) остаётся НАД правым
+   плечом, кончик прячется за торс. База = в ножнах: финал анимации
+   и статичная композиция reduced-motion. */
+.mascot__sword--r {
+  transform-box: view-box;
+  transform-origin: 176px 101px;
+  transform: rotate(-112deg);
+  animation: mascot-sword-sheathe 0.5s cubic-bezier(0.45, 0, 0.25, 1) 2.05s
+    backwards;
+}
+@keyframes mascot-sword-sheathe {
+  0% {
+    transform: rotate(25deg);
+  }
+  50% {
+    transform: rotate(-40deg);
+  }
+  85% {
+    transform: rotate(-108deg);
+  }
+  100% {
+    transform: rotate(-112deg);
   }
 }
 /* Голова: сбрасывает удар приземления. */
@@ -1055,51 +1088,272 @@ legend {
     transform: rotate(0deg);
   }
 }
-/* Левая рука ловит равновесие на посадке. */
-.mascot__arm--left {
-  transform-box: view-box;
-  transform-origin: 64px 169px;
-  animation: mascot-arm-catch 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.2) 0.62s
-    backwards;
-}
-@keyframes mascot-arm-catch {
-  0% {
-    transform: rotate(-16deg);
-  }
-  55% {
-    transform: rotate(5deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-/* Правая рука: до вскипа согнута через голову (замах после прорыва),
-   после печати знака проносится над макушкой в «победу» с перелётом. */
+/* ОБЕ руки двухзвенные (плечо → локоть → кисть), позы решены
+   обратной кинематикой и проверены численно (габариты костей,
+   перчаток и пальцев со штрихами на всём треке ≤256; node-проба
+   интерполирует ключи и считает точки кисти). Углы ведём
+   непрерывно, без перескока через 0 — иначе прокрут на сотни
+   градусов. Кисть вложена в предплечье — пальцы всегда вдоль него.
+   Правая рука НАРИСОВАНА в финальной позе «сердечка» (кисть у
+   груди), поэтому финал трека = (0,0). Трек (время → % за 2.25с
+   с 1.95с): 0% стойка, кисть у эфеса (−114.8,+142) → 8.9% дожим к
+   ножнам (−119,+130.6), клинок ложится за спину 2.05–2.55с → 35.6%
+   рука поднята для привета (−166.1,+204.6) → 44.4–60% два взмаха
+   ладонью (β +219.1 ↔ +204.6, второй тише) → 71.1–91.1% спуск к
+   груди (−120,+150) → (−60,+80) → (−20,+30) → 100% «сердечко»
+   (0,0), кисть у груди вместе с левой. */
 .mascot__arm--right {
   transform-box: view-box;
-  transform-origin: 187px 166px;
-  animation: mascot-arm-victory 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.3) 1.6s
-    backwards;
+  transform-origin: 183px 164px;
+  animation: mascot-shoulder-r 2.25s linear 1.95s backwards;
 }
-@keyframes mascot-arm-victory {
+.mascot__arm--right .mascot__fore {
+  transform-box: view-box;
+  transform-origin: 181px 210px;
+  animation: mascot-elbow-r 2.25s linear 1.95s backwards;
+}
+@keyframes mascot-shoulder-r {
   0% {
-    transform: rotate(-26deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.25, 1);
+    transform: rotate(-114.8deg);
   }
-  65% {
-    transform: rotate(6deg);
+  8.9% {
+    animation-timing-function: ease-out;
+    transform: rotate(-119deg);
+  }
+  13.3% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(-116deg);
+  }
+  26.7% {
+    animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
+    transform: rotate(-119deg);
+  }
+  35.6% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(-166.1deg);
+  }
+  60% {
+    animation-timing-function: cubic-bezier(0.3, 0, 0.25, 1);
+    transform: rotate(-166.1deg);
+  }
+  71.1% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(-120deg);
+  }
+  82.2% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(-60deg);
+  }
+  91.1% {
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+    transform: rotate(-20deg);
   }
   100% {
     transform: rotate(0deg);
   }
 }
-/* Глаза: после вскипа руки щёлки становятся радостными дугами
-   (перекрёстный fade — базовое состояние = финальный кадр). */
+@keyframes mascot-elbow-r {
+  0% {
+    animation-timing-function: cubic-bezier(0.45, 0, 0.25, 1);
+    transform: rotate(142deg);
+  }
+  8.9% {
+    animation-timing-function: ease-out;
+    transform: rotate(130.6deg);
+  }
+  13.3% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(136.6deg);
+  }
+  26.7% {
+    animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
+    transform: rotate(130.6deg);
+  }
+  35.6% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(204.6deg);
+  }
+  44.4% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(219.1deg);
+  }
+  53.3% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(204.6deg);
+  }
+  60% {
+    animation-timing-function: cubic-bezier(0.3, 0, 0.25, 1);
+    transform: rotate(214deg);
+  }
+  71.1% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(150deg);
+  }
+  82.2% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(80deg);
+  }
+  91.1% {
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+    transform: rotate(30deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+/* Левая рука нарисована в стойке (рука вдоль тела, кисть у пояса),
+   ловит равновесие на посадке и держит стойку, пока правая возится
+   с клинком и машет; с 3.45с (82% ключей с замахом-антисипацией)
+   поднимается к груди — 100% = базовая поза «сердечка» (−53.3,
+   −37.8): финал анимации совпадает с базой, reduced-motion видит
+   ту же композицию. */
+.mascot__arm--left {
+  transform-box: view-box;
+  transform-origin: 73px 164px;
+  transform: rotate(-53.3deg);
+  animation: mascot-shoulder-l 3.58s linear 0.62s backwards;
+}
+.mascot__arm--left .mascot__fore {
+  transform-box: view-box;
+  transform-origin: 37px 193px;
+  transform: rotate(-37.8deg);
+  animation: mascot-elbow-l 3.58s linear 0.62s backwards;
+}
+@keyframes mascot-shoulder-l {
+  0% {
+    animation-timing-function: ease-out;
+    transform: rotate(-12deg);
+  }
+  3.5% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(8deg);
+  }
+  7.8% {
+    animation-timing-function: linear;
+    transform: rotate(0deg);
+  }
+  79% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(0deg);
+  }
+  82% {
+    animation-timing-function: ease-in;
+    transform: rotate(6deg);
+  }
+  92% {
+    animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+    transform: rotate(-30deg);
+  }
+  100% {
+    transform: rotate(-53.3deg);
+  }
+}
+@keyframes mascot-elbow-l {
+  0% {
+    animation-timing-function: ease-out;
+    transform: rotate(2deg);
+  }
+  3.5% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(-2deg);
+  }
+  7.8% {
+    animation-timing-function: linear;
+    transform: rotate(0deg);
+  }
+  79% {
+    animation-timing-function: ease-in-out;
+    transform: rotate(0deg);
+  }
+  82% {
+    animation-timing-function: ease-in;
+    transform: rotate(-2deg);
+  }
+  92% {
+    animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+    transform: rotate(-22deg);
+  }
+  100% {
+    transform: rotate(-37.8deg);
+  }
+}
+/* Материалы руки: кости — сдвоенный штрих (чернильный кант поверх
+   тёмного костюма), повязка и перчатка — жёлтые. */
+.m-bone {
+  fill: none;
+  stroke-linecap: round;
+}
+.m-bone--ink {
+  stroke: var(--ink);
+  stroke-width: 22;
+}
+.m-bone--suit {
+  stroke: #172124;
+  stroke-width: 15;
+}
+.m-band {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 15;
+}
+.m-finger {
+  fill: none;
+  stroke-linecap: round;
+}
+.m-finger--ink {
+  stroke: var(--ink);
+  stroke-width: 11;
+}
+.m-finger--suit {
+  stroke: var(--accent);
+  stroke-width: 5.5;
+}
+.m-glove {
+  fill: var(--accent);
+  stroke: var(--ink);
+  stroke-width: 4;
+}
+/* Сердечко между кистями у груди: вспыхивает, когда обе руки
+   сложились (4.2с), и тихо пульсирует в idle. */
+.mascot__heart {
+  fill: var(--accent);
+  stroke: var(--ink);
+  stroke-width: 3.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    mascot-heart-pop 0.45s cubic-bezier(0.3, 1.6, 0.4, 1) 4.25s backwards,
+    mascot-heart-pulse 2.4s ease-in-out 4.9s infinite;
+}
+@keyframes mascot-heart-pop {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes mascot-heart-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
+}
+/* Глаза: когда вспыхивает сердечко, щёлки становятся радостными
+   дугами (перекрёстный fade — базовое состояние = финальный кадр). */
 .mascot__eyes--normal {
   opacity: 0;
-  animation: mascot-eyes-out 0.22s ease-out 1.85s backwards;
+  animation: mascot-eyes-out 0.22s ease-out 4.3s backwards;
 }
 .mascot__eyes--happy {
-  animation: mascot-eyes-in 0.22s ease-out 1.85s backwards;
+  animation: mascot-eyes-in 0.22s ease-out 4.3s backwards;
 }
 @keyframes mascot-eyes-out {
   from {
@@ -1111,16 +1365,16 @@ legend {
     opacity: 0;
   }
 }
-/* Искры у вскинутой руки. */
+/* Искры по бокам сердечка у груди. */
 .mascot__spark {
   fill: var(--ink);
   transform-box: fill-box;
   transform-origin: center;
   opacity: 0;
-  animation: mascot-spark 0.5s ease-out 2.05s backwards;
+  animation: mascot-spark 0.5s ease-out 4.4s backwards;
 }
 .mascot__spark--2 {
-  animation-delay: 2.16s;
+  animation-delay: 4.5s;
 }
 @keyframes mascot-spark {
   0% {
