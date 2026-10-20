@@ -16,9 +16,11 @@ import { telegramSilenced } from "../utils/telegram-silence";
  * TELEGRAM_PROMO_CHAT_IDS: обычное сообщение (или фото с подписью) создаёт
  * карточку, команды /list /on N /off N /del N /pin N /help управляют ею.
  *
- * Каналы приёма команд: вебхук POST /api/telegram/promo/webhook (прод —
- * хостер блокирует исходящие к api.telegram.org, входящие работают) и
- * getUpdates-поллинг TELEGRAM_PROMO_POLLING=1 (dev/локально). Ответы бота —
+ * Каналы приёма команд: getUpdates-поллинг TELEGRAM_PROMO_POLLING=1 (прод —
+ * через SSH-туннель к api.telegram.org с myserver; вебхук не работает:
+ * входящие от подсетей Telegram к REG.RU дропаются на магистрали, поэтому
+ * прод сам забирает апдейты) и вебхук POST /api/telegram/promo/webhook
+ * (запасной канал для хостинга без такой блокировки). Ответы бота —
  * best-effort: недоступность Telegram не влияет на карточки на сайте.
  */
 
@@ -59,6 +61,7 @@ function promoChatIds(): string[] {
 async function telegramApi(
   method: string,
   params: Record<string, string | number>,
+  timeoutMs: number = API_TIMEOUT_MS,
 ): Promise<unknown> {
   const token = promoBotToken();
   if (!token) throw new Error("Promo bot token is not configured");
@@ -67,7 +70,10 @@ async function telegramApi(
   for (const [key, value] of Object.entries(params))
     url.searchParams.set(key, String(value));
   const response = await fetch(url, {
-    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    // long-poll (getUpdates) висит дольше обычного запроса — его таймаут
+    // передаётся отдельно, иначе каждые 10 с журнал продa заполняется
+    // ложными «polling failed: aborted due to timeout».
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok)
     throw new Error(`Telegram ${method} failed: HTTP ${response.status}`);
@@ -324,11 +330,16 @@ export async function fetchPromoUpdates(
   offset: number,
   timeoutSec = 25,
 ): Promise<TelegramUpdate[]> {
-  const payload = (await telegramApi("getUpdates", {
-    timeout: timeoutSec,
-    offset,
-    allowed_updates: '["message"]',
-  })) as { result?: TelegramUpdate[] };
+  const payload = (await telegramApi(
+    "getUpdates",
+    {
+      timeout: timeoutSec,
+      offset,
+      allowed_updates: '["message"]',
+    },
+    // запас 3 с сверх long-poll, чтобы запрос не резался общим лимитом
+    timeoutSec * 1000 + 3000,
+  )) as { result?: TelegramUpdate[] };
   return payload.result ?? [];
 }
 

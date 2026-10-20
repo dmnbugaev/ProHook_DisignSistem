@@ -20,7 +20,7 @@ npm run build               # production-сборка
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:4317 npm test   # e2e против сборки
 npx playwright test -c playwright.audit.config.ts    # аудит вёрстки (нужен build)
 npm run catalog:sync        # полный снимок каталога из МойСклад
-npm run promo:webhook       # регистрация вебхука бота акций (не с VPS)
+npm run promo:webhook       # вебхук бота акций — запасной канал (не для REG.RU)
 ```
 
 Node 24 (юнит-тесты тайминг-зависимы на Node 22 — ложные «Promise resolution
@@ -86,10 +86,15 @@ server-side runtime config / env. В клиентский бандл, DOM и л�
   Telegram-боты с allowlist chat_id в env. Бот промо-акций
   (`TELEGRAM_PROMO_BOT_TOKEN` + `TELEGRAM_PROMO_CHAT_IDS`) наполняет блок
   «Акции и предложения»: команды /list /on /off /del /pin, сообщение =
-  карточка. На проде канал — вебхук `/api/telegram/promo/webhook` (секрет
-  `TELEGRAM_PROMO_WEBHOOK_SECRET`, регистрируется `npm run promo:webhook`
-  с машины с доступом к api.telegram.org; исходящие с VPS блокируются
-  хостером). Поллинг — только `TELEGRAM_PROMO_POLLING=1` для dev.
+  карточка. Канал на проде — поллинг `TELEGRAM_PROMO_POLLING=1`: исходящие
+  к api.telegram.org идут через SSH-туннель `prohook-telegram-relay`
+  (vapeserver → myserver, /etc/hosts + iptables переводят api.telegram.org
+  на локальный порт туннеля), а ВХОДЯЩИЕ вебхуки до REG.RU не доходят —
+  магистраль дропает подсети Telegram (диагностика 21.10: last_error
+  «Connection timed out», в access.log попыток нет). Вебхук
+  `/api/telegram/promo/webhook` (секрет `TELEGRAM_PROMO_WEBHOOK_SECRET`)
+  остаётся запасным каналом для хостинга без блокировки. Локально поллинг
+  держать выключенным: два getUpdates конфликтуют 409.
 - Банковские реквизиты намеренно не публикуются и не хранятся в репозитории.
 
 ## Готчи

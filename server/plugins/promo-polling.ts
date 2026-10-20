@@ -5,10 +5,13 @@ import {
 import { telegramSilenced } from "../utils/telegram-silence";
 
 /**
- * Поллинг-фолбэк бота промо-акций: getUpdates long poll. Включается только
- * явно — TELEGRAM_PROMO_POLLING=1 (dev/локальная машина, где исходящие к
- * api.telegram.org работают). На проде канал управления — вебхук
- * (хостер блокирует исходящие); в e2e-режиме (MOYSKLAD_SNAPSHOT_PATH) и без
+ * Поллинг бота промо-акций: getUpdates long poll. Включается только явно —
+ * TELEGRAM_PROMO_POLLING=1. Это ОСНОВНОЙ канал на проде: исходящие к
+ * api.telegram.org идут через SSH-туннель с myserver (юнит
+ * prohook-telegram-relay), а входящие вебхуки до REG.RU не доходят —
+ * магистраль дропает подсети Telegram. Локально для dev — тот же флаг,
+ * но на время локального поллинга прод-поллинг останавливают (иначе два
+ * getUpdates конфликтуют 409). В e2e-режиме (MOYSKLAD_SNAPSHOT_PATH) и без
  * токена поллинг не стартует — тесты молчат.
  */
 
