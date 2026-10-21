@@ -86,7 +86,10 @@ onBeforeUnmount(() => noticeTimer && clearTimeout(noticeTimer));
       <template v-else>
         <LegalNotice />
         <AppHeader />
-        <AgeMarquee v-if="!publicRoute" />
+        <!-- Бегущая строка 18+ — на всех страницах (решение владельца
+             21.10: вернуть; с 10.10 пряталась на публичных маршрутах как
+             побочный эффект их открытия для индексации). -->
+        <AgeMarquee />
       </template>
       <main id="main">
         <template v-if="contentVisible || showcase"><slot /></template>
