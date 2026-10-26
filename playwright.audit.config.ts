@@ -27,9 +27,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `node .output/server/index.mjs --port ${new URL(baseURL).port || "4173"}`,
+    // Nitro не разбирает CLI-флаги: `--port 4173` молча игнорировался,
+    // сервер слушал 3000 (порт соседнего проекта), healthcheck по 4173
+    // отваливался по таймауту. Порт передаём только переменной окружения.
+    command: "node .output/server/index.mjs",
     url: baseURL,
     env: {
+      PORT: new URL(baseURL).port || "4173",
       MOYSKLAD_SNAPSHOT_PATH: resolve("tests/fixtures/catalog.json"),
       ACCOUNT_DATA_DIR: resolve("test-results/account-data"),
       RESERVATION_DATA_DIR: resolve("test-results/reservation-data"),

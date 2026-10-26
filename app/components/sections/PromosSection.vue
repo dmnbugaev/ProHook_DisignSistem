@@ -572,20 +572,23 @@ onBeforeUnmount(() => {
 }
 .promos__segment {
   flex: 1;
-  height: 6px;
+  /* Реальная тач-цель 44×44 (Apple HIG): видимая полоса — псевдоэлемент
+     высотой 6px по центру кнопки. Раньше кнопка сама была полосой 6px,
+     а зона расширялась невидимым ::before — тач-цель честная, но внешние
+     аудиты (и часть браузеров на перекрытиях) её не видели. */
+  height: 44px;
   padding: 0;
   border: none;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.2);
-  overflow: hidden;
+  background: transparent;
   cursor: pointer;
-  /* Тач-цель расширяется прозрачной областью вокруг полосы. */
   position: relative;
 }
-.promos__segment::before {
+.promos__segment::after {
   content: "";
   position: absolute;
-  inset: -19px 0;
+  inset: 19px 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
 }
 .promos__segment:focus-visible {
   outline: 2px solid var(--accent);
@@ -593,7 +596,8 @@ onBeforeUnmount(() => {
 }
 .promos__fill {
   position: absolute;
-  inset: 0;
+  inset: 19px 0;
+  border-radius: 3px;
   background: var(--accent);
   transform-origin: left center;
   transform: scaleX(0);
@@ -626,16 +630,19 @@ onBeforeUnmount(() => {
   .promo-card h3 {
     font-size: 22px;
   }
+  /* На узких экранах центрировать индикатор некуда — стрелки и счётчик
+     занимают первую строку, полноразмерные сегменты (≥44px шириной)
+     переносятся на свою строку ниже. */
   .promos__controls {
     margin-top: var(--space-4);
+    flex-wrap: wrap;
   }
-  /* На узких экранах центрировать индикатор некуда — он в потоке
-     между стрелками и счётчиком. */
   .promos__progress {
     position: static;
     transform: none;
     width: auto;
-    flex: 1 1 auto;
+    flex: 0 0 100%;
+    order: 5;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -11,6 +11,8 @@ export default [
       "test-results/**",
       "playwright-report/**",
       ".agents/**",
+      // Отчёты и диагностические скрипты аудита — не прод-код
+      "qa-audit/**",
     ],
   },
   js.configs.recommended,

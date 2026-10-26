@@ -47,9 +47,14 @@ const MAX_TEXT = 500;
 
 let file: PromoFile | undefined;
 let queue: Promise<unknown> = Promise.resolve();
+/** Холодное чтение одно на все параллельные вызовы: без этого несколько
+ *  запросов к пустому хранилищу получали разные объекты и дублировали записи. */
+let loading: Promise<PromoFile> | undefined;
+/** Идущий демо-сид: параллельные GET /api/promos на пустом хранилище
+ *  трижды видели «пусто» и накатывали по 3 карточки (наблюдалось 9 вместо 3). */
+let seedInFlight: Promise<void> | undefined;
 
-async function load(): Promise<PromoFile> {
-  if (file) return file;
+async function readStore(): Promise<PromoFile> {
   try {
     const parsed = JSON.parse(await readFile(FILE, "utf8")) as PromoFile;
     file =
@@ -60,6 +65,16 @@ async function load(): Promise<PromoFile> {
     file = { version: 1, promos: [], counter: 0 };
   }
   return file;
+}
+
+async function load(): Promise<PromoFile> {
+  if (file) return file;
+  if (!loading) {
+    loading = readStore().finally(() => {
+      loading = undefined;
+    });
+  }
+  return loading;
 }
 
 function persist(next: PromoFile): Promise<void> {
@@ -213,7 +228,16 @@ export async function listActivePromos(): Promise<PromoCard[]> {
  * Демо-карточки для разработки и e2e: только при PROMO_SEED_DEMO=1 и только
  * в пустое хранилище — реальные акции приходят через бота, прод не сидируется.
  */
-export async function seedDemoPromosIfEmpty(): Promise<void> {
+export function seedDemoPromosIfEmpty(): Promise<void> {
+  // single-flight: пока сид работает, повторные вызовы ждут его, а не
+  // начинают параллельную проверку пустоты (гонка check-then-act).
+  seedInFlight ??= seedDemoPromosOnce().finally(() => {
+    seedInFlight = undefined;
+  });
+  return seedInFlight;
+}
+
+async function seedDemoPromosOnce(): Promise<void> {
   if (process.env.PROMO_SEED_DEMO !== "1") return;
   const data = await load();
   if (data.promos.length) return;
@@ -240,4 +264,5 @@ export async function seedDemoPromosIfEmpty(): Promise<void> {
 /** Только для тестов: сброс кэша файла. */
 export function resetPromoStoreForTests(): void {
   file = undefined;
+  loading = undefined;
 }

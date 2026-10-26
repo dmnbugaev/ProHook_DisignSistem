@@ -181,6 +181,19 @@ test("демо-сид только при PROMO_SEED_DEMO=1 и только в �
   process.env.PROMO_SEED_DEMO = "0";
 });
 
+test("демо-сид не дублируется при параллельных вызовах на пустом каталоге", async () => {
+  // Регрессия e2e: несколько GET /api/promos на старте concurrently видели
+  // «пусто» и накатывали по 3 карточки — в изолированном хранилище
+  // оказывалось 9 с повторами заголовков, карусель меняла карточки
+  // без смены заголовка.
+  process.env.PROMO_SEED_DEMO = "1";
+  await Promise.all(Array.from({ length: 5 }, () => seedDemoPromosIfEmpty()));
+  const promos = await listPromos();
+  assert.equal(promos.length, 3);
+  assert.equal(new Set(promos.map((item) => item.title)).size, 3);
+  process.env.PROMO_SEED_DEMO = "0";
+});
+
 test("апдейты: создание карточки, ответы оператору, allowlist", async () => {
   await handlePromoUpdateOnce(update("Ночная скидка\nС 22:00\n/catalog"));
   let active = await listActivePromos();

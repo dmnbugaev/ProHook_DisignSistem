@@ -364,11 +364,15 @@ button.text-link {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  /* Тач-цель 44px (Apple HIG): раньше ссылка была 21px высотой.
+     Отрицательные поля компенсируют рост визуального бокса, чтобы
+     заголовок раздела не уезжал вниз. */
+  min-height: 44px;
+  margin-block: -8px 8px;
   font-size: 14px;
   font-weight: var(--weight-medium);
   color: var(--text-secondary);
   text-decoration: none;
-  margin-bottom: var(--space-4);
   transition: color 160ms ease;
 }
 .catalog-back:hover,

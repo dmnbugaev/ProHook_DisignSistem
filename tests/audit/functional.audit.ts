@@ -73,15 +73,31 @@ test.describe("mobile interaction audit", () => {
     await expect(page.locator(".product-detail")).toBeVisible();
   });
 
-  test("age gate blocks catalog until confirmed on mobile", async ({
+  test("age gate: catalog public anonymously, modal on closed routes", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.context().clearCookies();
+    // Каталог (решение владельца 21.10): модального гейта нет — анонимно
+    // виден общедоступный ассортимент и инлайн-блок подтверждения 18+.
     await page.goto("/catalog", { waitUntil: "load" });
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+    const notice = page.locator(".age-notice");
+    await expect(notice).toBeVisible();
     await expect(page.locator(".product-card").first()).toBeVisible();
+    await notice.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+    await expect(notice).not.toBeVisible();
+    // Подтверждение живёт в cookie — сбрасываем, чтобы проверить закрытый
+    // маршрут с чистого анонимного состояния.
+    await page.context().clearCookies();
+    await page.goto("/reserve", { waitUntil: "load" });
+    // Диалог гейта ищем по имени: после подтверждения сайт сам открывает
+    // диалог выбора магазина, и безымянный getByRole("dialog") цеплял его.
+    const gate = page.getByRole("dialog", {
+      name: "Вам уже исполнилось 18 лет?",
+    });
+    await expect(gate).toBeVisible();
+    await gate.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+    await expect(gate).not.toBeVisible();
   });
 
   test("login and register forms: validation errors visible on mobile", async ({

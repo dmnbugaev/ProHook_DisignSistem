@@ -218,13 +218,17 @@ export const TOUCH_TARGETS_SCRIPT = `
     if (r.width === 0 || r.height === 0) continue;
     // Виртуальные клавиатуры/скрытые чекбоксы при кастомных контролах
     if (cs.position === "absolute" && (cs.clip !== "auto" && +cs.opacity === 0)) continue;
+    // Габариты берём layout-ные: у соседних карточек промо-карусели
+    // transform: scale(0.87), и getBoundingClientRect давал «усохшие»
+    // 38px вместо проектных 44px — зум-эффект карусели, не дизайн-дефект.
+    const w = el.offsetWidth, h = el.offsetHeight;
     const name = (el.getAttribute("aria-label") ||
       el.textContent || el.getAttribute("placeholder") || "").trim().slice(0, 50);
     targets.push({
       tag: el.tagName.toLowerCase(),
       cls: (el.className || "").toString().slice(0, 100),
       name,
-      w: Math.round(r.width), h: Math.round(r.height),
+      w: Math.round(w), h: Math.round(h),
       x: Math.round(r.left), y: Math.round(r.top),
     });
   }
