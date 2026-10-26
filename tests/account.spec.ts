@@ -385,6 +385,30 @@ test("anonymous catalog hides regulated product images server-side", async ({
 test("adult session unlocks product images", async ({ page }) => {
   await register(page, { dateOfBirth: birthdayExact18() });
   await expect(page).toHaveURL(/\/account$/, { timeout: 15000 });
+  const heroImage = await page.request.get("/api/hero/items/device-red");
+  expect(heroImage.status()).toBe(200);
+  expect(heroImage.headers()["content-type"]).toContain("image/webp");
+  expect((await heroImage.body()).subarray(0, 4).toString()).toBe("RIFF");
+  await page.goto("/");
+  await expect(page.locator(".floating-scene__item img")).toHaveCount(11);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const cropped = await page.locator(".floating-scene__item img").evaluateAll(
+      (images) =>
+        images
+          .filter(
+            (image) =>
+              getComputedStyle(image.closest(".floating-scene__item")!)
+                .display !== "none",
+          )
+          .filter((image) => {
+            const box = image.getBoundingClientRect();
+            return box.left < 0 || box.right > innerWidth;
+          }).length,
+    );
+    expect(cropped, `Обрезанные изображения при ширине ${width}px`).toBe(0);
+  }
   const list = await (await page.request.get("/api/products?limit=5")).json();
   const pictured = list.items.find(
     (product: { images: unknown[] }) => product.images.length > 0,
@@ -405,6 +429,9 @@ test("under-18 account keeps catalog text but never images", async ({
 }) => {
   await register(page, { dateOfBirth: birthdayUnder18() });
   await expect(page).toHaveURL(/\/account$/, { timeout: 15000 });
+  expect((await page.request.get("/api/hero/items/device-red")).status()).toBe(
+    403,
+  );
   await expect(
     page.getByText(
       "Изображения товаров доступны только совершеннолетним пользователям.",

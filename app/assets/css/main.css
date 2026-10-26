@@ -387,15 +387,35 @@ legend {
 }
 /* Первый экран (только главная): герой тянется до нижней кромки окна.
    Точную высоту — окно минус плашка и шапка над героем — ставит
-   HeroSection в --hero-min; до гидрации и без JS работает оценка
-   calc(100dvh - 132px). Основной ряд центрируется в свободном месте,
+   HeroSection в --hero-min; до гидрации и без JS учитываем высоту плашки,
+   шапки и строки 18+ (203px на широком экране). Основной ряд центрируется,
    статистика и маркиза прижаты к низу экрана. */
 .hero--screen {
-  min-height: calc(100vh - 132px);
-  min-height: calc(100dvh - 132px);
-  min-height: var(--hero-min, calc(100dvh - 132px));
+  min-height: calc(100vh - 203px);
+  min-height: calc(100dvh - 203px);
+  min-height: var(--hero-min, calc(100dvh - 203px));
   grid-template-rows: 1fr auto auto;
   align-items: center;
+}
+.hero--floating {
+  isolation: isolate;
+}
+.hero--floating > .floating-scene {
+  grid-column: 1/-1;
+  grid-row: 1;
+  align-self: stretch;
+}
+.hero--floating > .hero__copy {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  z-index: 1;
+}
+.hero--floating > .hero__stats {
+  grid-row: 2;
+}
+.hero--floating > .hero__marquee {
+  grid-row: 3;
 }
 .edition {
   display: flex;
@@ -532,624 +552,6 @@ legend {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-/* Параллакс слоёв при прокрутке (var ставит HeroSection) и наклон знака
-   за курсором (--tilt-*, только pointer: fine). */
-.hero__art {
-  transform: translateY(calc(var(--hero-parallax, 0) * 34px));
-}
-.hero__copy {
-  transform: translateY(calc(var(--hero-parallax, 0) * 14px));
-}
-.hero__art-field {
-  transform: perspective(700px) rotateX(var(--tilt-x, 0deg))
-    rotateY(var(--tilt-y, 0deg));
-  transition: transform 240ms ease;
-  will-change: transform;
-}
-/* ===== Кинетический знак (только главная; design-system живёт на базовых
-   классах без анимаций). «Прорыв»: талисман (HeroMascot, «жёлтый
-   Дэдпул» — новая редакция персонажа от 21.10) ломится сквозь серую
-   стену — плита дрожит и расходится трещинами от точки удара,
-   разлетается четырьмя осколками с ударной волной и щепками; под ней
-   жёлтое ядро, из пролома ударом вышибает знак ПроХука; приземлившись,
-   талисман машет правой ладонью и складывает пальцами «сердечко» у
-   груди (хореография рук — скрипт в HeroMascot, обратная кинематика;
-   клинки остаются за спиной). Хронометраж: дрожь 0.13с → трещины
-   0.2с → прорыв 0.55с (осколки/волна/щепки, прыжок талисмана) →
-   посадка ~1.05с → знак 1.15с → хореография персонажа с 1.45с:
-   взмах ~1.7–3.9с → «сердечко» к 5.7с → тихий idle (bob). Все базовые
-   состояния — финальные кадры: глобальный kill-switch
-   prefers-reduced-motion оставляет статичную финальную композицию
-   (скрипт талисмана при запрете движения не запускается). ===== */
-.hero--kinetic .hero__art {
-  animation: hero-fade-up 0.6s ease-out 0.1s backwards;
-}
-.hero--kinetic .hero__art-field {
-  overflow: hidden;
-  transform: perspective(760px) rotateX(var(--tilt-x, 0deg))
-    rotateY(var(--tilt-y, 0deg));
-  transition: transform 520ms cubic-bezier(0.22, 0.9, 0.32, 1.08);
-  /* Приседание плиты в момент удара печати знака (~1.55с). */
-  animation: hero-plate-thud 0.42s ease-out 1.55s backwards;
-}
-/* Ядро: жёлтая плита со знаком — то, что скрыто за стеной до вскрытия. */
-.hero__core {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: var(--accent);
-  display: grid;
-  place-items: center;
-}
-/* Стена: четыре осколка тем же серым, что плита (до прорыва — ровная
-   поверхность). Перед ударом плита дрожит и вздувается, потом осколки
-   разлетаются наружу с ускорением тяжести и гаснут. */
-.hero__wall {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  animation: hero-wall-tremble 0.42s linear 0.13s;
-}
-.hero__shard {
-  position: absolute;
-  inset: 0;
-  background: var(--surface-subtle);
-  filter: drop-shadow(0 2px 10px rgb(0 0 0 / 0.16));
-  opacity: 0;
-}
-.hero__shard--n {
-  clip-path: polygon(0 0, 100% 0, 50% 50%);
-  animation: hero-shard-fly-n 0.6s cubic-bezier(0.45, 0, 0.85, 0.55) 0.55s
-    backwards;
-}
-.hero__shard--e {
-  clip-path: polygon(100% 0, 100% 100%, 50% 50%);
-  animation: hero-shard-fly-e 0.6s cubic-bezier(0.45, 0, 0.85, 0.55) 0.61s
-    backwards;
-}
-.hero__shard--s {
-  clip-path: polygon(0 100%, 100% 100%, 50% 50%);
-  animation: hero-shard-fly-s 0.6s cubic-bezier(0.45, 0, 0.85, 0.55) 0.67s
-    backwards;
-}
-.hero__shard--w {
-  clip-path: polygon(0 0, 0 100%, 50% 50%);
-  animation: hero-shard-fly-w 0.6s cubic-bezier(0.45, 0, 0.85, 0.55) 0.73s
-    backwards;
-}
-@keyframes hero-wall-tremble {
-  0%,
-  100% {
-    transform: none;
-  }
-  12% {
-    transform: translate(0.5%, 0.3%) rotate(0.2deg);
-  }
-  24% {
-    transform: translate(-0.45%, -0.2%) rotate(-0.18deg);
-  }
-  36% {
-    transform: translate(0.55%, 0.25%) rotate(0.22deg);
-  }
-  48% {
-    transform: translate(-0.5%, 0.35%) rotate(-0.15deg);
-  }
-  60% {
-    transform: translate(0.6%, -0.25%) rotate(0.25deg);
-  }
-  72% {
-    transform: translate(-0.55%, 0.3%) rotate(-0.2deg);
-  }
-  84% {
-    transform: translate(0.65%, 0.4%) rotate(0.28deg) scale(1.003);
-  }
-  94% {
-    transform: translate(0.7%, 0.45%) rotate(0.3deg) scale(1.006);
-  }
-}
-@keyframes hero-shard-fly-n {
-  from,
-  70% {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-36%) rotate(-9deg);
-  }
-}
-@keyframes hero-shard-fly-e {
-  from,
-  70% {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-    transform: translate(36%, 8%) rotate(15deg);
-  }
-}
-@keyframes hero-shard-fly-s {
-  from,
-  70% {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-    transform: translateY(38%) rotate(9deg);
-  }
-}
-@keyframes hero-shard-fly-w {
-  from,
-  70% {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-    transform: translate(-36%, 6%) rotate(-14deg);
-  }
-}
-/* Трещины: рвут плиту от точки прорыва (24,78 — центр талисмана)
-   штрихом в последний момент дрожи и гаснут вместе с разлётом. */
-.hero__cracks {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.hero__crack {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  opacity: 0;
-}
-.hero__crack--1 {
-  animation:
-    hero-crack-draw 0.34s ease-out 0.2s backwards,
-    hero-crack-fade 0.26s ease-in 0.58s forwards;
-}
-.hero__crack--2 {
-  animation:
-    hero-crack-draw 0.34s ease-out 0.25s backwards,
-    hero-crack-fade 0.26s ease-in 0.6s forwards;
-}
-.hero__crack--3 {
-  animation:
-    hero-crack-draw 0.34s ease-out 0.22s backwards,
-    hero-crack-fade 0.26s ease-in 0.59s forwards;
-}
-.hero__crack--4 {
-  animation:
-    hero-crack-draw 0.34s ease-out 0.28s backwards,
-    hero-crack-fade 0.26s ease-in 0.61s forwards;
-}
-.hero__crack--5 {
-  animation:
-    hero-crack-draw 0.34s ease-out 0.24s backwards,
-    hero-crack-fade 0.26s ease-in 0.6s forwards;
-}
-@keyframes hero-crack-draw {
-  0% {
-    stroke-dashoffset: 1;
-    opacity: 1;
-  }
-  70%,
-  100% {
-    stroke-dashoffset: 0;
-    opacity: 1;
-  }
-}
-@keyframes hero-crack-fade {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-/* Ударная волна: два кольца от точки прорыва. */
-.hero__shock {
-  position: absolute;
-  left: 24%;
-  top: 78%;
-  z-index: 3;
-  width: 30%;
-  aspect-ratio: 1;
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  opacity: 0;
-  pointer-events: none;
-}
-.hero__shock--a {
-  animation: hero-shock-wave 0.5s cubic-bezier(0.16, 0.8, 0.3, 1) 0.55s
-    backwards;
-}
-.hero__shock--b {
-  border-width: 2px;
-  animation: hero-shock-wave 0.42s cubic-bezier(0.16, 0.8, 0.3, 1) 0.64s
-    backwards;
-}
-@keyframes hero-shock-wave {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.12);
-  }
-  10% {
-    opacity: 0.9;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.7);
-  }
-}
-/* Щепки: жёлтые обломки ядра и серые — стены, летят из точки прорыва. */
-.hero__chips {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-.hero__chip {
-  position: absolute;
-  left: 24%;
-  top: 78%;
-  width: 3%;
-  aspect-ratio: 1.3;
-  opacity: 0;
-}
-.hero__chip--1 {
-  background: var(--accent);
-  animation: hero-chip-fly-1 0.58s cubic-bezier(0.18, 0.6, 0.5, 1) 0.55s
-    backwards;
-}
-.hero__chip--2 {
-  background: var(--surface-subtle);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
-  animation: hero-chip-fly-2 0.62s cubic-bezier(0.18, 0.6, 0.5, 1) 0.56s
-    backwards;
-}
-.hero__chip--3 {
-  background: var(--accent);
-  animation: hero-chip-fly-3 0.55s cubic-bezier(0.18, 0.6, 0.5, 1) 0.58s
-    backwards;
-}
-.hero__chip--4 {
-  background: var(--surface-subtle);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
-  animation: hero-chip-fly-4 0.6s cubic-bezier(0.18, 0.6, 0.5, 1) 0.57s
-    backwards;
-}
-.hero__chip--5 {
-  background: var(--accent);
-  animation: hero-chip-fly-5 0.62s cubic-bezier(0.18, 0.6, 0.5, 1) 0.55s
-    backwards;
-}
-.hero__chip--6 {
-  background: var(--surface-subtle);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
-  animation: hero-chip-fly-6 0.56s cubic-bezier(0.18, 0.6, 0.5, 1) 0.6s
-    backwards;
-}
-@keyframes hero-chip-fly-1 {
-  0% {
-    opacity: 0;
-  }
-  12%,
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(110px, -130px) rotate(200deg);
-  }
-}
-@keyframes hero-chip-fly-2 {
-  0% {
-    opacity: 0;
-  }
-  12%,
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-90px, -150px) rotate(-160deg);
-  }
-}
-@keyframes hero-chip-fly-3 {
-  0% {
-    opacity: 0;
-  }
-  12%,
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(150px, -60px) rotate(240deg);
-  }
-}
-@keyframes hero-chip-fly-4 {
-  0% {
-    opacity: 0;
-  }
-  12%,
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-140px, -40px) rotate(-220deg);
-  }
-}
-@keyframes hero-chip-fly-5 {
-  0% {
-    opacity: 0;
-  }
-  12%,
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(70px, -180px) rotate(160deg);
-  }
-}
-@keyframes hero-chip-fly-6 {
-  0% {
-    opacity: 0;
-  }
-  12%,
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-40px, -170px) rotate(-120deg);
-  }
-}
-/* Знак: вышибается из пролома ударом (после прорыва и посадки
-   талисмана) и парит; hover приподнимает через scale на обёртке —
-   свойства компонуются. */
-.hero--kinetic .hero__mark-wrap {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  animation: hero-mark-float 7s ease-in-out 2.3s infinite;
-  transition: scale 0.5s cubic-bezier(0.3, 1.4, 0.4, 1);
-}
-.hero--kinetic .hero__art-field:hover .hero__mark-wrap,
-.hero--kinetic .hero__art-field:focus-visible .hero__mark-wrap {
-  scale: 1.03;
-}
-.hero--kinetic .hero__mark {
-  animation: hero-mark-press 0.66s cubic-bezier(0.2, 0.75, 0.25, 1) 1.15s
-    backwards;
-}
-@keyframes hero-mark-press {
-  0% {
-    transform: scale(1.55);
-    filter: blur(7px);
-    opacity: 0;
-  }
-  40% {
-    opacity: 1;
-  }
-  62% {
-    transform: scale(0.965);
-    filter: blur(0);
-  }
-  82% {
-    transform: scale(1.015);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-@keyframes hero-mark-float {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -1.4%;
-  }
-}
-@keyframes hero-plate-thud {
-  0%,
-  100% {
-    scale: 1;
-  }
-  35% {
-    scale: 0.992;
-  }
-}
-/* ===== Талисман (HeroMascot): «жёлтый Дэдпул» — новая редакция
-   персонажа от 21.10. Геометрия фигуры и хореография рук (обратная
-   кинематика двухзвенных рук, пальцы, взмах → «сердечко», мигание) —
-   inline-SVG и скрипт в компоненте; разметка отрисована в финальной
-   позе «сердечка» (SSR/no-JS/reduced-motion). Здесь — материалы и
-   причастность к прорыву: вылет из пролома с перелётом и
-   squash-посадкой (обёртка mascot__leap), доводка клинков и кивок
-   головы после посадки, дыхание idle (bob фигуры + покачивание
-   клинков). Скрипт стартует персонажа с 1.45с, «сердечко» сложено
-   к ~5.7с — bob подхватывает после. Пивоты — transform-origin в
-   координатах viewBox (transform-box: view-box).
-   ===== */
-.hero__mascot {
-  position: absolute;
-  left: 4%;
-  bottom: 3%;
-  z-index: 1;
-  width: 40%;
-  aspect-ratio: 1;
-  animation: mascot-bob 3.4s ease-in-out 5.9s infinite;
-}
-.mascot__leap {
-  position: absolute;
-  inset: 0;
-  animation: hero-mascot-burst 0.62s cubic-bezier(0.2, 0.85, 0.3, 1.18) 0.55s
-    backwards;
-}
-@keyframes hero-mascot-burst {
-  0% {
-    transform: translateY(42%) scale(0.3) rotate(-14deg);
-    opacity: 0;
-  }
-  35% {
-    opacity: 1;
-  }
-  58% {
-    transform: translateY(-8%) scale(1.17) rotate(5deg);
-  }
-  80% {
-    transform: translateY(2%) scale(0.94, 1.05) rotate(-2deg);
-  }
-  100% {
-    transform: translateY(0) scale(1) rotate(0deg);
-  }
-}
-/* Взмах выходит за viewBox (правый локоть ~x=528) и стикерная
-   окантовка шире контура — не обрезаем. */
-.mascot__figure {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-/* Клинки за спиной: доводка после посадки + лёгкое дыхание в idle. */
-.mascot__gear {
-  transform-box: view-box;
-  transform-origin: 256px 240px;
-  animation:
-    mascot-gear-settle 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.25) 0.62s backwards,
-    mascot-gear-sway 4.2s ease-in-out 3.4s infinite;
-}
-@keyframes mascot-gear-settle {
-  0% {
-    transform: rotate(-9deg);
-  }
-  60% {
-    transform: rotate(3deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-@keyframes mascot-gear-sway {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  50% {
-    transform: rotate(-1.6deg);
-  }
-}
-/* Голова: сброс удара приземления — на обёртке; наклон при взмахе и
-   мигание ставит скрипт на внутренней группе (транформы не конфликтуют). */
-.mascot__head-wrap {
-  transform-box: view-box;
-  transform-origin: 256px 225px;
-  animation: mascot-head-wobble 0.55s cubic-bezier(0.2, 0.8, 0.3, 1.2) 0.64s
-    backwards;
-}
-@keyframes mascot-head-wobble {
-  0% {
-    transform: rotate(8deg);
-  }
-  55% {
-    transform: rotate(-4deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-/* Руки: капсулы штрихами — чернильный кант поверх тёмной подложки
-   костюма, у плеча поверх — жёлтая вставка бицепса (класс suit);
-   предплечье темнее. Геометрию (d) пишет скрипт компонента,
-   базовое состояние = финальная поза «сердечка». */
-.mascot__limb path {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.mascot__limb--upper .mascot__edge {
-  stroke: var(--ink);
-  stroke-width: 79;
-}
-.mascot__limb--upper .mascot__base {
-  stroke: #253437;
-  stroke-width: 70;
-}
-.mascot__limb--upper .mascot__suit {
-  stroke: var(--accent);
-  stroke-width: 46;
-}
-.mascot__limb--fore .mascot__edge {
-  stroke: var(--ink);
-  stroke-width: 69;
-}
-.mascot__limb--fore .mascot__base {
-  stroke: #26383c;
-  stroke-width: 60;
-}
-/* Кисти: пальцы — сдвоенный штрих (чернильный кант + жёлтая
-   начинка), ширины по пальцам; ладонь — жёлтая перчатка. */
-.m-digit {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.m-digit--ink {
-  stroke: var(--ink);
-}
-.m-digit--suit {
-  stroke: var(--accent);
-}
-.m-digit--mid.m-digit--ink {
-  stroke-width: 14;
-}
-.m-digit--mid.m-digit--suit {
-  stroke-width: 9;
-}
-.m-digit--thumb.m-digit--ink {
-  stroke-width: 16;
-}
-.m-digit--thumb.m-digit--suit {
-  stroke-width: 11;
-}
-/* Сердечко между кистями: заполненная симметричная фигура,
-   масштабирует скрипт компонента (база = финальный кадр). Белое —
-   как глаза и стикерная окантовка (литерал #fff: «белизна
-   персонажа» не привязана к --background). */
-.mascot__heart {
-  fill: #fff;
-  stroke: var(--ink);
-  stroke-width: 5;
-  stroke-linejoin: round;
-}
-.m-glove {
-  fill: var(--accent);
-  stroke: var(--ink);
-  stroke-width: 4;
-  stroke-linejoin: round;
-}
-@keyframes mascot-bob {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 2.5%;
   }
 }
 /* Статистика сети со счётчиками: три равные колонки, содержимое каждой
@@ -2242,6 +1644,21 @@ html.js-reveal [data-reveal].reveal-in {
   .hero--screen {
     grid-template-rows: none;
   }
+  .hero--floating > .hero__copy {
+    grid-row: 1;
+    text-align: center;
+  }
+  .hero--floating > .floating-scene {
+    grid-column: 1;
+    grid-row: 2;
+    height: clamp(320px, 92vw, 420px);
+  }
+  .hero--floating > .hero__stats {
+    grid-row: 3;
+  }
+  .hero--floating > .hero__marquee {
+    grid-row: 4;
+  }
   .hero h1 {
     font-size: clamp(44px, 11.8vw, 70px);
     line-height: 1.045;
@@ -2258,6 +1675,12 @@ html.js-reveal [data-reveal].reveal-in {
   .hero__copy > .button {
     margin-top: 24px;
   }
+  .hero--floating .hero__copy > .button {
+    display: flex;
+    width: max-content;
+    max-width: 100%;
+    margin-inline: auto;
+  }
   .hero__art-field {
     aspect-ratio: 1.2;
   }
@@ -2266,11 +1689,6 @@ html.js-reveal [data-reveal].reveal-in {
   }
   .hero__corner {
     width: 25%;
-  }
-  .hero__mascot {
-    left: 2%;
-    bottom: 2%;
-    width: 44%;
   }
   .hero__art-caption {
     margin-top: 12px;
@@ -2285,26 +1703,37 @@ html.js-reveal [data-reveal].reveal-in {
     flex-shrink: 0;
     gap: 6px;
   }
-  .hero__stats {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    margin-top: 32px;
-    padding-top: 20px;
+  .hero--floating .hero__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    border-top: 0;
+    margin-top: 0;
+    padding-top: 0;
   }
-  /* Стек по одному на строку: центрируем пару «число + подпись»,
-     вертикальный разделитель колонок не нужен (селектор той же
-     специфичности, что и правило разделителя, — иначе не перебьёт). */
-  .hero__stat {
+  .hero--floating .hero__stat {
     display: flex;
-    align-items: baseline;
+    min-width: 0;
+    min-height: 96px;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 6px;
+    padding: 10px 6px;
+    border: 1px solid var(--ink);
+    border-radius: 10px;
+    background: var(--background);
+    box-shadow: 3px 3px 0 var(--accent);
   }
-  .hero__stat + .hero__stat {
-    border-left: none;
+  .hero--floating .hero__stat strong {
+    font-size: clamp(20px, 6vw, 28px);
+    line-height: 1.1;
+    letter-spacing: -0.055em;
+    white-space: nowrap;
   }
-  .hero__stat strong {
-    font-size: 28px;
+  .hero--floating .hero__stat span {
+    font-size: 11px;
+    line-height: 1.25;
+    text-wrap: balance;
   }
   .hero__marquee {
     margin-top: 24px;
