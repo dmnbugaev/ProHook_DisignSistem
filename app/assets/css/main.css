@@ -389,13 +389,15 @@ legend {
    Точную высоту — окно минус плашка и шапка над героем — ставит
    HeroSection в --hero-min; до гидрации и без JS учитываем высоту плашки,
    шапки и строки 18+ (203px на широком экране). Основной ряд центрируется,
-   статистика и маркиза прижаты к низу экрана. */
+   статистика прижата к низу экрана. Нижняя линия — граница героя
+   (раньше её держала бегущая строка). */
 .hero--screen {
   min-height: calc(100vh - 203px);
   min-height: calc(100dvh - 203px);
   min-height: var(--hero-min, calc(100dvh - 203px));
-  grid-template-rows: 1fr auto auto;
+  grid-template-rows: 1fr auto;
   align-items: center;
+  border-bottom: 1px solid var(--ink);
 }
 .hero--floating {
   isolation: isolate;
@@ -419,9 +421,6 @@ legend {
 }
 .hero--floating > .hero__stats {
   grid-row: 2;
-}
-.hero--floating > .hero__marquee {
-  grid-row: 3;
 }
 .edition {
   display: flex;
@@ -561,8 +560,10 @@ legend {
   }
 }
 /* Статистика сети со счётчиками: три равные колонки, содержимое каждой
-   центрируется; между колонками — светлая линия-разделитель (границы
-   ячеек, а не контента, поэтому ячейки не сжимаются под контент). */
+   центрируется. Вертикальные отступы живут в ячейках, а не в блоке:
+   границы ячеек (разделители) тянутся от верхней линии до нижней
+   (border-bottom героя), цвет — тот же --ink, и контент садится ровно
+   посередине между линиями. */
 .hero__stats {
   grid-column: 1/-1;
   display: grid;
@@ -570,15 +571,16 @@ legend {
   gap: 24px;
   border-top: 1px solid var(--ink);
   margin-top: 56px;
-  padding-top: 24px;
 }
 .hero__stat {
   display: grid;
   gap: 4px;
+  align-content: center;
   text-align: center;
+  padding-block: 24px;
 }
 .hero__stat + .hero__stat {
-  border-left: 1px solid var(--separator);
+  border-left: 1px solid var(--ink);
 }
 .hero__stat strong {
   font-size: clamp(28px, 3vw, 40px);
@@ -589,39 +591,6 @@ legend {
 .hero__stat span {
   font-size: 13px;
   color: var(--text-secondary);
-}
-/* Бегущая строка внизу героя: две одинаковые группы, сдвиг на 50% — шов
-   не виден (паттерн age-marquee). */
-.hero__marquee {
-  grid-column: 1/-1;
-  overflow: hidden;
-  border-bottom: 1px solid var(--ink);
-  margin-top: 40px;
-  padding: 14px 0;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--text-secondary);
-}
-.hero__marquee-track {
-  display: flex;
-  width: max-content;
-  animation: hero-marquee-scroll 36s linear infinite;
-  will-change: transform;
-}
-.hero__marquee-track > span {
-  white-space: nowrap;
-}
-.hero__marquee-track i {
-  font-style: normal;
-  color: var(--accent);
-  -webkit-text-stroke: 1px var(--ink);
-  padding: 0 18px;
-}
-@keyframes hero-marquee-scroll {
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
 }
 /* Появление секций при прокрутке: скрытое состояние включается только
    когда JS-плагин отметил документ (без JS/в SSR всё видно). */
@@ -1646,9 +1615,11 @@ html.js-reveal [data-reveal].reveal-in {
     gap: 32px;
   }
   /* На узких экранах контент героя выше окна — «первый экран» здесь не
-     ряд с 1fr, все строки по контенту. */
+     ряд с 1fr, все строки по контенту. Нижняя линия героя не нужна:
+     статистика превращается в карточки со своей обводкой. */
   .hero--screen {
     grid-template-rows: none;
+    border-bottom: 0;
   }
   .hero--floating > .hero__copy {
     grid-row: 1;
@@ -1661,9 +1632,6 @@ html.js-reveal [data-reveal].reveal-in {
   }
   .hero--floating > .hero__stats {
     grid-row: 3;
-  }
-  .hero--floating > .hero__marquee {
-    grid-row: 4;
   }
   .hero h1 {
     font-size: clamp(44px, 11.8vw, 70px);
@@ -1714,7 +1682,6 @@ html.js-reveal [data-reveal].reveal-in {
     gap: 8px;
     border-top: 0;
     margin-top: 0;
-    padding-top: 0;
   }
   .hero--floating .hero__stat {
     display: flex;
@@ -1728,7 +1695,6 @@ html.js-reveal [data-reveal].reveal-in {
     border: 1px solid var(--ink);
     border-radius: 10px;
     background: var(--background);
-    box-shadow: 3px 3px 0 var(--accent);
   }
   .hero--floating .hero__stat strong {
     font-size: clamp(20px, 6vw, 28px);
@@ -1740,10 +1706,6 @@ html.js-reveal [data-reveal].reveal-in {
     font-size: 11px;
     line-height: 1.25;
     text-wrap: balance;
-  }
-  .hero__marquee {
-    margin-top: 24px;
-    font-size: 11px;
   }
   .section-heading {
     grid-template-columns: 1fr;

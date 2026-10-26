@@ -223,6 +223,12 @@ button.text-link {
   text-decoration: none;
   position: relative;
   min-width: 0;
+  /* Карточка сливается с фоном страницы и держится обводкой —
+     серые подложки под картинками убраны. */
+  background: var(--background);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
 }
 .category-card__number {
   display: block;
@@ -232,7 +238,7 @@ button.text-link {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: contain;
-  background: var(--surface-subtle);
+  background: var(--background);
 }
 .category-card > div {
   display: flex;
@@ -531,7 +537,9 @@ button.text-link {
 }
 .product-image {
   aspect-ratio: 1 / 1;
-  background: var(--surface-subtle);
+  /* Белый, а не surface-subtle: фото МойСклада на белом фоне — заливка
+     должна быть продолжением фото, без серых полей по краям. */
+  background: var(--background);
   overflow: hidden;
 }
 .product-image > img {

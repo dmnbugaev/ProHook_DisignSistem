@@ -130,18 +130,5 @@ onMounted(() => {
         <span>{{ item.label }}</span>
       </div>
     </div>
-    <div class="hero__marquee" aria-hidden="true">
-      <div class="hero__marquee-track">
-        <span
-          >Каталог <i>✳</i> Наличие <i>✳</i> Цены <i>✳</i> Магазины сети
-          <i>✳</i> Каталог <i>✳</i> Наличие <i>✳</i> Цены <i>✳</i> Магазины сети
-          <i>✳</i> </span
-        ><span
-          >Каталог <i>✳</i> Наличие <i>✳</i> Цены <i>✳</i> Магазины сети
-          <i>✳</i> Каталог <i>✳</i> Наличие <i>✳</i> Цены <i>✳</i> Магазины сети
-          <i>✳</i>
-        </span>
-      </div>
-    </div>
   </UiContainer>
 </template>
