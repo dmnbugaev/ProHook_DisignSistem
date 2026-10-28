@@ -6,8 +6,18 @@ import {
   listPromos,
   pinPromo,
   setPromoStatus,
+  MAX_TEXT,
+  MAX_TITLE,
   PROMO_MEDIA_DIR,
 } from "./promo-store";
+import {
+  cleanTelegramText,
+  sliceWithEntities,
+  telegramTextToHtml,
+  truncateForPromo,
+  trimWithEntities,
+  type TelegramMessageEntity,
+} from "./promo-format";
 import { telegramSilenced } from "../utils/telegram-silence";
 
 /**
@@ -15,6 +25,9 @@ import { telegramSilenced } from "../utils/telegram-silence";
  * «Акции и предложения» на главной. Управление — сообщениями из allowlist
  * TELEGRAM_PROMO_CHAT_IDS: обычное сообщение (или фото с подписью) создаёт
  * карточку, команды /list /on N /off N /del N /pin N /help управляют ею.
+ * Форматирование сообщения (entities: жирный, курсив, цитаты, ссылки) и
+ * переносы строк сохраняются — карточка на сайте выглядит как в Telegram;
+ * стикер становится карточкой со стикером.
  *
  * Каналы приёма команд: getUpdates-поллинг TELEGRAM_PROMO_POLLING=1 (прод —
  * через SSH-туннель к api.telegram.org с myserver; вебхук не работает:
@@ -35,8 +48,19 @@ export interface TelegramUpdate {
     chat: { id: number };
     text?: string;
     caption?: string;
+    entities?: TelegramMessageEntity[];
+    caption_entities?: TelegramMessageEntity[];
     photo?: Array<{ file_id: string; file_size?: number }>;
+    sticker?: TelegramSticker;
   };
+}
+
+interface TelegramSticker {
+  file_id: string;
+  /** Статический эскиз (для видео-стикеров — постер <video> на сайте). */
+  thumbnail?: { file_id: string };
+  is_animated?: boolean;
+  is_video?: boolean;
 }
 
 export function promoBotToken(): string {
@@ -101,7 +125,15 @@ export async function sendPromoReply(
 }
 
 export type PromoBotCommand =
-  | { kind: "create"; title: string; text: string; ctaHref: string | null }
+  | {
+      kind: "create";
+      title: string;
+      titleHtml: string;
+      text: string;
+      textHtml: string;
+      ctaLabel: string | null;
+      ctaHref: string | null;
+    }
   | { kind: "list" }
   | { kind: "help" }
   | { kind: "status"; status: "active" | "hidden"; number: number }
@@ -109,9 +141,17 @@ export type PromoBotCommand =
   | { kind: "pin"; number: number }
   | { kind: "ignore" };
 
-/** Разбор сообщения оператора: команда или текст будущей карточки. */
-export function parsePromoBotCommand(raw: string): PromoBotCommand {
-  const text = raw.replace(/\r/g, "").trim();
+/**
+ * Разбор сообщения оператора: команда или текст будущей карточки.
+ * Форматирование из entities сохраняется: заголовок и текст получают
+ * готовый безопасный HTML, переносы строк и отступы не сворачиваются.
+ */
+export function parsePromoBotCommand(
+  raw: string,
+  entities: TelegramMessageEntity[] = [],
+): PromoBotCommand {
+  const clean = trimWithEntities(cleanTelegramText(raw, entities));
+  const text = clean.text;
   if (!text) return { kind: "ignore" };
   const [firstLine] = text.split("\n");
   const command = (firstLine ?? "").trim().split(/\s+/);
@@ -128,17 +168,78 @@ export function parsePromoBotCommand(raw: string): PromoBotCommand {
   if (name.startsWith("/")) return { kind: "ignore" };
 
   // Обычное сообщение — новая карточка: первая строка — заголовок, остаток —
-  // текст; последняя строка-ссылка (/path или https://…) становится кнопкой.
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const title = lines.shift() ?? "";
+  // текст; последняя строка-ссылка (/path, https://… или строка целиком под
+  // text_link) становится кнопкой. Пустые строки внутри текста и отступы
+  // строк сохраняются «как в Телеграме».
+  const lines = text.split("\n");
+  const lineAt = (index: number) => lines[index] ?? "";
+  const lineStarts: number[] = [];
+  let cursor = 0;
+  for (const line of lines) {
+    lineStarts.push(cursor);
+    cursor += line.length + 1;
+  }
+
+  const title = truncateForPromo(
+    trimWithEntities(
+      sliceWithEntities(text, clean.entities, 0, lineAt(0).length),
+    ),
+    MAX_TITLE,
+  );
+
+  let last = lines.length - 1;
+  while (last >= 1 && !lineAt(last).trim()) last--;
   let ctaHref: string | null = null;
-  const last = lines[lines.length - 1] ?? "";
-  if (/^https:\/\/\S+$/i.test(last)) ctaHref = lines.pop() ?? null;
-  else if (/^\/[a-z0-9\-./?#%=&]*$/i.test(last)) ctaHref = lines.pop() ?? null;
-  return { kind: "create", title, text: lines.join("\n"), ctaHref };
+  let ctaLabel: string | null = null;
+  if (last >= 1) {
+    const line = lineAt(last);
+    const trimmed = line.trim();
+    const start =
+      (lineStarts[last] ?? 0) + (line.length - line.trimStart().length);
+    const end = start + trimmed.length;
+    const link = clean.entities.find(
+      (entity) =>
+        entity.type === "text_link" &&
+        entity.offset <= start &&
+        entity.offset + entity.length >= end,
+    );
+    if (
+      /^https:\/\/\S+$/i.test(trimmed) ||
+      /^\/[a-z0-9\-./?#%=&]*$/i.test(trimmed)
+    ) {
+      ctaHref = trimmed;
+      last--;
+    } else if (link?.url) {
+      ctaHref = link.url;
+      ctaLabel = trimmed;
+      last--;
+    }
+  }
+
+  let bodyEnd = last;
+  while (bodyEnd >= 1 && !lineAt(bodyEnd).trim()) bodyEnd--;
+  const body =
+    bodyEnd >= 1
+      ? truncateForPromo(
+          sliceWithEntities(
+            text,
+            clean.entities,
+            lineStarts[1] ?? 0,
+            (lineStarts[bodyEnd] ?? 0) + lineAt(bodyEnd).length,
+          ),
+          MAX_TEXT,
+        )
+      : { text: "", entities: [] };
+
+  return {
+    kind: "create",
+    title: title.text,
+    titleHtml: telegramTextToHtml(title.text, title.entities),
+    text: body.text,
+    textHtml: telegramTextToHtml(body.text, body.entities),
+    ctaLabel,
+    ctaHref,
+  };
 }
 
 function parseNumberCommand(
@@ -168,6 +269,8 @@ const HELP_TEXT = [
   "1-я строка — заголовок, остальное — текст.",
   "Последняя строка /catalog или https://… — кнопка-ссылка.",
   "Фото с подписью — карточка с изображением.",
+  "Форматирование сохраняется: жирный, курсив, цитаты, переносы строк.",
+  "Стикер — карточка со стикером (анимированные tgs не поддерживаются).",
   "",
   "Команды:",
   "/list — список карточек",
@@ -176,8 +279,8 @@ const HELP_TEXT = [
   "/pin N — закрепить в начале",
 ].join("\n");
 
-/** Скачивание фото карточки во внутренний media-каталог хранилища. */
-async function downloadPromoPhoto(fileId: string): Promise<string | null> {
+/** Скачивание медиа карточки (фото или стикер) во внутренний каталог хранилища. */
+async function downloadPromoMedia(fileId: string): Promise<string | null> {
   const token = promoBotToken();
   if (!token) return null;
   const info = (await telegramApi("getFile", { file_id: fileId })) as {
@@ -186,7 +289,8 @@ async function downloadPromoPhoto(fileId: string): Promise<string | null> {
   const filePath = info.result?.file_path;
   if (!filePath) return null;
   const extension = filePath.split(".").at(-1)?.toLocaleLowerCase("ru");
-  if (!["jpg", "jpeg", "png", "webp"].includes(extension ?? "")) return null;
+  if (!["jpg", "jpeg", "png", "webp", "webm"].includes(extension ?? ""))
+    return null;
   const response = await fetch(
     `https://api.telegram.org/file/bot${token}/${filePath}`,
     { signal: AbortSignal.timeout(API_TIMEOUT_MS) },
@@ -200,6 +304,47 @@ async function downloadPromoPhoto(fileId: string): Promise<string | null> {
   return name;
 }
 
+/**
+ * Стикер — карточка со стикером без текста (у стикеров в Telegram не бывает
+ * подписи). Поддержаны статические (webp) и видео-стикеры (webm, статичный
+ * thumbnail становится постером видео); анимированные tgs (Lottie) на сайте
+ * не отобразить — вежливо отказываем.
+ */
+async function handleStickerMessage(
+  chatId: string,
+  sticker: TelegramSticker,
+): Promise<void> {
+  if (sticker.is_animated && !sticker.is_video) {
+    await sendPromoReply(
+      chatId,
+      "Анимированные (tgs) стикеры не поддерживаются — пришлите обычный или видеостикер.",
+    );
+    return;
+  }
+  const mediaFile = await downloadPromoMedia(sticker.file_id);
+  if (!mediaFile) {
+    await sendPromoReply(
+      chatId,
+      "Не удалось скачать стикер. Попробуйте ещё раз.",
+    );
+    return;
+  }
+  const poster = sticker.thumbnail
+    ? ((await downloadPromoMedia(sticker.thumbnail.file_id)) ?? null)
+    : null;
+  const promo = await createPromo({
+    title: "",
+    text: "",
+    mediaFile,
+    mediaPosterFile: poster,
+    mediaKind: "sticker",
+  });
+  await sendPromoReply(
+    chatId,
+    `Карточка №${promo.number} добавлена (стикер) и уже на сайте.`,
+  );
+}
+
 /** Обработка одного апдейта: allowlist → команда → ответ оператору. */
 export async function handlePromoUpdate(update: TelegramUpdate): Promise<void> {
   const message = update.message;
@@ -207,8 +352,13 @@ export async function handlePromoUpdate(update: TelegramUpdate): Promise<void> {
   const chatId = String(message.chat.id);
   if (!promoChatIds().includes(chatId)) return;
   const raw = message.text ?? message.caption ?? "";
-  const command = parsePromoBotCommand(raw);
+  const entities = message.entities ?? message.caption_entities ?? [];
+  const command = parsePromoBotCommand(raw, entities);
   try {
+    if (message.sticker) {
+      await handleStickerMessage(chatId, message.sticker);
+      return;
+    }
     switch (command.kind) {
       case "help":
         await sendPromoReply(chatId, HELP_TEXT);
@@ -224,7 +374,7 @@ export async function handlePromoUpdate(update: TelegramUpdate): Promise<void> {
           promos
             .map(
               (promo) =>
-                `${promo.status === "active" ? "●" : "○"} №${promo.number} — ${promo.title}`,
+                `${promo.status === "active" ? "●" : "○"} №${promo.number} — ${promo.title || "(стикер)"}`,
             )
             .join("\n"),
         );
@@ -233,7 +383,7 @@ export async function handlePromoUpdate(update: TelegramUpdate): Promise<void> {
       case "create": {
         const photo = message.photo?.at(-1);
         const mediaFile = photo
-          ? ((await downloadPromoPhoto(photo.file_id)) ?? null)
+          ? ((await downloadPromoMedia(photo.file_id)) ?? null)
           : null;
         const promo = await createPromo({ ...command, mediaFile });
         await sendPromoReply(

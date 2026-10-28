@@ -1,6 +1,4 @@
 <script setup lang="ts">
-defineProps<{ showProducts: boolean }>();
-
 /** Предметы из эскиза владельца. Координаты — доли ширины/высоты сцены от центра. */
 const items = [
   {
@@ -184,18 +182,12 @@ function reset() {
       <div class="floating-scene__parallax">
         <div class="floating-scene__drift">
           <img
-            v-if="showProducts"
-            :src="`/api/hero/items/${item.image}`"
+            :src="`/hero/${item.image}.webp`"
             alt=""
             :width="item.size[0]"
             :height="item.size[1]"
             draggable="false"
             :loading="index < 6 ? 'eager' : 'lazy'"
-          />
-          <span
-            v-else
-            class="floating-scene__shape"
-            :class="`floating-scene__shape--${index % 4}`"
           />
         </div>
       </div>
@@ -272,66 +264,6 @@ function reset() {
   filter: drop-shadow(0 13px 13px rgb(0 0 0 / 0.17));
   user-select: none;
   -webkit-user-drag: none;
-}
-
-.floating-scene__shape {
-  display: block;
-  width: 76%;
-  aspect-ratio: 1;
-  position: relative;
-  margin: auto;
-  transform: rotate(var(--angle));
-  filter: drop-shadow(0 12px 0 rgb(0 0 0 / 0.1));
-}
-
-.floating-scene__shape--0 {
-  border: max(4px, 0.7cqw) solid var(--ink);
-  background: var(--background);
-}
-
-.floating-scene__shape--0::after {
-  content: "";
-  position: absolute;
-  inset: 24%;
-  background: var(--accent);
-}
-
-.floating-scene__shape--1 {
-  width: 62%;
-  border: max(5px, 1cqw) solid var(--ink);
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.floating-scene__shape--2 {
-  width: 48%;
-  aspect-ratio: 0.48;
-  border-radius: 999px;
-  background: var(--ink);
-}
-
-.floating-scene__shape--2::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 38%;
-  height: 16%;
-  background: var(--accent);
-}
-
-.floating-scene__shape--3 {
-  background: var(--accent);
-  clip-path: polygon(
-    50% 0,
-    61% 38%,
-    100% 50%,
-    61% 62%,
-    50% 100%,
-    39% 62%,
-    0 50%,
-    39% 38%
-  );
 }
 
 @keyframes center-enter {

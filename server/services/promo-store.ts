@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { join, resolve } from "node:path";
 import type { PromoCard } from "../../shared/types/promo";
+import { sanitizePromoHtml, telegramTextToHtml } from "./promo-format";
 
 /**
  * Файловое хранилище промо-акций (JSON + атомарная запись), по образцу
@@ -16,11 +17,18 @@ export interface StoredPromo {
   number: number;
   title: string;
   text: string;
+  /** Разметка Telegram (жирный/цитаты/ссылки) для сайта; null у старых карточек. */
+  titleHtml: string | null;
+  textHtml: string | null;
   badge: string | null;
   ctaLabel: string | null;
   ctaHref: string | null;
   /** Имя файла в media-каталоге хранилища или null. */
   mediaFile: string | null;
+  /** Статический эскиз видео-стикера (poster для <video>) или null. */
+  mediaPosterFile: string | null;
+  /** Фото-снимок оператора или стикер из Telegram. */
+  mediaKind: "photo" | "sticker";
   status: "active" | "hidden";
   /** Порядок показа: меньше — раньше (команда /pin ставит в начало). */
   order: number;
@@ -42,8 +50,9 @@ const DATA_DIR = resolve(
 const FILE = resolve(DATA_DIR, "promos.json");
 export const PROMO_MEDIA_DIR = resolve(DATA_DIR, "media");
 
-const MAX_TITLE = 80;
-const MAX_TEXT = 500;
+/** Лимиты карточки (символы чистого текста); парсер бота обрезает по ним. */
+export const MAX_TITLE = 80;
+export const MAX_TEXT = 500;
 
 let file: PromoFile | undefined;
 let queue: Promise<unknown> = Promise.resolve();
@@ -98,6 +107,26 @@ function normalizeText(value: string, max: number): string {
   return stripped.replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+/**
+ * Многострочная нормализация текста карточки: переносы строк сохраняются
+ * (сайт показывает их «как в Телеграме»), схлопываются только пробелы и
+ * табы внутри строки. Отображение всё равно идёт по textHtml — это поле
+ * для /list, aria и совместимости.
+ */
+function normalizeMultilineText(value: string, max: number): string {
+  const stripped = Array.from(value)
+    .map((char) =>
+      (char.charCodeAt(0) < 32 && char !== "\n") || char.charCodeAt(0) === 127
+        ? ""
+        : char,
+    )
+    .join("");
+  return stripped
+    .replace(/[^\S\n]+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
 /** Нормализация адреса кнопки: внутренний путь или https-ссылка. */
 function normalizeHref(value: string): string | null {
   const trimmed = value.trim();
@@ -114,10 +143,15 @@ function normalizeHref(value: string): string | null {
 export interface CreatePromoInput {
   title: string;
   text?: string;
+  /** Разметка Telegram; без неё HTML экранируется из плоского текста. */
+  titleHtml?: string | null;
+  textHtml?: string | null;
   badge?: string | null;
   ctaLabel?: string | null;
   ctaHref?: string | null;
   mediaFile?: string | null;
+  mediaPosterFile?: string | null;
+  mediaKind?: "photo" | "sticker";
 }
 
 export async function createPromo(
@@ -130,11 +164,19 @@ export async function createPromo(
     id: randomUUID(),
     number: data.counter,
     title: normalizeText(input.title, MAX_TITLE),
-    text: normalizeText(input.text ?? "", MAX_TEXT),
+    text: normalizeMultilineText(input.text ?? "", MAX_TEXT),
+    titleHtml: sanitizePromoHtml(
+      input.titleHtml ?? telegramTextToHtml(input.title ?? "", []),
+    ),
+    textHtml: sanitizePromoHtml(
+      input.textHtml ?? telegramTextToHtml(input.text ?? "", []),
+    ),
     badge: input.badge ? normalizeText(input.badge, 24) : null,
     ctaLabel: input.ctaLabel ? normalizeText(input.ctaLabel, 32) : null,
     ctaHref: input.ctaHref ? normalizeHref(input.ctaHref) : null,
     mediaFile: input.mediaFile ?? null,
+    mediaPosterFile: input.mediaPosterFile ?? null,
+    mediaKind: input.mediaKind === "sticker" ? "sticker" : "photo",
     status: "active",
     order: -data.counter,
     createdAt: now,
@@ -175,10 +217,12 @@ export async function deletePromo(number: number): Promise<boolean> {
   if (index === -1) return false;
   const [promo] = data.promos.splice(index, 1);
   await persist(data);
-  // Файл карточки больше никому не нужен — убираем, чтобы media-каталог
+  // Файлы карточки больше никому не нужны — убираем, чтобы media-каталог
   // не рос от удалённых акций.
   if (promo?.mediaFile)
     await rm(join(PROMO_MEDIA_DIR, promo.mediaFile), { force: true });
+  if (promo?.mediaPosterFile)
+    await rm(join(PROMO_MEDIA_DIR, promo.mediaPosterFile), { force: true });
   return true;
 }
 
@@ -216,10 +260,18 @@ export async function listActivePromos(): Promise<PromoCard[]> {
       id: promo.id,
       title: promo.title,
       text: promo.text,
+      // У карточек, сохранённых до поддержки разметки, HTML нет — текст
+      // экранируется как есть (переносы покажет white-space: pre-wrap).
+      titleHtml: promo.titleHtml ?? telegramTextToHtml(promo.title, []),
+      textHtml: promo.textHtml ?? telegramTextToHtml(promo.text, []),
       badge: promo.badge,
       ctaLabel: promo.ctaLabel ?? (promo.ctaHref ? "Открыть" : null),
       ctaHref: promo.ctaHref,
       image: promo.mediaFile ? `/api/promos/${promo.id}/image` : null,
+      imagePoster: promo.mediaPosterFile
+        ? `/api/promos/${promo.id}/image?variant=poster`
+        : null,
+      mediaKind: promo.mediaKind ?? "photo",
       accent: index % 2 === 0 ? ("yellow" as const) : ("ink" as const),
     }));
 }
@@ -243,7 +295,10 @@ async function seedDemoPromosOnce(): Promise<void> {
   if (data.promos.length) return;
   await createPromo({
     title: "Тестовая акция №1: −20% на китайский чай",
-    text: "Демо-карточка для разработки: на проде показываются только реальные акции из Telegram-бота.",
+    titleHtml: "Тестовая акция №1: <strong>−20%</strong> на китайский чай",
+    text: "Демо-карточка для разработки:\nжирный, курсив и цитата — как в Telegram.\nВсего 490 ₽ вместо 690 ₽.\nНа проде показываются только реальные акции из бота.",
+    textHtml:
+      'Демо-карточка для разработки: <strong>жирный</strong>, <em>курсив</em> и цитата — как в Telegram.\nВсего <span class="tg-price">490 ₽</span> вместо <span class="tg-price">690 ₽</span>.\n<blockquote>На проде показываются только реальные акции из бота.</blockquote>',
     badge: "ТЕСТ",
     ctaHref: "/catalog",
   });

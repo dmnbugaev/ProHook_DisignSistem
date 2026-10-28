@@ -385,10 +385,6 @@ test("anonymous catalog hides regulated product images server-side", async ({
 test("adult session unlocks product images", async ({ page }) => {
   await register(page, { dateOfBirth: birthdayExact18() });
   await expect(page).toHaveURL(/\/account$/, { timeout: 15000 });
-  const heroImage = await page.request.get("/api/hero/items/device-red");
-  expect(heroImage.status()).toBe(200);
-  expect(heroImage.headers()["content-type"]).toContain("image/webp");
-  expect((await heroImage.body()).subarray(0, 4).toString()).toBe("RIFF");
   await page.goto("/");
   await expect(page.locator(".floating-scene__item img")).toHaveCount(11);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -429,9 +425,6 @@ test("under-18 account keeps catalog text but never images", async ({
 }) => {
   await register(page, { dateOfBirth: birthdayUnder18() });
   await expect(page).toHaveURL(/\/account$/, { timeout: 15000 });
-  expect((await page.request.get("/api/hero/items/device-red")).status()).toBe(
-    403,
-  );
   await expect(
     page.getByText(
       "Изображения товаров доступны только совершеннолетним пользователям.",

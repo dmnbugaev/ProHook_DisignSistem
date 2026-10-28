@@ -1,11 +1,10 @@
 <script setup lang="ts">
-/** Первый экран главной: фирменная композиция, фото только взрослой сессии. */
+/** Первый экран главной: фирменная композиция (предметы — публичные). */
 const props = defineProps<{
   storesCount?: number;
   productsTotal?: number;
   citiesCount?: number;
 }>();
-const { canViewProductImages } = useSessionUser();
 
 const stats = computed(() =>
   [
@@ -101,7 +100,7 @@ onMounted(() => {
     class="hero hero--floating hero--screen"
     aria-labelledby="hero-title"
   >
-    <HeroFloatingScene :show-products="canViewProductImages" />
+    <HeroFloatingScene />
     <div class="hero__copy">
       <h1 id="hero-title">
         <span class="hero__line"

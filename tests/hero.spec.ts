@@ -7,7 +7,7 @@ test("hero fits a phone and stops moving when reduced motion is requested", asyn
   await page.goto("/");
   const items = page.locator(".floating-scene__item");
   await expect(items).toHaveCount(11);
-  await expect(page.locator(".floating-scene__item img")).toHaveCount(0);
+  await expect(page.locator(".floating-scene__item img")).toHaveCount(11);
   expect(
     await items
       .first()

@@ -7,13 +7,18 @@ const CONTENT_TYPES: Record<string, string> = {
   jpeg: "image/jpeg",
   png: "image/png",
   webp: "image/webp",
+  // видео-стикеры Telegram
+  webm: "video/webm",
 };
 
+const MEDIA_FILE_RE = /^[0-9a-f-]{36}\.(jpg|jpeg|png|webp|webm)$/;
+
 /**
- * Изображение промо-карточки. Сам блок акций показывается после
- * подтверждения 18+, поэтому и прямой доступ к картинке гейтится cookie —
- * анонимный запрос получает 403 (содержимое карточек готовит владелец, но
- * оно может включать регулируемый ассортимент).
+ * Медиа промо-карточки: фото или стикер (?variant=poster — статичный эскиз
+ * видео-стикера). Сам блок акций показывается после подтверждения 18+,
+ * поэтому и прямой доступ к файлу гейтится cookie — анонимный запрос
+ * получает 403 (содержимое карточек готовит владелец, но оно может включать
+ * регулируемый ассортимент).
  */
 export default defineEventHandler(async (event) => {
   if (!hasAgeConfirmation(event))
@@ -21,17 +26,18 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, "id") || "";
   const promo = (await listPromos()).find((item) => item.id === id);
   // mediaFile генерируется сервисом (uuid.ext) — валидируем на всякий случай.
-  if (
-    !promo?.mediaFile ||
-    !/^[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/.test(promo.mediaFile)
-  )
+  const fileName =
+    getQuery(event).variant === "poster"
+      ? promo?.mediaPosterFile
+      : promo?.mediaFile;
+  if (!fileName || !MEDIA_FILE_RE.test(fileName))
     throw createError({ statusCode: 404, statusMessage: "Not found" });
   try {
-    const bytes = await readFile(resolve(PROMO_MEDIA_DIR, promo.mediaFile));
+    const bytes = await readFile(resolve(PROMO_MEDIA_DIR, fileName));
     setHeader(
       event,
       "Content-Type",
-      CONTENT_TYPES[promo.mediaFile.split(".").at(-1)!] ?? "image/jpeg",
+      CONTENT_TYPES[fileName.split(".").at(-1)!] ?? "image/jpeg",
     );
     setHeader(event, "Cache-Control", "private, max-age=300");
     return bytes;

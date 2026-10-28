@@ -97,11 +97,38 @@ test("public promos API exposes only display fields", async ({ request }) => {
   for (const item of payload.items) {
     expect(item.id).toBeTruthy();
     expect(item.title).toBeTruthy();
+    // Разметка Telegram: безопасный HTML сгенерирован сервером.
+    expect(item.titleHtml).toBeTruthy();
+    expect(item.textHtml).toBeTruthy();
+    expect(["photo", "sticker"]).toContain(item.mediaKind);
     expect(item).not.toHaveProperty("status");
     expect(item).not.toHaveProperty("order");
     expect(item).not.toHaveProperty("mediaFile");
+    expect(item).not.toHaveProperty("mediaPosterFile");
     expect(item.ctaHref).toBe("/catalog");
   }
+});
+
+test("promos section renders Telegram formatting", async ({ page }) => {
+  await page.context().addCookies([AGE_COOKIE]);
+  await page.goto("/");
+  // Демо-карточка №1 приходит с жирным и цитатой (лента показывает новые
+  // карточки первыми, поэтому ищем по содержимому, а не по позиции).
+  await expect(page.locator(".promo-card__text strong").first()).toBeVisible();
+  await expect(
+    page.locator(".promo-card__text blockquote").first(),
+  ).toBeVisible();
+  const formatted = page
+    .locator(".promo-card__text", { hasText: "жирный" })
+    .first();
+  // Переносы строк и отступы сообщения показывает pre-wrap.
+  await expect(formatted).toHaveCSS("white-space", "pre-wrap");
+  // Заголовок с разметкой <strong> из titleHtml.
+  await expect(page.locator(".promo-card h3 strong").first()).toBeVisible();
+  // Ценник подсвечен красным (демо-карточка №1 — жёлтая, #c91400).
+  const price = page.locator(".promo-card__text .tg-price").first();
+  await expect(price).toBeVisible();
+  await expect(price).toHaveCSS("color", "rgb(201, 20, 0)");
 });
 
 test("promo bot webhook rejects requests without secret", async ({

@@ -50,19 +50,19 @@ test("catalog content is absent from server HTML until age is confirmed", async 
   await expect(page.locator(".product-card").first()).toBeVisible();
 });
 
-test("hero photos require an adult session even after cookie confirmation", async ({
+test("hero art is decorative and public — no shapes, no session gate", async ({
   request,
 }) => {
-  for (const cookie of [undefined, "prohook-age-confirmed=true"]) {
-    const options = cookie ? { headers: { cookie } } : undefined;
-    const html = await (await request.get("/", options)).text();
-    expect(html).toContain("floating-scene__shape");
-    expect(html).not.toContain("/api/hero/items/");
-    expect(
-      (await request.get("/api/hero/items/device-red", options)).status(),
-    ).toBe(403);
-  }
-  expect((await request.get("/hero/device-red.webp")).status()).toBe(404);
+  // Решение владельца 29.10.2026: предметы hero — декоративная композиция
+  // из эскиза, а не фото товаров каталога; показываются всем, CSS-фолбэк
+  // фигурами убран. Возрастной гейт остаётся только на фото товаров.
+  const html = await (await request.get("/")).text();
+  expect(html).not.toContain("floating-scene__shape");
+  expect(html).toContain("/hero/device-red.webp");
+  const image = await request.get("/hero/device-red.webp");
+  expect(image.status()).toBe(200);
+  expect(image.headers()["content-type"]).toContain("image/webp");
+  expect((await image.body()).subarray(0, 4).toString()).toBe("RIFF");
 });
 
 test("banned and unclassified categories are never published; pouches are published as regulated", async ({

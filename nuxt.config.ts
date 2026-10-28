@@ -1,5 +1,3 @@
-import { fileURLToPath } from "node:url";
-
 // Шрифты и изображения — собственные; стили Vue требуют unsafe-inline.
 // 'unsafe-inline' для script-src обязателен: Nuxt передаёт состояние SSR
 // inline-скриптом (см. docs/COMPLIANCE.md — оценка остаточного риска CSP).
@@ -93,14 +91,6 @@ export default defineNuxtConfig({
   experimental: { appManifest: false },
   css: ["~/assets/css/main.css", "~/assets/css/catalog.css"],
   nitro: {
-    // Фото для hero не лежат в public: их отдаёт только API после проверки
-    // совершеннолетия по сессии аккаунта.
-    serverAssets: [
-      {
-        baseName: "hero",
-        dir: fileURLToPath(new URL("./server/data/hero", import.meta.url)),
-      },
-    ],
     routeRules: {
       "/**": {
         headers: {

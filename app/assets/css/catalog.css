@@ -853,8 +853,8 @@ button.text-link {
   max-width: none;
 }
 .footer-bottom__legal span {
-  /* Реквизиты переносятся построчно, номера не рвутся посередине. */
-  display: inline-block;
+  /* Каждая строка реквизитов (ИП, ИНН, ОГРНИП) — всегда отдельно, не сливаются. */
+  display: block;
 }
 .footer-bottom nav {
   margin-left: auto;

@@ -247,19 +247,45 @@ onBeforeUnmount(() => {
             ]"
           >
             <img
-              v-if="slide.promo.image"
+              v-if="slide.promo.image && slide.promo.mediaKind !== 'sticker'"
               class="promo-card__image"
               :src="slide.promo.image"
               alt=""
               loading="lazy"
               decoding="async"
             />
+            <img
+              v-else-if="slide.promo.image && !slide.promo.imagePoster"
+              class="promo-card__image promo-card__image--sticker"
+              :src="slide.promo.image"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+            <video
+              v-else-if="slide.promo.image"
+              class="promo-card__image promo-card__image--sticker"
+              :src="slide.promo.image"
+              :poster="slide.promo.imagePoster ?? undefined"
+              autoplay
+              loop
+              muted
+              playsinline
+              aria-hidden="true"
+            ></video>
             <div class="promo-card__body">
               <span v-if="slide.promo.badge" class="promo-card__badge">{{
                 slide.promo.badge
               }}</span>
-              <h3>{{ slide.promo.title }}</h3>
-              <p v-if="slide.promo.text">{{ slide.promo.text }}</p>
+              <h3 v-if="slide.promo.title" v-html="slide.promo.titleHtml"></h3>
+              <!-- Разметка Telegram (жирный/цитаты/ссылки) приходит с сервера
+                   готовым безопасным HTML: теги только из allowlist, текст
+                   экранирован. div, а не p: внутри бывают блочные blockquote/pre. -->
+              <div
+                v-if="slide.promo.textHtml"
+                class="promo-card__text"
+                v-html="slide.promo.textHtml"
+              ></div>
               <NuxtLink
                 v-if="slide.promo.ctaHref && isInternal(slide.promo.ctaHref)"
                 :to="slide.promo.ctaHref"
@@ -465,6 +491,10 @@ onBeforeUnmount(() => {
   object-fit: cover;
   display: block;
 }
+/* Стикер — с прозрачным фоном: contain вместо cover, кадр не кропается. */
+.promo-card__image--sticker {
+  object-fit: contain;
+}
 .promo-card__body {
   display: grid;
   gap: 14px;
@@ -495,16 +525,99 @@ onBeforeUnmount(() => {
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
-.promo-card p {
+.promo-card p,
+.promo-card__text {
   font-size: 15px;
   line-height: 1.55;
   max-width: 46ch;
 }
-.promo-card--yellow p {
+/* pre-wrap: переносы строк и отступы сообщения показываются «как в Телеграме». */
+.promo-card__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.promo-card--yellow p,
+.promo-card--yellow .promo-card__text {
   color: rgba(0, 0, 0, 0.74);
 }
-.promo-card--ink p {
+.promo-card--ink p,
+.promo-card--ink .promo-card__text {
   color: #b3b3b3;
+}
+/* Разметка Telegram (HTML генерирует сервер, поэтому :deep). */
+.promo-card__text :deep(strong) {
+  font-weight: var(--weight-bold);
+}
+.promo-card__text :deep(a) {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.promo-card--ink .promo-card__text :deep(a) {
+  color: var(--accent);
+}
+.promo-card__text :deep(blockquote) {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-left: 3px solid currentColor;
+  border-radius: 0 8px 8px 0;
+  background: rgb(0 0 0 / 0.08);
+}
+.promo-card__text :deep(blockquote:first-child) {
+  margin-top: 0;
+}
+.promo-card__text :deep(blockquote:last-child) {
+  margin-bottom: 0;
+}
+.promo-card--ink .promo-card__text :deep(blockquote) {
+  background: rgb(255 255 255 / 0.08);
+}
+.promo-card__text :deep(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.08);
+}
+.promo-card--ink .promo-card__text :deep(code) {
+  background: rgb(255 255 255 / 0.08);
+}
+.promo-card__text :deep(pre) {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  white-space: pre;
+  overflow-x: auto;
+}
+.promo-card--ink .promo-card__text :deep(pre) {
+  background: rgb(255 255 255 / 0.08);
+}
+/* Спойлер: залит текстовым цветом, наведение раскрывает. */
+.promo-card__text :deep(.tg-spoiler) {
+  border-radius: 4px;
+  background: currentColor;
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+.promo-card__text :deep(.tg-spoiler:hover),
+.promo-card__text :deep(.tg-spoiler:focus-within) {
+  background: transparent;
+}
+/* Ценники акций — красные (решение владельца 29.10.2026): на каждый фон свой
+   оттенок, чтобы контраст оставался читаемым. */
+.promo-card :deep(.tg-price) {
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+.promo-card--yellow :deep(.tg-price) {
+  color: #c91400;
+}
+.promo-card--ink :deep(.tg-price) {
+  color: #ff7b72;
 }
 .promo-card__cta {
   /* Кнопка прижата к низу карточки — ровная линия на карточках разной
