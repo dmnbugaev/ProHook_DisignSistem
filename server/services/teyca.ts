@@ -27,7 +27,7 @@ export type TeycaResult<T> =
 
 export interface TeycaPass {
   userId: string;
-  /** Баллы приходят строкой («100») — приводим к числу. */
+  /** Баллы приходят числом или строкой («100») — приводим к числу. */
   balance: number;
   loyaltyLevel?: string;
   discount?: string;
@@ -97,11 +97,16 @@ async function instanceToken(
         undefined,
         fetchImpl,
       );
-      const entries = asArray(list.authorization);
-      const existing = entries.find(
+      // Список токенов приходит в поле tokens; свой identifier может
+      // встретиться несколько раз — берём активный (status !== false):
+      // заблокированный токен вернул бы 401 на каждый запрос.
+      const own = asArray(list.tokens).filter(
         (entry) => fieldOf(entry, "identifier") === TOKEN_IDENTIFIER,
       );
-      const existingToken = fieldOf(existing, "token");
+      const existingToken = fieldOf(
+        own.find((entry) => entry.status !== false),
+        "token",
+      );
       if (existingToken) {
         cachedToken = { token: existingToken };
         await saveToken(existingToken);
@@ -188,8 +193,13 @@ async function request(
 }
 
 function toPass(entry: Record<string, unknown> | undefined): TeycaPass | null {
-  const userId = entry?.user_id;
-  if (typeof userId !== "string" || !userId) return null;
+  if (entry == null) return null;
+  // TEYCA присылает user_id числом («user_id»: 17895, см. документацию API);
+  // строковый id тоже валиден — нормализуем к строке для хранения.
+  const rawId = entry.user_id;
+  if (typeof rawId !== "number" && typeof rawId !== "string") return null;
+  const userId = String(rawId).trim();
+  if (!userId) return null;
   const bonus = Number.parseInt(String(entry.bonus ?? "0"), 10);
   const pass: TeycaPass = {
     userId,
