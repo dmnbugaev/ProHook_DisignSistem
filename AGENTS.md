@@ -125,6 +125,16 @@ server-side runtime config / env. В клиентский бандл, DOM и л�
   `NUXT_TELEGRAM_CHAT_ID` и `TELEGRAM_RESERVATION_CHAT_IDS` равными только
   этому chat_id — остальные аккаунты allowlist тестовые уведомления не
   получают; на проде с общим allowlist формы не тестировать.
+- Канал Telegram прода = туннель `prohook-telegram-relay` (vapeserver:
+  /etc/hosts `api.telegram.org → 127.0.0.2` + iptables REDIRECT → ssh -L
+  9443 → myserver). «active» юнита не значит живой egress: с 30.10.2026
+  провайдер myserver флапит (~20–30% соединений) к подсетям Telegram.
+  Диагностика: `journalctl -u prohook-telegram-relay` («channel …
+  connect failed» = нога myserver→Telegram) и одновременный curl с myserver
+  и через туннель. Поллинг промо-бота при флапе ловит 409 от собственного
+  зависшего long-poll — выход только при подтверждённом `getWebhookInfo`
+  url (фикс 02.11.2026); безусловный «exit по 409» не возвращать: он
+  молча убивал поллинг до рестарта сервиса.
 - На открытых роутах (/login, /register) сабмит до гидрации Vue уходит
   нативным GET с паролем в URL — ждать `__vue_app__` на `#__nuxt`.
 - МойСклад режет curl маскированным 415 независимо от заголовков — только
