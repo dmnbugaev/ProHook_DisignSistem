@@ -32,6 +32,7 @@ const {
   handlePromoUpdateOnce,
   parsePromoBotCommand,
   parsePromoChatIds,
+  promoWebhookActive,
   resetPromoBotForTests,
 } = await jiti.import("../server/services/promo-telegram.ts");
 const {
@@ -582,4 +583,43 @@ test("хранилище: без html-полей текст экранирует
   // Ценник подсвечивается и в фолбэке без html-полей.
   const priced = await createPromo({ title: "Набор 490 ₽" });
   assert.equal(priced.titleHtml, 'Набор <span class="tg-price">490 ₽</span>');
+});
+
+// Регрессия 02.11.2026: флап туннеля на проде дал поллеру 409 от его же
+// зависшего long-poll, и поллинг навсегда остановился («webhook is active»).
+// Решение о выходе теперь принимает promoWebhookActive: true — только при
+// подтверждённом getWebhookInfo url; пустой url и сетевой сбой — поллим дальше.
+test("promoWebhookActive: останавливать поллинг может только реальный вебхук", async () => {
+  const fileFetch = globalThis.fetch;
+  const respond = (body) => async () =>
+    new Response(JSON.stringify(body), { status: 200 });
+  try {
+    globalThis.fetch = respond({
+      ok: true,
+      result: { url: "https://reg.example/tg" },
+    });
+    assert.equal(
+      await promoWebhookActive(),
+      true,
+      "установленный вебхук → поллинг уступает каналу",
+    );
+
+    globalThis.fetch = respond({ ok: true, result: { url: "" } });
+    assert.equal(
+      await promoWebhookActive(),
+      false,
+      "пустой url (409 от зависшего long-poll) → поллинг продолжает работу",
+    );
+
+    globalThis.fetch = async () => {
+      throw new TypeError("fetch failed");
+    };
+    assert.equal(
+      await promoWebhookActive(),
+      false,
+      "сетевой сбой getWebhookInfo → поллинг продолжает работу",
+    );
+  } finally {
+    globalThis.fetch = fileFetch;
+  }
 });

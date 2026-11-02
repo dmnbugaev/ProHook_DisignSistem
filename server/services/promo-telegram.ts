@@ -104,6 +104,24 @@ async function telegramApi(
   return response.json();
 }
 
+/**
+ * Установлен ли у бота вебхук (getWebhookInfo). Любая ошибка сети/парсинга
+ * трактуется как «вебхука нет»: выключающим сигналом для поллинга считается
+ * только подтверждённый url — мимолётный 409 от собственного зависшего
+ * long-poll при флапе туннеля поллинг останавливать не должен (диагностика
+ * 02.11.2026: 409-самоубийство поллинга на проде).
+ */
+export async function promoWebhookActive(): Promise<boolean> {
+  try {
+    const info = (await telegramApi("getWebhookInfo", {})) as {
+      result?: { url?: string };
+    };
+    return Boolean(info.result?.url);
+  } catch {
+    return false;
+  }
+}
+
 /** Отправка ответа оператору; сбой (блок хостинга) только логируется. */
 export async function sendPromoReply(
   chatId: string,

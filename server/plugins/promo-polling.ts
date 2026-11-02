@@ -1,6 +1,7 @@
 import {
   fetchPromoUpdates,
   handlePromoUpdateOnce,
+  promoWebhookActive,
 } from "../services/promo-telegram";
 import { telegramSilenced } from "../utils/telegram-silence";
 
@@ -36,18 +37,27 @@ export default defineNitroPlugin(() => {
             await handlePromoUpdateOnce(update);
           }
         } catch (error) {
-          // 409 — конфликт с активным вебхуком: поллинг не нужен, выходим.
           const message = error instanceof Error ? error.message : "";
+          // 409 бывает не только у активного вебхука: при флапе туннеля
+          // Telegram ещё держит зависший long-poll, и повтор конфликтует
+          // сам с собой. Выходим только если вебхук подтверждён
+          // getWebhookInfo — запасной вебхук-канал важнее поллинга.
           if (message.includes("409")) {
+            if (await promoWebhookActive()) {
+              console.error(
+                "Promo bot polling stopped: webhook is active (409, подтверждён getWebhookInfo).",
+              );
+              return;
+            }
             console.error(
-              "Promo bot polling stopped: webhook is active (409).",
+              "Promo bot polling conflict (409) без активного вебхука — продолжаю поллинг.",
             );
-            return;
+          } else {
+            console.error(
+              "Promo bot polling failed:",
+              message || "Unknown error",
+            );
           }
-          console.error(
-            "Promo bot polling failed:",
-            message || "Unknown error",
-          );
           await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         }
       }
