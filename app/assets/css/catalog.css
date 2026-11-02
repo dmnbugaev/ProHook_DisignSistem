@@ -521,9 +521,7 @@ button.text-link {
   min-width: 0;
 }
 .product-card__visual {
-  display: block;
   position: relative;
-  text-decoration: none;
 }
 /* Метка нулевого остатка поверх фото: позиция остаётся в каталоге. */
 .product-card__soon {
@@ -534,6 +532,81 @@ button.text-link {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+/* Фото карточки — кликабельная зона перехода на товар; при нескольких
+   фото превращается в ленту: нативный скролл со снапом (свайп на таче),
+   стрелки для мыши и точки-индикаторы. */
+.card-slider {
+  position: relative;
+}
+.card-slider__link {
+  display: block;
+  text-decoration: none;
+}
+.card-slider__track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* Полоса прокрутки ломает квадрат витрины: листают свайп/стрелки. */
+  scrollbar-width: none;
+}
+.card-slider__track::-webkit-scrollbar {
+  display: none;
+}
+.card-slider__slide {
+  flex: 0 0 100%;
+  min-width: 100%;
+  scroll-snap-align: start;
+}
+.card-slider__arrow {
+  position: absolute;
+  top: 50%;
+  margin-top: -22px;
+  z-index: 1;
+  background: var(--background);
+  border-color: var(--ink);
+  color: var(--ink);
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+.card-slider__arrow:hover {
+  background: var(--accent);
+}
+.card-slider__arrow--prev {
+  left: var(--space-1);
+}
+.card-slider__arrow--next {
+  right: var(--space-1);
+}
+.product-card__visual:hover .card-slider__arrow,
+.card-slider__arrow:focus-visible {
+  opacity: 1;
+}
+/* Стрелки — только для устройств с мышью: на таче листают свайпом. */
+@media (hover: none), (pointer: coarse) {
+  .card-slider__arrow {
+    display: none;
+  }
+}
+.card-slider__dots {
+  position: absolute;
+  bottom: var(--space-2);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+}
+.card-slider__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+}
+.card-slider__dot--active {
+  background: var(--ink);
 }
 .product-image {
   aspect-ratio: 1 / 1;

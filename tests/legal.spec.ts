@@ -124,11 +124,12 @@ test("unregulated assortment is reachable before age confirmation; regulated sta
     ).status(),
   ).toBe(200);
   // Изображения общедоступных товаров не требуют взрослой сессии в API;
-  // прямой URL изображения регулируемого товара закрыт 403.
+  // прямой URL изображения регулируемого товара закрыт 403. У «Блокнота 01»
+  // в фикстуре два фото (лента в карточке каталога).
   const notebookPublic = list.items.find(
     (item: { slug: string }) => item.slug === "notebooks-01",
   );
-  expect(notebookPublic.images.length).toBe(1);
+  expect(notebookPublic.images.length).toBe(2);
   expect(notebookPublic.imagesRestricted).toBeUndefined();
   expect((await request.get("/api/products/p1/images/0")).status()).toBe(403);
 

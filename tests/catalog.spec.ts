@@ -158,6 +158,40 @@ test("instant filters: availability is on by default, photo filter removed", asy
   await expect(page.locator(".filter-chips")).toHaveCount(0);
 });
 
+test("card with several photos flips them in place", async ({ page }) => {
+  await open(page);
+  // «Блокнот 01» — общедоступная позиция (корень «Напитки») с двумя фото,
+  // видна анонимно вместе с изображениями и без снятия фильтра наличия.
+  const card = page.locator(".product-card", {
+    has: page.getByRole("heading", { name: "Блокнот 01" }),
+  });
+  // Лента появляется только у многофотных карточек, у остальных —
+  // одиночная картинка-ссылка как раньше.
+  await expect(page.locator(".card-slider")).toHaveCount(1);
+  await expect(card.locator(".card-slider__slide")).toHaveCount(2);
+  await expect(card.locator(".card-slider__dot")).toHaveCount(2);
+  await expect(card.locator(".card-slider__dot").first()).toHaveClass(
+    /card-slider__dot--active/,
+  );
+  // Стрелка листает ленту на второе фото, активная точка переходит к нему.
+  await card.getByRole("button", { name: "Следующее фото товара" }).click();
+  await expect(card.locator(".card-slider__dot").first()).not.toHaveClass(
+    /card-slider__dot--active/,
+  );
+  await expect(card.locator(".card-slider__dot").nth(1)).toHaveClass(
+    /card-slider__dot--active/,
+  );
+  // Крайние стрелки не уводят за пределы ленты.
+  await card.getByRole("button", { name: "Следующее фото товара" }).click();
+  await expect(card.locator(".card-slider__dot").nth(1)).toHaveClass(
+    /card-slider__dot--active/,
+  );
+  await card.getByRole("button", { name: "Предыдущее фото товара" }).click();
+  await expect(card.locator(".card-slider__dot").first()).toHaveClass(
+    /card-slider__dot--active/,
+  );
+});
+
 test("search field in catalog shows live suggestions", async ({ page }) => {
   await open(page);
   // Поле поиска доступно прямо в каталоге, без перехода на /search.

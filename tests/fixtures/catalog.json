@@ -175,6 +175,11 @@
           "id": "main",
           "src": "/demo/notebook.svg",
           "alt": "Блокнот"
+        },
+        {
+          "id": "detail",
+          "src": "/demo/detail.svg",
+          "alt": "Разворот блокнота"
         }
       ],
       "description": "Описание блокнота.",
