@@ -3,6 +3,7 @@ import { parseTelegramChatIds } from "../services/telegram";
 import { createPartnership } from "../services/partnership-store";
 import { dispatchPartnershipNotification } from "../services/partnership-telegram";
 import { allowPartnership } from "../utils/partnership-rate-limit";
+import { isMonitorProbe } from "../utils/monitor-probe";
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, "Cache-Control", "no-store");
@@ -53,6 +54,15 @@ export default defineEventHandler(async (event) => {
   // блокировка api.telegram.org хостингом) не теряет её и не возвращает
   // ошибку отправителю. Сотрудники читают заявки в инбоксе /api/staff/inbox.
   const application = await createPartnership(data);
+  // Тестовые заявки монитор-бота не рассылаются сотрудникам (мандат
+  // владельца 05.11.2026): конвейер проверяется, чаты не шумят.
+  if (isMonitorProbe(event)) {
+    console.info(
+      "Partnership monitor probe — dispatch skipped:",
+      application.publicId,
+    );
+    return { ok: true, id: application.publicId };
+  }
   const chatIds = parseTelegramChatIds(config.telegramChatId);
   void dispatchPartnershipNotification(
     application,

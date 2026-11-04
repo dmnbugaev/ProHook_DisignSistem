@@ -16,6 +16,7 @@ import {
 import { enforceRegionalRestrictions } from "../../shared/legal/catalog-policy";
 import { getSessionUser } from "../utils/session";
 import { guardJsonRequest } from "../utils/request-guard";
+import { isMonitorProbe } from "../utils/monitor-probe";
 import { allowReservation } from "../utils/reservation-rate-limit";
 import {
   IDEMPOTENCY_KEY_PATTERN,
@@ -185,6 +186,16 @@ export default defineEventHandler(async (event) => {
   });
   if (IDEMPOTENCY_KEY_PATTERN.test(headerKey))
     rememberIdempotentResult(headerKey, reservation.publicId);
+
+  // Тестовые заявки монитор-бота не рассылаются сотрудникам (мандат
+  // владельца 05.11.2026): конвейер проверяется целиком, чаты не шумят.
+  if (isMonitorProbe(event)) {
+    console.info(
+      "Reservation monitor probe — dispatch skipped:",
+      reservation.publicId,
+    );
+    return { ok: true as const, publicId: reservation.publicId };
+  }
 
   // Уведомление сотрудников — best-effort после сохранения: сбой Telegram
   // не теряет запрос и не возвращает ошибку пользователю (повтор доставки
