@@ -90,31 +90,10 @@ onBeforeUnmount(() => window.removeEventListener("scroll", onScroll));
           aria-hidden="true"
         >
           <path
-            d="M2.5 4h2.4l1 4M6 8h15l-1.9 7.4a2.1 2.1 0 0 1-2 1.6H9.4a2.1 2.1 0 0 1-2-1.6L6 8Z"
+            d="m12 2.6 2.8 5.9 6.5.9-4.7 4.5 1.1 6.4L12 17.2l-5.7 3.1 1.1-6.4L2.7 9.4l6.5-.9L12 2.6Z"
             stroke="currentColor"
             stroke-width="1.8"
-            stroke-linecap="round"
             stroke-linejoin="round"
-          />
-          <path
-            d="M10.4 11.2v3M14.2 11.2v3"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-          />
-          <circle
-            cx="10"
-            cy="20.3"
-            r="1.55"
-            stroke="currentColor"
-            stroke-width="1.8"
-          />
-          <circle
-            cx="16.8"
-            cy="20.3"
-            r="1.55"
-            stroke="currentColor"
-            stroke-width="1.8"
           /></svg
         ><span v-if="count > 0" class="selection-link__badge">{{
           count
