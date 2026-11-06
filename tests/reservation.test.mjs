@@ -318,7 +318,7 @@ test("survives Telegram 429, 5xx, timeout and network errors per chat", async ()
   assert.deepEqual(partial.deliveredTo, ["3"]);
 });
 
-test("dispatch retries a bounded number of times and never duplicates a request", async () => {
+test("dispatch retries until every chat is covered, without duplicates", async () => {
   const originalToken = process.env.TELEGRAM_BOT_TOKEN;
   const originalChats = process.env.TELEGRAM_RESERVATION_CHAT_IDS;
   const originalFetch = globalThis.fetch;
@@ -350,24 +350,77 @@ test("dispatch retries a bounded number of times and never duplicates a request"
     };
     // Доставка не бросает исключение даже при полном отказе Telegram…
     await dispatchReservationNotification(created);
-    assert.equal(calls, 6); // 3 попытки × 2 чата
+    assert.equal(calls, 10); // 5 попыток × 2 чата
     const stored = await findReservationByPublicId(created.publicId);
-    assert.equal(stored.telegramDelivery.attempts, 3);
+    assert.equal(stored.telegramDelivery.attempts, 5);
     assert.deepEqual(stored.telegramDelivery.deliveredTo, []);
     assert.equal(stored.status, "PENDING"); // запрос не потерян и не изменён
-    // …и останавливается после первого успеха.
+    // …и добирает недоставленный чат: частичный успех — не остановка.
     calls = 0;
-    globalThis.fetch = async () => {
+    const sentTo = [];
+    let chat222Calls = 0;
+    globalThis.fetch = async (url, options) => {
       calls++;
-      return new Response(
-        JSON.stringify({ ok: true, result: { message_id: 1 } }),
-      );
+      const chatId = JSON.parse(options.body).chat_id;
+      sentTo.push(chatId);
+      // Флап: чат 222 проходит только со второго к нему обращения.
+      if (chatId === "222") chat222Calls++;
+      const ok = chatId === "111" || chat222Calls >= 2;
+      return ok
+        ? new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }))
+        : new Response('{"ok":false}');
     };
     await dispatchReservationNotification(created);
-    assert.equal(calls, 2);
+    // Попытка 1: оба чата (111 ок, 222 нет), попытка 2: только 222.
+    assert.equal(calls, 3);
+    assert.deepEqual(sentTo, ["111", "222", "222"]);
     const after = await findReservationByPublicId(created.publicId);
-    assert.equal(after.telegramDelivery.attempts, 4);
+    assert.equal(after.telegramDelivery.attempts, 7);
     assert.deepEqual(after.telegramDelivery.deliveredTo, ["111", "222"]);
+  } finally {
+    process.env.TELEGRAM_BOT_TOKEN = originalToken;
+    process.env.TELEGRAM_RESERVATION_CHAT_IDS = originalChats;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("dispatch keeps retrying through network-level errors (flap)", async () => {
+  const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+  const originalChats = process.env.TELEGRAM_RESERVATION_CHAT_IDS;
+  const originalFetch = globalThis.fetch;
+  process.env.TELEGRAM_BOT_TOKEN = "fake-token";
+  process.env.TELEGRAM_RESERVATION_CHAT_IDS = "111,222";
+  try {
+    const created = await createReservation({
+      userId: null,
+      customerName: "Сеть флапает",
+      phone: "79991234567",
+      storeId: "store-2",
+      storeNameSnapshot: "Студия · Север",
+      storeAddressSnapshot: "",
+      comment: "",
+      consent: { personalData: true, telegram: true },
+      captchaVerifiedAt: null,
+      items: [
+        {
+          productId: "stands-01",
+          productNameSnapshot: "Подставка 01",
+          quantity: 1,
+        },
+      ],
+    });
+    let calls = 0;
+    globalThis.fetch = async () => {
+      calls++;
+      throw new TypeError("fetch failed");
+    };
+    await dispatchReservationNotification(created);
+    // Раньше сетевая ошибка обрывала ретраи — при флапе туннеля это
+    // теряло уведомление; теперь проходятся все попытки.
+    assert.equal(calls, 10);
+    const stored = await findReservationByPublicId(created.publicId);
+    assert.equal(stored.telegramDelivery.attempts, 5);
+    assert.deepEqual(stored.telegramDelivery.deliveredTo, []);
   } finally {
     process.env.TELEGRAM_BOT_TOKEN = originalToken;
     process.env.TELEGRAM_RESERVATION_CHAT_IDS = originalChats;
@@ -389,43 +442,6 @@ test("dispatch is a no-op without a configured bot (dev and e2e mode)", async ()
   try {
     await dispatchReservationNotification(storedReservation());
     assert.equal(called, 0);
-  } finally {
-    process.env.TELEGRAM_BOT_TOKEN = originalToken;
-    process.env.TELEGRAM_RESERVATION_CHAT_IDS = originalChats;
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test("network-level Telegram failure skips retries (hosting block scenario)", async () => {
-  const originalToken = process.env.TELEGRAM_BOT_TOKEN;
-  const originalChats = process.env.TELEGRAM_RESERVATION_CHAT_IDS;
-  const originalFetch = globalThis.fetch;
-  process.env.TELEGRAM_BOT_TOKEN = "test-token";
-  process.env.TELEGRAM_RESERVATION_CHAT_IDS = "111,222";
-  let calls = 0;
-  // TypeError = сетевой уровень (fetch failed), как при блокировке
-  // api.telegram.org хостингом: ретраи не выполняются.
-  globalThis.fetch = async () => {
-    calls++;
-    throw new TypeError("fetch failed");
-  };
-  try {
-    const created = await createReservation({
-      userId: null,
-      customerName: "Иван",
-      phone: "79991234567",
-      storeId: "store-1",
-      storeNameSnapshot: "Студия · Центр",
-      storeAddressSnapshot: "",
-      comment: "",
-      consent: { personalData: true, telegram: true },
-      captchaVerifiedAt: null,
-      items: [],
-    });
-    await dispatchReservationNotification(created);
-    assert.equal(calls, 2); // 1 попытка × 2 чата, без повторов
-    const stored = await findReservationByPublicId(created.publicId);
-    assert.equal(stored.telegramDelivery.attempts, 1);
   } finally {
     process.env.TELEGRAM_BOT_TOKEN = originalToken;
     process.env.TELEGRAM_RESERVATION_CHAT_IDS = originalChats;

@@ -1,7 +1,23 @@
 /* global Response */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import process from "node:process";
 import { createJiti } from "jiti";
+
+// Свежий каталог и быстрые повторы до импорта модулей: стор читает env
+// при импорте, диспетчер — паузу ретраев.
+const dataDir = mkdtempSync(join(tmpdir(), "prohook-partnership-"));
+process.env.PARTNERSHIP_DATA_DIR = dataDir;
+process.env.TELEGRAM_RETRY_DELAY_MS = "1";
+// Резервный канал МойСклад в тестах отключён (в шелле разработчика могут
+// быть экспортированы боевые токены).
+process.env.NUXT_MOYSKLAD_TOKEN = "";
+process.env.MOYSKLAD_TOKEN = "";
+process.env.MOYSKLAD_NOTIFY_EMPLOYEE_ID = "";
+
 const jiti = createJiti(import.meta.url);
 const { validatePartnership } = await jiti.import(
   "../shared/utils/partnership.ts",
@@ -11,6 +27,12 @@ const { sendPartnership, parseTelegramChatIds } = await jiti.import(
 );
 const { allowPartnership } = await jiti.import(
   "../server/utils/partnership-rate-limit.ts",
+);
+const { dispatchPartnershipNotification } = await jiti.import(
+  "../server/services/partnership-telegram.ts",
+);
+const { createPartnership, listPartnerships } = await jiti.import(
+  "../server/services/partnership-store.ts",
 );
 const valid = {
   name: "Иван Иванов",
@@ -122,4 +144,34 @@ test("limits attempts and expires windows", () => {
     assert.equal(allowPartnership("test-ip", 1000), true);
   assert.equal(allowPartnership("test-ip", 1000), false);
   assert.equal(allowPartnership("test-ip", 901001), true);
+});
+test("dispatch covers every chat, retrying only the missing one", async () => {
+  const application = await createPartnership(valid);
+  const sentTo = [];
+  let chat456Calls = 0;
+  const request = async (url, options) => {
+    const chatId = JSON.parse(options.body).chat_id;
+    sentTo.push(chatId);
+    // Флап: второй чат проходит только со второго к нему обращения.
+    if (chatId === "-456") chat456Calls++;
+    const ok = chatId === "-123" || chat456Calls >= 2;
+    return new Response(
+      ok
+        ? JSON.stringify({ ok: true, result: { message_id: 1 } })
+        : '{"ok":false}',
+    );
+  };
+  await dispatchPartnershipNotification(
+    application,
+    valid,
+    "fake-token",
+    ["-123", "-456"],
+    request,
+  );
+  // Попытка 1: оба чата (-123 ок, -456 нет), попытка 2: только -456.
+  assert.deepEqual(sentTo, ["-123", "-456", "-456"]);
+  const [stored] = await listPartnerships(1);
+  assert.equal(stored.id, application.id);
+  assert.equal(stored.telegramDelivery.attempts, 2);
+  assert.deepEqual(stored.telegramDelivery.deliveredTo, ["-123", "-456"]);
 });

@@ -23,7 +23,11 @@ export function parseTelegramChatIds(raw: string | number) {
     .filter(Boolean);
 }
 
-/** api.telegram.org недоступен на сетевом уровне (DNS/TCP) — ретраи бессмысленны. */
+/**
+ * Сетевая недоступность api.telegram.org (DNS/TCP). При флапе egress
+ * (myserver → Telegram) это проходящая ошибка: диспетчеры ретраят её
+ * наравне с остальными, класс различает режим сбоя в логах/наблюдении.
+ */
 export class TelegramUnreachableError extends Error {}
 
 export async function sendPartnership(

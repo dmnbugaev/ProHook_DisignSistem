@@ -15,14 +15,19 @@ import { telegramSilenced } from "../utils/telegram-silence";
  * запроса и отправляется обычным текстом (без parse_mode — разметка
  * пользовательских строк невозможна по построению).
  *
- * Доставка — best-effort с повторами: сбой Telegram не теряет и не
- * дублирует запрос (запрос уже сохранён в reservation-store; повтор
+ * Доставка — с повторами до полного покрытия allowlist: успех = все чаты.
+ * Ретраи добирают только недоставленные чаты, сбой Telegram не теряет и
+ * не дублирует запрос (запрос уже сохранён в reservation-store; повтор
  * доставки привязан к id запроса, а не создаёт новый запрос).
  */
 
 const MAX_CHAT_IDS = 20;
 const SEND_TIMEOUT_MS = 10000;
-const MAX_DELIVERY_ATTEMPTS = 3;
+// Флап egress myserver → api.telegram.org (с 30.10.2026): каждый запрос
+// доходит с шансом ~50–60%, поэтому «хотя бы один чат получил» — не успех.
+// Успех = все чаты allowlist; ретраи добирают только недоставленные.
+const MAX_DELIVERY_ATTEMPTS = 5;
+const RETRY_DELAY_CAP_MS = 300_000;
 
 export function parseReservationChatIds(raw: string | undefined): string[] {
   return [
@@ -128,8 +133,8 @@ export async function deliverReservationMessage(
           },
         );
       } catch (error) {
-        // TypeError = сетевой уровень (DNS/TCP): ретраи бессмысленны, пока
-        // хостинг не вернёт маршруты к Telegram.
+        // TypeError = сетевой уровень (DNS/TCP/сброс туннеля). При флапе
+        // egress это проходящая ошибка — классифицируем для наблюдаемости.
         if (error instanceof TypeError) networkFailures++;
         throw new Error("telegram send failed", { cause: error });
       }
@@ -149,9 +154,12 @@ export async function deliverReservationMessage(
   };
 }
 
-function retryDelayMs(): number {
-  const value = Number(process.env.TELEGRAM_RETRY_DELAY_MS);
-  return Number.isFinite(value) && value >= 0 ? value : 60_000;
+function retryDelayMs(attempt: number): number {
+  const base = Number(process.env.TELEGRAM_RETRY_DELAY_MS);
+  const value = Number.isFinite(base) && base >= 0 ? base : 60_000;
+  // Экспоненциальная пауза: всплески флапа длятся минуты, ранний повтор
+  // чаще попадает в тот же сбой, поздний — теряет оперативность заявки.
+  return Math.min(value * 2 ** (attempt - 1), RETRY_DELAY_CAP_MS);
 }
 
 function delay(ms: number): Promise<void> {
@@ -192,42 +200,63 @@ export async function dispatchReservationNotification(
   inFlight.add(reservation.id);
   try {
     const text = buildReservationMessage(reservation);
+    // Повтор доставки привязан к id: чаты, уже получившие сообщение по
+    // этой записи, не получают дубликат.
+    const delivered = new Set(reservation.telegramDelivery.deliveredTo);
     for (let attempt = 1; attempt <= MAX_DELIVERY_ATTEMPTS; attempt++) {
-      const { deliveredTo, unreachable } = await deliverReservationMessage(
+      const missing = chatIds.filter((chatId) => !delivered.has(chatId));
+      // deliverReservationMessage шлёт только в недоставленные чаты —
+      // успешные не получают дубликат.
+      const { deliveredTo } = await deliverReservationMessage(
         token,
-        chatIds,
+        missing,
         text,
         request,
       );
       await recordTelegramAttempt(reservation.id, deliveredTo);
-      if (deliveredTo.length > 0) return;
-      // Сетевая недоступность (хостинг блокирует api.telegram.org) —
-      // ретраи не помогут, сразу уходим в резервный канал.
-      if (unreachable) break;
-      if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs());
+      for (const chatId of deliveredTo) delivered.add(chatId);
+      if (delivered.size === chatIds.length) return;
+      // Сетевые сбои при флапе туннеля лечатся повтором — не выходим.
+      if (delivered.size > 0)
+        console.warn(
+          `Reservation telegram delivery partial: ${reservation.publicId} ${delivered.size}/${chatIds.length}, повтор ${attempt}`,
+        );
+      if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs(attempt));
     }
-    await fallbackToMoySkladTask(reservation);
+    if (delivered.size === 0) await fallbackToMoySkladTask(reservation);
     // Без ПД и токена: только публичный номер запроса.
     console.error(
-      "Reservation telegram delivery failed after retries:",
-      reservation.publicId,
+      `Reservation telegram delivery incomplete after retries: ${reservation.publicId} ${delivered.size}/${chatIds.length}`,
     );
   } finally {
     inFlight.delete(reservation.id);
   }
 }
 
+/** Доставка ещё идёт? — свипер до-доставки пропускает такие записи. */
+export function reservationDeliveryInFlight(id: string): boolean {
+  return inFlight.has(id);
+}
+
 /**
  * Резервный канал: хостинг продакшена блокирует api.telegram.org, поэтому
  * недоставленное уведомление становится задачей в МойСклад (API доступен).
- * Без токена МойСклад (dev/e2e) — молча пропускается.
+ * Задача создаётся при полной недоставке (0 чатов); частичную добирает
+ * свипер telegram-redelivery. Без токена МойСклад (dev/e2e) — логируется.
  */
 async function fallbackToMoySkladTask(reservation: StoredReservation) {
   const created = await notifyStaffViaMoySklad(
     `ПроХук · резерв ${reservation.publicId}`,
     buildReservationMessage(reservation),
   );
-  if (!created) return;
+  if (!created) {
+    // Раньше молчали: провал обоих каналов не должен быть невидимым.
+    console.error(
+      "Reservation MoySklad fallback failed:",
+      reservation.publicId,
+    );
+    return;
+  }
   console.info(
     "Reservation notification routed to MoySklad task:",
     reservation.publicId,

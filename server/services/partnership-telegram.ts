@@ -1,9 +1,5 @@
 import type { Partnership } from "../../shared/utils/partnership";
-import {
-  partnershipMessage,
-  sendPartnership,
-  TelegramUnreachableError,
-} from "./telegram";
+import { partnershipMessage, sendPartnership } from "./telegram";
 import {
   recordPartnershipAttempt,
   type StoredPartnership,
@@ -12,18 +8,25 @@ import { notifyStaffViaMoySklad } from "./moysklad-notify";
 import { telegramSilenced } from "../utils/telegram-silence";
 
 /**
- * Доставка заявок на партнёрство в Telegram — best-effort с повторами,
- * по образцу reservation-telegram. Заявка уже сохранена в
+ * Доставка заявок на партнёрство в Telegram — с повторами до полного
+ * покрытия, по образцу reservation-telegram. Заявка уже сохранена в
  * partnership-store: сбой доставки (включая блокировку api.telegram.org
  * на уровне хостинга) не теряет её; сотрудники видят заявки в инбоксе
  * (/api/staff/inbox), повтор доставки привязан к id заявки.
  */
 
-const MAX_DELIVERY_ATTEMPTS = 3;
+// Флап egress myserver → api.telegram.org (с 30.10.2026): каждый запрос
+// доходит с шансом ~50–60%, поэтому «хотя бы один чат получил» — не успех.
+// Успех = все чаты allowlist; ретраи добирают только недоставленные.
+const MAX_DELIVERY_ATTEMPTS = 5;
+const RETRY_DELAY_CAP_MS = 300_000;
 
-function retryDelayMs(): number {
-  const value = Number(process.env.TELEGRAM_RETRY_DELAY_MS);
-  return Number.isFinite(value) && value >= 0 ? value : 60_000;
+function retryDelayMs(attempt: number): number {
+  const base = Number(process.env.TELEGRAM_RETRY_DELAY_MS);
+  const value = Number.isFinite(base) && base >= 0 ? base : 60_000;
+  // Экспоненциальная пауза: всплески флапа длятся минуты, ранний повтор
+  // чаще попадает в тот же сбой, поздний — теряет оперативность заявки.
+  return Math.min(value * 2 ** (attempt - 1), RETRY_DELAY_CAP_MS);
 }
 
 function delay(ms: number): Promise<void> {
@@ -59,39 +62,54 @@ export async function dispatchPartnershipNotification(
   if (inFlight.has(application.id)) return;
   inFlight.add(application.id);
   try {
+    // Повтор доставки привязан к id: чаты, уже получившие сообщение по
+    // этой записи, не получают дубликат.
+    const delivered = new Set(application.telegramDelivery.deliveredTo);
     for (let attempt = 1; attempt <= MAX_DELIVERY_ATTEMPTS; attempt++) {
+      const missing = chatIds.filter((chatId) => !delivered.has(chatId));
       try {
+        // sendPartnership шлёт только в недоставленные чаты — успешные
+        // не получают дубликат. Сетевые сбои при флапе туннеля лечатся
+        // повтором, досрочного выхода нет.
         const deliveredTo = await sendPartnership(
           botToken,
-          chatIds,
+          missing,
           data,
           application.publicId,
           request,
         );
         await recordPartnershipAttempt(application.id, deliveredTo);
-        return;
-      } catch (error) {
+        for (const chatId of deliveredTo) delivered.add(chatId);
+      } catch {
         await recordPartnershipAttempt(application.id, []);
-        // Сетевая недоступность (хостинг блокирует api.telegram.org) —
-        // ретраи не помогут, сразу уходим в резервный канал.
-        if (error instanceof TelegramUnreachableError) break;
       }
-      if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs());
+      if (delivered.size === chatIds.length) return;
+      if (delivered.size > 0)
+        console.warn(
+          `Partnership telegram delivery partial: ${application.publicId} ${delivered.size}/${chatIds.length}, повтор ${attempt}`,
+        );
+      if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs(attempt));
     }
-    await fallbackToMoySkladTask(application, data);
+    if (delivered.size === 0) await fallbackToMoySkladTask(application, data);
     // Без ПД и токена: только публичный номер заявки.
     console.error(
-      "Partnership telegram delivery failed after retries:",
-      application.publicId,
+      `Partnership telegram delivery incomplete after retries: ${application.publicId} ${delivered.size}/${chatIds.length}`,
     );
   } finally {
     inFlight.delete(application.id);
   }
 }
 
+/** Доставка ещё идёт? — свипер до-доставки пропускает такие записи. */
+export function partnershipDeliveryInFlight(id: string): boolean {
+  return inFlight.has(id);
+}
+
 /**
  * Резервный канал: хостинг продакшена блокирует api.telegram.org, поэтому
- * недоставленное уведомление становится задачей в МойСклад (API доступен).
+ * недоставленное уведомление становится задачей сотруднику в МойСклад.
+ * Задача создаётся при полной недоставке (0 чатов); частичную добирает
+ * свипер telegram-redelivery.
  */
 async function fallbackToMoySkladTask(
   application: StoredPartnership,
@@ -101,7 +119,14 @@ async function fallbackToMoySkladTask(
     `ПроХук · партнёрство ${application.publicId}`,
     partnershipMessage(data, application.publicId),
   );
-  if (!created) return;
+  if (!created) {
+    // Раньше молчали: провал обоих каналов не должен быть невидимым.
+    console.error(
+      "Partnership MoySklad fallback failed:",
+      application.publicId,
+    );
+    return;
+  }
   console.info(
     "Partnership notification routed to MoySklad task:",
     application.publicId,
