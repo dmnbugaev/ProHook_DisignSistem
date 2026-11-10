@@ -200,6 +200,20 @@ function saratovDayKey(iso: string): string {
 }
 
 /**
+ * Проба монитор-бота? Флаг monitorProbe ставится при создании с 10.11.2026;
+ * записи старше распознаются по официальным маркерам заявки монитор-бота
+ * (мандат 20.10.2026: тестовые заявки помечаются «ТЕСТ» в имени) — имя и
+ * служебный телефон вместе исключают ложное совпадение с реальным
+ * клиентом, случайно назвавшимся так же.
+ */
+function isMonitorProbeRecord(item: StoredReservation): boolean {
+  return (
+    item.monitorProbe === true ||
+    (item.customerName === "ТЕСТ Мониторинг" && item.phone === "79990000000")
+  );
+}
+
+/**
  * Порядковый номер заявки внутри её дня по времени Саратова: сколько
  * запросов этого дня создано не позже указанного (включая его самого).
  * Пробы монитор-бота (ежечасные) в нумерации не участвуют — номер
@@ -214,7 +228,7 @@ export async function reservationDailyIndex(
   if (!day) return 0;
   let index = 0;
   for (const item of data.requests) {
-    if (item.monitorProbe) continue;
+    if (isMonitorProbeRecord(item)) continue;
     if (
       saratovDayKey(item.createdAt) === day &&
       item.createdAt <= reservation.createdAt

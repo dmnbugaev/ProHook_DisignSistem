@@ -259,11 +259,11 @@ test("daily index line numbers the request within its Saratov day", () => {
 test("daily index counts requests per Saratov calendar day", async () => {
   // Саратов = МСК+1: заявка в 23:30 МСК 09.11 уже принадлежит
   // саратовскому дню 10.11 — нумерация следует саратовской границе.
-  const make = (customerName, monitorProbe = false) =>
+  const make = (customerName, phone = "79991234567", monitorProbe = false) =>
     createReservation({
       userId: null,
       customerName,
-      phone: "79991234567",
+      phone,
       storeId: "store-2",
       storeNameSnapshot: "Студия · Север",
       storeAddressSnapshot: "",
@@ -281,7 +281,12 @@ test("daily index counts requests per Saratov calendar day", async () => {
     });
   const first = await make("День Саратов 1");
   const second = await make("День Саратов 2");
-  const probe = await make("ТЕСТ Мониторинг", true); // проба монитор-бота
+  // Проба монитор-бота с флагом (создаётся так с 10.11.2026)…
+  const probe = await make("ТЕСТ Мониторинг", "79990000000", true);
+  // …и легаси-проба без флага — как записи до деплоя 10.11: распознаётся
+  // по маркерам (имя «ТЕСТ Мониторинг» + служебный телефон).
+  const legacyProbe = await make("ТЕСТ Мониторинг", "79990000000", false);
+  const joker = await make("ТЕСТ Мониторинг"); // реальный клиент-шутник
   const third = await make("День Саратов 3");
   const file = join(dataDir, "reservations.json");
   const data = JSON.parse(readFileSync(file, "utf8"));
@@ -289,6 +294,8 @@ test("daily index counts requests per Saratov calendar day", async () => {
   byId(first.id).createdAt = "2026-11-09T19:00:00.000Z"; // САР 09.11 23:00
   byId(second.id).createdAt = "2026-11-09T19:30:00.000Z"; // САР 09.11 23:30
   byId(probe.id).createdAt = "2026-11-09T19:45:00.000Z"; // САР 09.11 23:45
+  byId(legacyProbe.id).createdAt = "2026-11-09T19:50:00.000Z"; // САР 09.11 23:50
+  byId(joker.id).createdAt = "2026-11-09T19:55:00.000Z"; // САР 09.11 23:55
   byId(third.id).createdAt = "2026-11-09T20:30:00.000Z"; // САР 10.11 00:30
   writeFileSync(file, JSON.stringify(data));
   resetReservationStoreForTests();
@@ -297,8 +304,10 @@ test("daily index counts requests per Saratov calendar day", async () => {
   // держат старый createdAt).
   const reloaded = (publicId) => findReservationByPublicId(publicId);
   assert.equal(await reservationDailyIndex(await reloaded(first.publicId)), 1);
-  // Проба между second и third не сдвигает нумерацию реальных заявок.
+  // Обе пробы между second и joker не сдвигают нумерацию; клиент-шутник
+  // с тем же именем, но обычным телефоном — реальная заявка.
   assert.equal(await reservationDailyIndex(await reloaded(second.publicId)), 2);
+  assert.equal(await reservationDailyIndex(await reloaded(joker.publicId)), 3);
   // Новый саратовский день — хотя московский всё ещё 09.11.
   assert.equal(await reservationDailyIndex(await reloaded(third.publicId)), 1);
 });
