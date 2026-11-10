@@ -132,6 +132,50 @@ test("redelivers only missing chats and skips probes", async () => {
   assert.equal(again.partnershipDelivered, 0);
 });
 
+test("skips chats that Telegram fatally rejected", async () => {
+  // Диагностика 10.11.2026: чат allowlist, чей владелец не нажимал /start,
+  // отвечает 400 «chat not found» вечно — свипер больше не дёргает его
+  // каждые 10 минут (160 циклов впустую), а фиксирует фатальным.
+  const reservation = await createReservation(
+    reservationInput("Фатальный чат"),
+  );
+  await recordTelegramAttempt(reservation.id, ["111"], ["222"]);
+
+  // Частичная доставка с живым недоставленным чатом и новым фатальным.
+  const second = await createReservation(reservationInput("Частичный резерв"));
+  await recordTelegramAttempt(second.id, ["111"]);
+
+  const sentTo = [];
+  await redeliverIncompleteTelegram(channels, async (url, options) => {
+    const chatId = JSON.parse(options.body).chat_id;
+    sentTo.push(chatId);
+    return chatId === "222"
+      ? new Response(
+          '{"ok":false,"error_code":400,"description":"Bad Request: chat not found"}',
+        )
+      : okResponse();
+  });
+
+  // Первая запись: 111 доставлен, 222 фатален — поводов для отправки нет.
+  // Вторая: только недоставленный живой 222 (ответ — фатальный отказ).
+  assert.deepEqual(sentTo, ["222"]);
+
+  const list = await listReservations(10);
+  const storedFirst = list.find((item) => item.id === reservation.id);
+  assert.deepEqual(storedFirst.telegramDelivery.fatalTo, ["222"]);
+  const storedSecond = list.find((item) => item.id === second.id);
+  assert.deepEqual(storedSecond.telegramDelivery.deliveredTo, ["111"]);
+  assert.deepEqual(storedSecond.telegramDelivery.fatalTo, ["222"]);
+
+  // Фатальный чат исключён из всех записей: следующий цикл молчит.
+  sentTo.length = 0;
+  await redeliverIncompleteTelegram(channels, async (url, options) => {
+    sentTo.push(JSON.parse(options.body).chat_id);
+    return okResponse();
+  });
+  assert.deepEqual(sentTo, []);
+});
+
 test("ignores entries older than the redelivery window", async () => {
   const reservation = await createReservation(
     reservationInput("Старый резерв"),

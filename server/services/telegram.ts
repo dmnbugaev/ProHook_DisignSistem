@@ -23,12 +23,58 @@ export function parseTelegramChatIds(raw: string | number) {
     .filter(Boolean);
 }
 
+/** Тело ответа Telegram Bot API на отправку (успех или ошибка). */
+export interface TelegramSendError {
+  ok?: boolean;
+  error_code?: number;
+  description?: string;
+}
+
 /**
- * Сетевая недоступность api.telegram.org (DNS/TCP). При флапе egress
- * (myserver → Telegram) это проходящая ошибка: диспетчеры ретраят её
- * наравне с остальными, класс различает режим сбоя в логах/наблюдении.
+ * Фатальный для чата отказ Telegram: повтор в этот же чат бессмыслен.
+ * 403 — бот заблокирован получателем / не может начать диалог / аккаунт
+ * удалён; 400 «chat not found» — получатель не начинал диалог с ботом
+ * (диагностика 10.11.2026: чат allowlist резерва отвечал так на каждую
+ * отправку, 160 ретраев свипера впустую). Остальные отказы (429, 5xx,
+ * обрывы) проходящие — флап туннеля лечится повтором.
  */
-export class TelegramUnreachableError extends Error {}
+export function isFatalTelegramChatError(
+  errorCode: number | undefined,
+  description: string | undefined,
+): boolean {
+  if (errorCode === 403) return true;
+  return errorCode === 400 && /chat not found/i.test(description ?? "");
+}
+
+/** Маска chat_id для журнала: полный идентификатор не публикуем. */
+export function maskChatId(chatId: string): string {
+  return `*${chatId.slice(-4)}`;
+}
+
+/** Результат рассылки по чатам: доставленные и фатально отказавшие. */
+export interface TelegramSendReport {
+  deliveredTo: string[];
+  fatalTo: Array<{ chatId: string; description: string }>;
+}
+
+/**
+ * Журнал для чатов, впервые получивших фатальный отказ: причина видна
+ * владельцу сразу, а не после жалобы «заявки не приходят».
+ */
+export function logFatalChats(
+  scope: string,
+  publicId: string,
+  fatalTo: Array<{ chatId: string; description: string }>,
+  alreadyFatal: Set<string>,
+): void {
+  for (const { chatId, description } of fatalTo) {
+    if (alreadyFatal.has(chatId)) continue;
+    alreadyFatal.add(chatId);
+    console.error(
+      `${scope} ${publicId}: Telegram отклонил чат ${maskChatId(chatId)} — ${description}. Получатель не начинал диалог с ботом, заблокировал его или id ошибочен; ретраи в этот чат отключены, заявка доступна в инбоксе.`,
+    );
+  }
+}
 
 export async function sendPartnership(
   token: string,
@@ -36,10 +82,10 @@ export async function sendPartnership(
   data: Partnership,
   id: string,
   request: typeof fetch = fetch,
-): Promise<string[]> {
+): Promise<TelegramSendReport> {
   // Plain text deliberately avoids interpreting user input as Telegram markup.
   const deliveredTo: string[] = [];
-  let networkFailures = 0;
+  const fatalTo: Array<{ chatId: string; description: string }> = [];
   for (const chatId of chatIds) {
     try {
       const response = await request(
@@ -55,25 +101,24 @@ export async function sendPartnership(
           signal: AbortSignal.timeout(10000),
         },
       );
-      const result = (await response.json()) as {
-        ok?: boolean;
-        result?: { message_id?: number };
-      };
+      const result = (await response.json().catch(() => null)) as
+        (TelegramSendError & { result?: { message_id?: number } }) | null;
       if (
         response.ok &&
-        result.ok === true &&
+        result?.ok === true &&
         typeof result.result?.message_id === "number"
       ) {
         deliveredTo.push(chatId);
+        continue;
       }
-    } catch (error) {
-      if (error instanceof TypeError) networkFailures++;
-      // One unreachable chat must not block delivery to the others.
+      if (isFatalTelegramChatError(result?.error_code, result?.description))
+        fatalTo.push({
+          chatId,
+          description: result?.description ?? `HTTP ${response.status}`,
+        });
+    } catch {
+      // Сетевой сбой (флап туннеля) проходящий — его доберут ретраи.
     }
   }
-  if (deliveredTo.length === 0) {
-    if (networkFailures > 0) throw new TelegramUnreachableError();
-    throw new Error("Telegram delivery failed");
-  }
-  return deliveredTo;
+  return { deliveredTo, fatalTo };
 }

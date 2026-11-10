@@ -1,10 +1,16 @@
 import { formatPhone } from "../../shared/utils/account";
 import {
   recordTelegramAttempt,
+  reservationDailyIndex,
   type StoredReservation,
 } from "./reservation-store";
 import { notifyStaffViaMoySklad } from "./moysklad-notify";
 import { telegramSilenced } from "../utils/telegram-silence";
+import {
+  isFatalTelegramChatError,
+  logFatalChats,
+  type TelegramSendError,
+} from "./telegram";
 
 /**
  * Telegram-уведомления о запросах на резерв (бот @prohook_bunker_site_bot).
@@ -54,21 +60,42 @@ function plain(value: string): string {
   return stripped.replace(/\s+/g, " ").trim();
 }
 
-function formatMoscow(iso: string): string {
+function formatInTimeZone(
+  iso: string,
+  timeZone: string,
+  withDate: boolean,
+): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return plain(iso);
   return new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+    day: withDate ? "2-digit" : undefined,
+    month: withDate ? "2-digit" : undefined,
+    year: withDate ? "numeric" : undefined,
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Europe/Moscow",
+    timeZone,
   }).format(date);
+}
+
+function formatMoscow(iso: string): string {
+  return formatInTimeZone(iso, "Europe/Moscow", true);
+}
+
+/**
+ * Строка нумерации за день: день и номер — по времени Саратова
+ * (штаб-квартира сети, МСК+1), время дублируется обоими поясами —
+ * магазины работают в Саратове и Москве.
+ */
+function dailyIndexLine(
+  reservation: StoredReservation,
+  dailyIndex: number,
+): string {
+  return `Заявка №${dailyIndex} за день · Саратов ${formatInTimeZone(reservation.createdAt, "Europe/Saratov", true)} (МСК ${formatInTimeZone(reservation.createdAt, "Europe/Moscow", false)})`;
 }
 
 export function buildReservationMessage(
   reservation: StoredReservation,
+  dailyIndex: number | null = null,
 ): string {
   const items = reservation.items
     .map(
@@ -102,8 +129,9 @@ export function buildReservationMessage(
     "",
     "Статус:",
     "Ожидает обработки",
-    "",
-    "Продажа, проверка возраста и оплата — только в магазине; онлайн-оплаты и доставки нет.",
+    ...(dailyIndex && dailyIndex > 0
+      ? ["", dailyIndexLine(reservation, dailyIndex)]
+      : []),
   ].join("\n");
 }
 
@@ -112,9 +140,13 @@ export async function deliverReservationMessage(
   chatIds: string[],
   text: string,
   request: typeof fetch = fetch,
-): Promise<{ deliveredTo: string[]; unreachable: boolean }> {
+): Promise<{
+  deliveredTo: string[];
+  /** Чаты с фатальным отказом (403 / chat not found) — ретраи отключены. */
+  fatalTo: Array<{ chatId: string; description: string }>;
+}> {
   const deliveredTo: string[] = [];
-  let networkFailures = 0;
+  const fatalTo: Array<{ chatId: string; description: string }> = [];
   const results = await Promise.allSettled(
     chatIds.map(async (chatId) => {
       let response: Response;
@@ -132,26 +164,34 @@ export async function deliverReservationMessage(
             signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
           },
         );
-      } catch (error) {
-        // TypeError = сетевой уровень (DNS/TCP/сброс туннеля). При флапе
-        // egress это проходящая ошибка — классифицируем для наблюдаемости.
-        if (error instanceof TypeError) networkFailures++;
-        throw new Error("telegram send failed", { cause: error });
+      } catch {
+        // Сетевой уровень (DNS/TCP/сброс туннеля). При флапе egress это
+        // проходящая ошибка — её доберут ретраи диспетчера и свипера.
+        return null;
       }
-      const result = (await response.json().catch(() => null)) as {
-        ok?: boolean;
-      } | null;
-      if (response.ok && result?.ok === true) return chatId;
-      // Недоступность одного чата не блокирует остальные.
-      throw new Error("telegram send failed");
+      const result = (await response.json().catch(() => null)) as
+        (TelegramSendError & { result?: unknown }) | null;
+      if (response.ok && result?.ok === true)
+        return { chatId, delivered: true, fatal: false, description: "" };
+      const fatal = isFatalTelegramChatError(
+        result?.error_code,
+        result?.description,
+      );
+      return {
+        chatId,
+        delivered: false,
+        fatal,
+        description: result?.description ?? `HTTP ${response.status}`,
+      };
     }),
   );
-  for (const result of results)
-    if (result.status === "fulfilled") deliveredTo.push(result.value);
-  return {
-    deliveredTo,
-    unreachable: deliveredTo.length === 0 && networkFailures > 0,
-  };
+  for (const result of results) {
+    if (result.status !== "fulfilled" || result.value === null) continue;
+    const { chatId, delivered, fatal, description } = result.value;
+    if (delivered) deliveredTo.push(chatId);
+    else if (fatal) fatalTo.push({ chatId, description });
+  }
+  return { deliveredTo, fatalTo };
 }
 
 function retryDelayMs(attempt: number): number {
@@ -193,29 +233,50 @@ export async function dispatchReservationNotification(
   );
   // Без конфигурации бот молча пропускается (dev/тесты); запрос сохранён.
   if (!token || chatIds.length === 0) {
-    await fallbackToMoySkladTask(reservation);
+    await fallbackToMoySkladTask(
+      reservation,
+      await reservationDailyIndex(reservation),
+    );
     return;
   }
   if (inFlight.has(reservation.id)) return;
   inFlight.add(reservation.id);
   try {
-    const text = buildReservationMessage(reservation);
+    const dailyIndex = await reservationDailyIndex(reservation);
+    const text = buildReservationMessage(reservation, dailyIndex);
     // Повтор доставки привязан к id: чаты, уже получившие сообщение по
-    // этой записи, не получают дубликат.
+    // этой записи, не получают дубликат. Фатально отказавшие чаты (403 /
+    // chat not found) из ретраев исключены — повтор в них бессмыслен.
     const delivered = new Set(reservation.telegramDelivery.deliveredTo);
+    const fatal = new Set(reservation.telegramDelivery.fatalTo ?? []);
     for (let attempt = 1; attempt <= MAX_DELIVERY_ATTEMPTS; attempt++) {
-      const missing = chatIds.filter((chatId) => !delivered.has(chatId));
+      const missing = chatIds.filter(
+        (chatId) => !delivered.has(chatId) && !fatal.has(chatId),
+      );
+      if (missing.length === 0) break;
       // deliverReservationMessage шлёт только в недоставленные чаты —
       // успешные не получают дубликат.
-      const { deliveredTo } = await deliverReservationMessage(
+      const report = await deliverReservationMessage(
         token,
         missing,
         text,
         request,
       );
-      await recordTelegramAttempt(reservation.id, deliveredTo);
-      for (const chatId of deliveredTo) delivered.add(chatId);
+      logFatalChats(
+        "Reservation telegram:",
+        reservation.publicId,
+        report.fatalTo,
+        fatal,
+      );
+      await recordTelegramAttempt(
+        reservation.id,
+        report.deliveredTo,
+        report.fatalTo.map((entry) => entry.chatId),
+      );
+      for (const chatId of report.deliveredTo) delivered.add(chatId);
       if (delivered.size === chatIds.length) return;
+      // Фатальные чаты не добираются повторами — не жжём ретраи впустую.
+      if (delivered.size + fatal.size === chatIds.length) break;
       // Сетевые сбои при флапе туннеля лечатся повтором — не выходим.
       if (delivered.size > 0)
         console.warn(
@@ -223,11 +284,17 @@ export async function dispatchReservationNotification(
         );
       if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs(attempt));
     }
-    if (delivered.size === 0) await fallbackToMoySkladTask(reservation);
-    // Без ПД и токена: только публичный номер запроса.
-    console.error(
-      `Reservation telegram delivery incomplete after retries: ${reservation.publicId} ${delivered.size}/${chatIds.length}`,
+    if (delivered.size === 0)
+      await fallbackToMoySkladTask(reservation, dailyIndex);
+    // Не добраны только фатальные чаты — причина уже в журнале выше.
+    const pending = chatIds.filter(
+      (chatId) => !delivered.has(chatId) && !fatal.has(chatId),
     );
+    if (pending.length > 0)
+      // Без ПД и токена: только публичный номер запроса.
+      console.error(
+        `Reservation telegram delivery incomplete after retries: ${reservation.publicId} ${delivered.size}/${chatIds.length}`,
+      );
   } finally {
     inFlight.delete(reservation.id);
   }
@@ -244,10 +311,13 @@ export function reservationDeliveryInFlight(id: string): boolean {
  * Задача создаётся при полной недоставке (0 чатов); частичную добирает
  * свипер telegram-redelivery. Без токена МойСклад (dev/e2e) — логируется.
  */
-async function fallbackToMoySkladTask(reservation: StoredReservation) {
+async function fallbackToMoySkladTask(
+  reservation: StoredReservation,
+  dailyIndex: number,
+) {
   const created = await notifyStaffViaMoySklad(
     `ПроХук · резерв ${reservation.publicId}`,
-    buildReservationMessage(reservation),
+    buildReservationMessage(reservation, dailyIndex),
   );
   if (!created) {
     // Раньше молчали: провал обоих каналов не должен быть невидимым.

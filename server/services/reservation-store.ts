@@ -37,9 +37,20 @@ export interface StoredReservation {
   consent: { personalData: boolean; telegram: boolean; capturedAt: string };
   captchaVerifiedAt: string | null;
   items: StoredReservationItem[];
+  /**
+   * Проба монитор-бота (секрет x-monitor-secret): создана автоматикой,
+   * не рассылается в Telegram и не участвует в нумерации заявок за день.
+   * Опционально — записи до 10.11.2026 (считаются реальными).
+   */
+  monitorProbe?: boolean;
   telegramDelivery: {
     attempts: number;
     deliveredTo: string[];
+    /**
+     * Чаты с фатальным отказом Telegram (403 / «chat not found»):
+     * ретраи в них отключены. Опционально — записи до 10.11.2026.
+     */
+    fatalTo?: string[];
     lastAttemptAt: string | null;
   };
 }
@@ -123,6 +134,8 @@ export async function createReservation(input: {
   consent: { personalData: boolean; telegram: boolean };
   captchaVerifiedAt: string | null;
   items: StoredReservationItem[];
+  /** Проба монитор-бота: true у автоматических проверок. */
+  monitorProbe?: boolean;
 }): Promise<StoredReservation> {
   const data = await load();
   const now = Date.now();
@@ -147,6 +160,7 @@ export async function createReservation(input: {
     consent: { ...input.consent, capturedAt: new Date(now).toISOString() },
     captchaVerifiedAt: input.captchaVerifiedAt,
     items: input.items,
+    monitorProbe: input.monitorProbe ?? false,
     telegramDelivery: { attempts: 0, deliveredTo: [], lastAttemptAt: null },
   };
   data.requests.push(request);
@@ -171,10 +185,50 @@ export async function listReservations(
     .slice(0, limit);
 }
 
+/** Ключ дня по времени Саратова (YYYY-MM-DD) — сеть базируется там. */
+function saratovDayKey(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Saratov",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Порядковый номер заявки внутри её дня по времени Саратова: сколько
+ * запросов этого дня создано не позже указанного (включая его самого).
+ * Пробы монитор-бота (ежечасные) в нумерации не участвуют — номер
+ * считает только реальные заявки сотрудников-клиентов.
+ * ISO-строки сравниваются лексикографически — формат записи одинаков.
+ */
+export async function reservationDailyIndex(
+  reservation: StoredReservation,
+): Promise<number> {
+  const data = await load();
+  const day = saratovDayKey(reservation.createdAt);
+  if (!day) return 0;
+  let index = 0;
+  for (const item of data.requests) {
+    if (item.monitorProbe) continue;
+    if (
+      saratovDayKey(item.createdAt) === day &&
+      item.createdAt <= reservation.createdAt
+    )
+      index++;
+  }
+  return index;
+}
+
 /** Фиксация попытки доставки в Telegram (без ПД в логах). */
 export async function recordTelegramAttempt(
   id: string,
   deliveredTo: string[],
+  fatalTo: string[] = [],
 ): Promise<void> {
   const data = await load();
   const request = data.requests.find((item) => item.id === id);
@@ -184,6 +238,10 @@ export async function recordTelegramAttempt(
   for (const chatId of deliveredTo)
     if (!request.telegramDelivery.deliveredTo.includes(chatId))
       request.telegramDelivery.deliveredTo.push(chatId);
+  request.telegramDelivery.fatalTo ??= [];
+  for (const chatId of fatalTo)
+    if (!request.telegramDelivery.fatalTo.includes(chatId))
+      request.telegramDelivery.fatalTo.push(chatId);
   request.updatedAt = new Date().toISOString();
   await persist(data);
 }

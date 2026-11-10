@@ -1,5 +1,5 @@
 import type { Partnership } from "../../shared/utils/partnership";
-import { partnershipMessage, sendPartnership } from "./telegram";
+import { logFatalChats, partnershipMessage, sendPartnership } from "./telegram";
 import {
   recordPartnershipAttempt,
   type StoredPartnership,
@@ -63,27 +63,40 @@ export async function dispatchPartnershipNotification(
   inFlight.add(application.id);
   try {
     // Повтор доставки привязан к id: чаты, уже получившие сообщение по
-    // этой записи, не получают дубликат.
+    // этой записи, не получают дубликат. Фатально отказавшие чаты (403 /
+    // chat not found) из ретраев исключены — повтор в них бессмыслен.
     const delivered = new Set(application.telegramDelivery.deliveredTo);
+    const fatal = new Set(application.telegramDelivery.fatalTo ?? []);
     for (let attempt = 1; attempt <= MAX_DELIVERY_ATTEMPTS; attempt++) {
-      const missing = chatIds.filter((chatId) => !delivered.has(chatId));
-      try {
-        // sendPartnership шлёт только в недоставленные чаты — успешные
-        // не получают дубликат. Сетевые сбои при флапе туннеля лечатся
-        // повтором, досрочного выхода нет.
-        const deliveredTo = await sendPartnership(
-          botToken,
-          missing,
-          data,
-          application.publicId,
-          request,
-        );
-        await recordPartnershipAttempt(application.id, deliveredTo);
-        for (const chatId of deliveredTo) delivered.add(chatId);
-      } catch {
-        await recordPartnershipAttempt(application.id, []);
-      }
+      const missing = chatIds.filter(
+        (chatId) => !delivered.has(chatId) && !fatal.has(chatId),
+      );
+      if (missing.length === 0) break;
+      // sendPartnership шлёт только в недоставленные чаты — успешные
+      // не получают дубликат. Сетевые сбои при флапе туннеля лечатся
+      // повтором, досрочного выхода нет.
+      const report = await sendPartnership(
+        botToken,
+        missing,
+        data,
+        application.publicId,
+        request,
+      );
+      logFatalChats(
+        "Partnership telegram:",
+        application.publicId,
+        report.fatalTo,
+        fatal,
+      );
+      await recordPartnershipAttempt(
+        application.id,
+        report.deliveredTo,
+        report.fatalTo.map((entry) => entry.chatId),
+      );
+      for (const chatId of report.deliveredTo) delivered.add(chatId);
       if (delivered.size === chatIds.length) return;
+      // Фатальные чаты не добираются повторами — не жжём ретраи впустую.
+      if (delivered.size + fatal.size === chatIds.length) break;
       if (delivered.size > 0)
         console.warn(
           `Partnership telegram delivery partial: ${application.publicId} ${delivered.size}/${chatIds.length}, повтор ${attempt}`,
@@ -91,10 +104,15 @@ export async function dispatchPartnershipNotification(
       if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs(attempt));
     }
     if (delivered.size === 0) await fallbackToMoySkladTask(application, data);
-    // Без ПД и токена: только публичный номер заявки.
-    console.error(
-      `Partnership telegram delivery incomplete after retries: ${application.publicId} ${delivered.size}/${chatIds.length}`,
+    // Не добраны только фатальные чаты — причина уже в журнале выше.
+    const pending = chatIds.filter(
+      (chatId) => !delivered.has(chatId) && !fatal.has(chatId),
     );
+    if (pending.length > 0)
+      // Без ПД и токена: только публичный номер заявки.
+      console.error(
+        `Partnership telegram delivery incomplete after retries: ${application.publicId} ${delivered.size}/${chatIds.length}`,
+      );
   } finally {
     inFlight.delete(application.id);
   }

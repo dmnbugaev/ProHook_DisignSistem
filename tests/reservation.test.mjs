@@ -31,8 +31,13 @@ const {
   deliverReservationMessage,
   dispatchReservationNotification,
 } = await jiti.import("../server/services/reservation-telegram.ts");
-const { createReservation, findReservationByPublicId, RESERVATION_TTL_MS } =
-  await jiti.import("../server/services/reservation-store.ts");
+const {
+  createReservation,
+  findReservationByPublicId,
+  reservationDailyIndex,
+  resetReservationStoreForTests,
+  RESERVATION_TTL_MS,
+} = await jiti.import("../server/services/reservation-store.ts");
 const { verifySmartCaptcha, isSmartCaptchaConfigured } = await jiti.import(
   "../server/services/smartcaptcha.ts",
 );
@@ -217,7 +222,7 @@ test("parses and validates the reservation chat id allowlist", () => {
 });
 
 test("message is plain text with required fields and no commerce wording", () => {
-  const text = buildReservationMessage(storedReservation());
+  const text = buildReservationMessage(storedReservation(), 5);
   for (const expected of [
     "Новый запрос на резерв",
     "Номер: R-AB3DK9",
@@ -229,12 +234,73 @@ test("message is plain text with required fields and no commerce wording", () =>
     "2. Паучи тестовые 4 мг\nКоличество: 1 шт.",
     "Комментарий:\nПриду вечером",
     "Статус:\nОжидает обработки",
-    "только в магазине",
+    // Юридическую приписку заменила нумерация за день (решение 10.11.2026).
+    "Заявка №5 за день · Саратов",
   ])
     assert.ok(text.includes(expected), `missing: ${expected}`);
   // Запрещённая терминология дистанционной продажи.
   for (const forbidden of ["Новый заказ", "Заказ оформлен", "купил", "оплачен"])
     assert.ok(!text.includes(forbidden), `forbidden: ${forbidden}`);
+});
+
+test("daily index line numbers the request within its Saratov day", () => {
+  // Решение 10.11.2026: юридическая приписка заменена нумерацией за день —
+  // день и номер по времени Саратова (МСК+1), время в обоих поясах
+  // (магазины в Саратове и Москве).
+  const text = buildReservationMessage(storedReservation(), 3);
+  assert.ok(
+    text.includes("Заявка №3 за день · Саратов 07.10.2026, 15:33 (МСК 14:33)"),
+  );
+  assert.ok(!text.includes("онлайн-оплаты и доставки нет"));
+  // Без номера (номер не вычислен) строка не добавляется вовсе.
+  assert.ok(!buildReservationMessage(storedReservation()).includes("Заявка №"));
+});
+
+test("daily index counts requests per Saratov calendar day", async () => {
+  // Саратов = МСК+1: заявка в 23:30 МСК 09.11 уже принадлежит
+  // саратовскому дню 10.11 — нумерация следует саратовской границе.
+  const make = (customerName, monitorProbe = false) =>
+    createReservation({
+      userId: null,
+      customerName,
+      phone: "79991234567",
+      storeId: "store-2",
+      storeNameSnapshot: "Студия · Север",
+      storeAddressSnapshot: "",
+      comment: "",
+      consent: { personalData: true, telegram: true },
+      captchaVerifiedAt: null,
+      items: [
+        {
+          productId: "stands-01",
+          productNameSnapshot: "Подставка 01",
+          quantity: 1,
+        },
+      ],
+      monitorProbe,
+    });
+  const first = await make("День Саратов 1");
+  const second = await make("День Саратов 2");
+  const probe = await make("ТЕСТ Мониторинг", true); // проба монитор-бота
+  const third = await make("День Саратов 3");
+  const file = join(dataDir, "reservations.json");
+  const data = JSON.parse(readFileSync(file, "utf8"));
+  const byId = (id) => data.requests.find((item) => item.id === id);
+  byId(first.id).createdAt = "2026-11-09T19:00:00.000Z"; // САР 09.11 23:00
+  byId(second.id).createdAt = "2026-11-09T19:30:00.000Z"; // САР 09.11 23:30
+  byId(probe.id).createdAt = "2026-11-09T19:45:00.000Z"; // САР 09.11 23:45
+  byId(third.id).createdAt = "2026-11-09T20:30:00.000Z"; // САР 10.11 00:30
+  writeFileSync(file, JSON.stringify(data));
+  resetReservationStoreForTests();
+
+  // Индекс считается по перечитанным записям (снятки из createReservation
+  // держат старый createdAt).
+  const reloaded = (publicId) => findReservationByPublicId(publicId);
+  assert.equal(await reservationDailyIndex(await reloaded(first.publicId)), 1);
+  // Проба между second и third не сдвигает нумерацию реальных заявок.
+  assert.equal(await reservationDailyIndex(await reloaded(second.publicId)), 2);
+  // Новый саратовский день — хотя московский всё ещё 09.11.
+  assert.equal(await reservationDailyIndex(await reloaded(third.publicId)), 1);
 });
 
 test("message cannot be forged with extra lines via user input", () => {
@@ -316,6 +382,46 @@ test("survives Telegram 429, 5xx, timeout and network errors per chat", async ()
     },
   );
   assert.deepEqual(partial.deliveredTo, ["3"]);
+});
+
+test("classifies fatal chat rejections (chat not found / blocked)", async () => {
+  // Диагностика 10.11.2026: чат allowlist, чей владелец не нажимал /start,
+  // отвечает 400 «chat not found» на каждую отправку. Такой чат фатален —
+  // ретраи в него бессмысленны и раньше тихо сжигали 160 попыток свипера.
+  const report = await deliverReservationMessage(
+    "fake-token",
+    ["111", "222", "333"],
+    "text",
+    async (url, options) => {
+      const chatId = JSON.parse(options.body).chat_id;
+      if (chatId === "111")
+        return new Response(
+          '{"ok":false,"error_code":400,"description":"Bad Request: chat not found"}',
+        );
+      if (chatId === "222")
+        return new Response(
+          '{"ok":false,"error_code":403,"description":"Forbidden: bot was blocked by the user"}',
+        );
+      return new Response(
+        JSON.stringify({ ok: true, result: { message_id: 1 } }),
+      );
+    },
+  );
+  assert.deepEqual(report.deliveredTo, ["333"]);
+  assert.deepEqual(
+    report.fatalTo.map((entry) => entry.chatId),
+    ["111", "222"],
+  );
+  assert.match(report.fatalTo[0].description, /chat not found/);
+  // Проходящие отказы (429, 5xx) фатальными не считаются — флап лечится повтором.
+  const transient = await deliverReservationMessage(
+    "fake-token",
+    ["111"],
+    "text",
+    async () => new Response('{"ok":false,"error_code":429}', { status: 429 }),
+  );
+  assert.deepEqual(transient.deliveredTo, []);
+  assert.deepEqual(transient.fatalTo, []);
 });
 
 test("dispatch retries until every chat is covered, without duplicates", async () => {
@@ -421,6 +527,59 @@ test("dispatch keeps retrying through network-level errors (flap)", async () => 
     const stored = await findReservationByPublicId(created.publicId);
     assert.equal(stored.telegramDelivery.attempts, 5);
     assert.deepEqual(stored.telegramDelivery.deliveredTo, []);
+  } finally {
+    process.env.TELEGRAM_BOT_TOKEN = originalToken;
+    process.env.TELEGRAM_RESERVATION_CHAT_IDS = originalChats;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("dispatch stops retrying fatally rejected chats", async () => {
+  // Регрессия 10.11.2026: чат allowlist с 400 «chat not found» раньше
+  // ретраился впустую все 5 попыток (и ещё 160 циклов свипера) — теперь
+  // фатальный чат фиксируется в хранилище и исключается из повторов.
+  const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+  const originalChats = process.env.TELEGRAM_RESERVATION_CHAT_IDS;
+  const originalFetch = globalThis.fetch;
+  process.env.TELEGRAM_BOT_TOKEN = "fake-token";
+  process.env.TELEGRAM_RESERVATION_CHAT_IDS = "111,222";
+  try {
+    const created = await createReservation({
+      userId: null,
+      customerName: "Фатальный чат",
+      phone: "79991234567",
+      storeId: "store-2",
+      storeNameSnapshot: "Студия · Север",
+      storeAddressSnapshot: "",
+      comment: "",
+      consent: { personalData: true, telegram: true },
+      captchaVerifiedAt: null,
+      items: [
+        {
+          productId: "stands-01",
+          productNameSnapshot: "Подставка 01",
+          quantity: 1,
+        },
+      ],
+    });
+    const sentTo = [];
+    globalThis.fetch = async (url, options) => {
+      const chatId = JSON.parse(options.body).chat_id;
+      sentTo.push(chatId);
+      return chatId === "111"
+        ? new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }))
+        : new Response(
+            '{"ok":false,"error_code":400,"description":"Bad Request: chat not found"}',
+          );
+    };
+    await dispatchReservationNotification(created);
+    // Одна попытка в каждый чат: живой доставлен, фатальный исключён
+    // из повторов (старое поведение — 5×2 = 10 вызовов).
+    assert.deepEqual(sentTo, ["111", "222"]);
+    const stored = await findReservationByPublicId(created.publicId);
+    assert.deepEqual(stored.telegramDelivery.deliveredTo, ["111"]);
+    assert.deepEqual(stored.telegramDelivery.fatalTo, ["222"]);
+    assert.equal(stored.telegramDelivery.attempts, 1);
   } finally {
     process.env.TELEGRAM_BOT_TOKEN = originalToken;
     process.env.TELEGRAM_RESERVATION_CHAT_IDS = originalChats;

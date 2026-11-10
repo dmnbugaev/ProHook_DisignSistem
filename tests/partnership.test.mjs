@@ -106,7 +106,7 @@ test("sends all fields as plain text to configured chats", async () => {
 });
 test("succeeds when at least one chat receives the message", async () => {
   let calls = 0;
-  await sendPartnership(
+  const report = await sendPartnership(
     "fake-token",
     ["-123", "-456"],
     valid,
@@ -118,6 +118,8 @@ test("succeeds when at least one chat receives the message", async () => {
         : new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }));
     },
   );
+  assert.deepEqual(report.deliveredTo, ["-456"]);
+  assert.deepEqual(report.fatalTo, []);
 });
 test("parses comma-separated chat ids", () => {
   assert.deepEqual(parseTelegramChatIds(" 6939112736 , -100123 ,"), [
@@ -134,10 +136,46 @@ test("does not report success on Telegram rejection or network failure", async (
       throw new Error("network");
     },
   ]) {
-    await assert.rejects(
-      sendPartnership("fake-token", ["-123"], valid, "test-id", request),
+    const report = await sendPartnership(
+      "fake-token",
+      ["-123"],
+      valid,
+      "test-id",
+      request,
     );
+    assert.deepEqual(report.deliveredTo, []);
+    assert.deepEqual(report.fatalTo, []);
   }
+});
+test("marks fatally rejected chats for the dispatcher", async () => {
+  // 400 «chat not found» и 403 — фатальные для чата отказы: получатель не
+  // начинал диалог с ботом или заблокировал его (диагностика 10.11.2026).
+  const report = await sendPartnership(
+    "fake-token",
+    ["-123", "-456", "-789"],
+    valid,
+    "test-id",
+    async (url, options) => {
+      const chatId = JSON.parse(options.body).chat_id;
+      if (chatId === "-123")
+        return new Response(
+          '{"ok":false,"error_code":400,"description":"Bad Request: chat not found"}',
+        );
+      if (chatId === "-456")
+        return new Response(
+          '{"ok":false,"error_code":403,"description":"Forbidden: bot was blocked by the user"}',
+        );
+      return new Response(
+        JSON.stringify({ ok: true, result: { message_id: 1 } }),
+      );
+    },
+  );
+  assert.deepEqual(report.deliveredTo, ["-789"]);
+  assert.deepEqual(
+    report.fatalTo.map((entry) => entry.chatId),
+    ["-123", "-456"],
+  );
+  assert.match(report.fatalTo[0].description, /chat not found/);
 });
 test("limits attempts and expires windows", () => {
   for (let i = 0; i < 5; i++)

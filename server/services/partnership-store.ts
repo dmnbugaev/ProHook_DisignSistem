@@ -25,6 +25,11 @@ export interface StoredPartnership {
   telegramDelivery: {
     attempts: number;
     deliveredTo: string[];
+    /**
+     * Чаты с фатальным отказом Telegram (403 / «chat not found»):
+     * ретраи в них отключены. Опционально — записи до 10.11.2026.
+     */
+    fatalTo?: string[];
     lastAttemptAt: string | null;
   };
 }
@@ -139,6 +144,7 @@ export async function listPartnerships(
 export async function recordPartnershipAttempt(
   id: string,
   deliveredTo: string[],
+  fatalTo: string[] = [],
 ): Promise<void> {
   const store = await load();
   const application = store.applications.find((item) => item.id === id);
@@ -148,6 +154,10 @@ export async function recordPartnershipAttempt(
   for (const chatId of deliveredTo)
     if (!application.telegramDelivery.deliveredTo.includes(chatId))
       application.telegramDelivery.deliveredTo.push(chatId);
+  application.telegramDelivery.fatalTo ??= [];
+  for (const chatId of fatalTo)
+    if (!application.telegramDelivery.fatalTo.includes(chatId))
+      application.telegramDelivery.fatalTo.push(chatId);
   await persist(store);
 }
 

@@ -4,8 +4,12 @@ import {
   recordPartnershipAttempt,
   type StoredPartnership,
 } from "./partnership-store";
-import { listReservations, recordTelegramAttempt } from "./reservation-store";
-import { sendPartnership } from "./telegram";
+import {
+  listReservations,
+  recordTelegramAttempt,
+  reservationDailyIndex,
+} from "./reservation-store";
+import { logFatalChats, sendPartnership } from "./telegram";
 import {
   buildReservationMessage,
   deliverReservationMessage,
@@ -70,32 +74,39 @@ async function redeliverPartnerships(
     return 0;
   let deliveredCount = 0;
   for (const application of await listPartnerships(100)) {
-    const { attempts, deliveredTo } = application.telegramDelivery;
+    const { attempts, deliveredTo, fatalTo } = application.telegramDelivery;
+    const fatal = new Set(fatalTo ?? []);
     // attempts === 0 — рассылка намеренно пропущена (пробы монитор-бота).
     if (attempts === 0 || attempts >= REDELIVERY_MAX_ATTEMPTS) continue;
     if (partnershipDeliveryInFlight(application.id)) continue;
     if (!withinWindow(application.createdAt, now)) continue;
     const missing = channels.partnershipChatIds.filter(
-      (chatId) => !deliveredTo.includes(chatId),
+      (chatId) => !deliveredTo.includes(chatId) && !fatal.has(chatId),
     );
     if (missing.length === 0) continue;
-    try {
-      const delivered = await sendPartnership(
-        channels.partnershipToken,
-        missing,
-        dataFromStored(application),
-        application.publicId,
-        request,
+    const report = await sendPartnership(
+      channels.partnershipToken,
+      missing,
+      dataFromStored(application),
+      application.publicId,
+      request,
+    );
+    logFatalChats(
+      "Partnership telegram:",
+      application.publicId,
+      report.fatalTo,
+      fatal,
+    );
+    await recordPartnershipAttempt(
+      application.id,
+      report.deliveredTo,
+      report.fatalTo.map((entry) => entry.chatId),
+    );
+    if (report.deliveredTo.length > 0) {
+      deliveredCount += report.deliveredTo.length;
+      console.info(
+        `Partnership telegram redelivery: ${application.publicId} +${report.deliveredTo.length} чат(ов)`,
       );
-      await recordPartnershipAttempt(application.id, delivered);
-      if (delivered.length > 0) {
-        deliveredCount += delivered.length;
-        console.info(
-          `Partnership telegram redelivery: ${application.publicId} +${delivered.length} чат(ов)`,
-        );
-      }
-    } catch {
-      await recordPartnershipAttempt(application.id, []);
     }
   }
   return deliveredCount;
@@ -110,26 +121,40 @@ async function redeliverReservations(
     return 0;
   let deliveredCount = 0;
   for (const reservation of await listReservations(100)) {
-    const { attempts, deliveredTo } = reservation.telegramDelivery;
+    const { attempts, deliveredTo, fatalTo } = reservation.telegramDelivery;
+    const fatal = new Set(fatalTo ?? []);
     // attempts === 0 — рассылка намеренно пропущена (пробы монитор-бота).
     if (attempts === 0 || attempts >= REDELIVERY_MAX_ATTEMPTS) continue;
     if (reservationDeliveryInFlight(reservation.id)) continue;
     if (!withinWindow(reservation.createdAt, now)) continue;
     const missing = channels.reservationChatIds.filter(
-      (chatId) => !deliveredTo.includes(chatId),
+      (chatId) => !deliveredTo.includes(chatId) && !fatal.has(chatId),
     );
     if (missing.length === 0) continue;
-    const { deliveredTo: delivered } = await deliverReservationMessage(
+    const report = await deliverReservationMessage(
       channels.reservationToken,
       missing,
-      buildReservationMessage(reservation),
+      buildReservationMessage(
+        reservation,
+        await reservationDailyIndex(reservation),
+      ),
       request,
     );
-    await recordTelegramAttempt(reservation.id, delivered);
-    if (delivered.length > 0) {
-      deliveredCount += delivered.length;
+    logFatalChats(
+      "Reservation telegram:",
+      reservation.publicId,
+      report.fatalTo,
+      fatal,
+    );
+    await recordTelegramAttempt(
+      reservation.id,
+      report.deliveredTo,
+      report.fatalTo.map((entry) => entry.chatId),
+    );
+    if (report.deliveredTo.length > 0) {
+      deliveredCount += report.deliveredTo.length;
       console.info(
-        `Reservation telegram redelivery: ${reservation.publicId} +${delivered.length} чат(ов)`,
+        `Reservation telegram redelivery: ${reservation.publicId} +${report.deliveredTo.length} чат(ов)`,
       );
     }
   }

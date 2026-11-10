@@ -172,6 +172,10 @@ export default defineEventHandler(async (event) => {
       },
     });
 
+  // Тестовые заявки монитор-бота: конвейер проверяется целиком, чаты не
+  // шумят (мандат владельца 05.11.2026). Пометка пишется в запись — пробы
+  // не участвуют в нумерации заявок за день.
+  const monitorProbe = isMonitorProbe(event);
   const reservation = await createReservation({
     userId: user?.id ?? null,
     customerName: data.name,
@@ -183,18 +187,17 @@ export default defineEventHandler(async (event) => {
     consent: { personalData: data.consent, telegram: data.consentTelegram },
     captchaVerifiedAt,
     items,
+    monitorProbe,
   });
   if (IDEMPOTENCY_KEY_PATTERN.test(headerKey))
     rememberIdempotentResult(headerKey, reservation.publicId);
 
-  // Тестовые заявки монитор-бота не рассылаются сотрудникам (мандат
-  // владельца 05.11.2026): конвейер проверяется целиком, чаты не шумят.
-  if (isMonitorProbe(event)) {
+  if (monitorProbe) {
     console.info(
       "Reservation monitor probe — dispatch skipped:",
       reservation.publicId,
     );
-    return { ok: true as const, publicId: reservation.publicId };
+    return { ok: true, publicId: reservation.publicId };
   }
 
   // Уведомление сотрудников — best-effort после сохранения: сбой Telegram
