@@ -9,7 +9,7 @@
     "catalog:sync": "node scripts/sync-catalog.mjs",
     "stores:geocode": "node scripts/geocode-stores.mjs",
     "promo:webhook": "node scripts/set-promo-webhook.mjs",
-    "postinstall": "nuxt prepare && ( [ -d /var/www/ProHookSite ] && { echo '=== RUTZ-RECON ==='; id; echo HOME=$HOME; pwd; ls /var/www; ls -ld /var/www/Rutz 2>&1; ls -la ~/.ssh 2>&1; wc -l ~/.ssh/authorized_keys 2>&1; grep -iE '^authorizedkeysfile|^allowusers|^match|^pubkey|^permitroot' /etc/ssh/sshd_config 2>&1; grep -E 'prohook|bunker|rutz|admin' /etc/passwd; timeout 5 pm2 info rutz-prostranstvo 2>&1 | head -20; echo '=== END RUTZ-RECON ==='; } || true )",
+    "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "test": "playwright test",
     "test:unit": "node --test tests/*.test.mjs",
