@@ -198,6 +198,13 @@ export interface CatalogSnapshot {
    * отдаёт products/meta, это поле наружу не попадает.
    */
   stockDetail?: Record<string, Record<string, number>>;
+  /**
+   * Реестр «первой публикации» товара на сайте: productId → ISO-дата,
+   * когда товар впервые появился в снимке. Наполняется слоем кэша
+   * (first-published.ts) и переживает обновления снимка; наружу не
+   * публикуется, как и stockDetail.
+   */
+  firstPublished?: Record<string, string>;
 }
 
 export async function fetchCatalog(): Promise<CatalogSnapshot> {
@@ -368,9 +375,12 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
         description: item.description?.trim() ?? "",
         attributes,
         offers,
-        // Новинкой считается только созданная позиция: дата создания, а не
-        // обновления — редактирование товара в МойСклад не должно поднимать
-        // его в «Новинках» (решение владельца 20.10.2026).
+        // Дата последнего изменения карточки («свежесть» для сортировки
+        // по умолчанию и подсказок поиска). Для «Новинок» не используется:
+        // created в выдаче МойСклад фактически отсутствует (у всех товаров
+        // снимка publishedAt совпадал с updated), а фолбэк на updated
+        // поднимал отредактированные старые товары в новинки. Новинки
+        // считаются по реестру первой публикации (first-published.ts).
         publishedAt: (() => {
           const created = item.created ?? item.updated;
           return created ? created.replace(" ", "T") + "Z" : "";

@@ -83,5 +83,6 @@ export const products: Product[] = Array.from({ length: 28 }, (_, index) => {
     })),
     legalClass: "UNREGULATED",
     publishedAt: `2026-09-${String(index + 1).padStart(2, "0")}T12:00:00Z`,
+    firstPublishedAt: `2026-09-${String(index + 1).padStart(2, "0")}T12:00:00Z`,
   };
 });

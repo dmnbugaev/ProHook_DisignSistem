@@ -265,13 +265,17 @@ test("visibility field, city prices, retail store mapping and legal policy", asy
   assert.equal(stocked.stockDetail["product-1"]["store-2"], 0);
 });
 
-test("publishedAt берётся из created — редактирование не делает товар новинкой", async () => {
+test("publishedAt предпочитает created, фолбэк — updated", async () => {
   const snapshot = await fetchCatalog();
   const edited = snapshot.products.find(
     (product) => product.id === "product-1",
   );
-  // created 10.01, а updated 20.10: новинки считаются по дате создания
-  // (решение владельца 20.10.2026 — в «Новинках» только новые позиции).
+  // created 10.01, updated 20.10: publishedAt — дата изменения карточки,
+  // используется как «свежесть» в сортировке по умолчанию и подсказках.
+  // ВАЖНО: в реальном API МойСклад created фактически не приходит (снимок
+  // 05.11.2026 — publishedAt ≡ updated у всех товаров), поэтому «Новинки»
+  // по publishedAt НЕ строятся — только по реестру первой публикации
+  // (tests/first-published.test.mjs).
   assert.equal(edited.publishedAt, "2026-01-10T08:00:00Z");
   const legacy = snapshot.products.find(
     (product) => product.id === "product-7",

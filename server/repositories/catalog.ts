@@ -245,7 +245,13 @@ export const catalogRepository: CatalogRepository = {
       if (query.sort === "price-desc")
         return price(b) - price(a) || a.id.localeCompare(b.id);
       if (query.sort === "newest")
-        return b.publishedAt.localeCompare(a.publishedAt);
+        // «Новинки» — по дате первой публикации на сайте (реестр снимка,
+        // first-published.ts): правки старого товара в МойСклад не поднимают
+        // его в новинки. Без даты (фикстуры/демо) — в конец, по названию.
+        return (
+          (b.firstPublishedAt ?? "").localeCompare(a.firstPublishedAt ?? "") ||
+          a.name.localeCompare(b.name, "ru")
+        );
       // Сортировка по умолчанию в поиске — по релевантности, затем витринный
       // приоритет (фото + наличие) и свежесть. В каталоге без запроса скор
       // отсутствует и порядок не меняется.

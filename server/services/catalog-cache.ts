@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import type { Product } from "../../shared/types/product";
 import { applyLegalPolicy } from "../../shared/legal/catalog-policy";
 import { fetchCatalog, fetchStock, type CatalogSnapshot } from "./moysklad";
+import { applyFirstPublished } from "./first-published";
 
 const FIXTURE_FILE = process.env.MOYSKLAD_SNAPSHOT_PATH;
 const CACHE_FILE = resolve(
@@ -70,7 +71,13 @@ export async function refreshCatalog() {
   if (catalogRefresh) return catalogRefresh;
   catalogRefresh = (async () => {
     await load();
-    const next = retainStock(await fetchCatalog(), snapshot);
+    // Порядок важен: retainStock переносит доступность из прошлого снимка,
+    // applyFirstPublished — даты первой публикации (новинки не зависят от
+    // правок в МойСклад, см. first-published.ts).
+    const next = applyFirstPublished(
+      retainStock(await fetchCatalog(), snapshot),
+      snapshot,
+    );
     snapshot = next;
     await save(next);
     return next;
