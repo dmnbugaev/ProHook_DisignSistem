@@ -51,6 +51,36 @@ export function maskChatId(chatId: string): string {
   return `*${chatId.slice(-4)}`;
 }
 
+/** Потолок паузы между попытками доставки диспетчера. */
+export const TELEGRAM_RETRY_DELAY_CAP_MS = 300_000;
+/**
+ * Попытки доставки одной заявки в цикле диспетчера: пауз на одну меньше.
+ * Дальше недостающие чаты добирает свипер telegram-redelivery.
+ */
+export const TELEGRAM_MAX_DELIVERY_ATTEMPTS = 8;
+
+/**
+ * Паузы между попытками доставки по умолчанию. Флап egress
+ * myserver → api.telegram.org идёт волнами по 1–15 минут (журнал релея,
+ * 30.10–13.11.2026: тысячи «channel … connect failed» в сутки), поэтому
+ * лестница начинается с секунд — одиночный срыв соединения закрывается
+ * почти мгновенно — и тянется до потолка, переживая минутные всплески.
+ * База 60 с превращала секундный сбой в задержку последнего чата
+ * до 30 минут (диагностика 13.11.2026: R-BHJZFH доставлялся 32 минуты).
+ */
+const DEFAULT_RETRY_DELAYS_MS = [
+  3_000, 10_000, 30_000, 60_000, 120_000, 240_000, 300_000,
+];
+
+export function telegramRetryDelayMs(attempt: number): number {
+  // TELEGRAM_RETRY_DELAY_MS — переопределение для тестов и диагностики:
+  // база · 2^(попытка−1) с тем же потолком.
+  const base = Number(process.env.TELEGRAM_RETRY_DELAY_MS);
+  if (Number.isFinite(base) && base >= 0)
+    return Math.min(base * 2 ** (attempt - 1), TELEGRAM_RETRY_DELAY_CAP_MS);
+  return DEFAULT_RETRY_DELAYS_MS.at(attempt - 1) ?? TELEGRAM_RETRY_DELAY_CAP_MS;
+}
+
 /** Результат рассылки по чатам: доставленные и фатально отказавшие. */
 export interface TelegramSendReport {
   deliveredTo: string[];

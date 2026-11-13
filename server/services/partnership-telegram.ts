@@ -1,5 +1,11 @@
 import type { Partnership } from "../../shared/utils/partnership";
-import { logFatalChats, partnershipMessage, sendPartnership } from "./telegram";
+import {
+  logFatalChats,
+  partnershipMessage,
+  sendPartnership,
+  telegramRetryDelayMs,
+  TELEGRAM_MAX_DELIVERY_ATTEMPTS,
+} from "./telegram";
 import {
   recordPartnershipAttempt,
   type StoredPartnership,
@@ -18,16 +24,8 @@ import { telegramSilenced } from "../utils/telegram-silence";
 // Флап egress myserver → api.telegram.org (с 30.10.2026): каждый запрос
 // доходит с шансом ~50–60%, поэтому «хотя бы один чат получил» — не успех.
 // Успех = все чаты allowlist; ретраи добирают только недоставленные.
-const MAX_DELIVERY_ATTEMPTS = 5;
-const RETRY_DELAY_CAP_MS = 300_000;
-
-function retryDelayMs(attempt: number): number {
-  const base = Number(process.env.TELEGRAM_RETRY_DELAY_MS);
-  const value = Number.isFinite(base) && base >= 0 ? base : 60_000;
-  // Экспоненциальная пауза: всплески флапа длятся минуты, ранний повтор
-  // чаще попадает в тот же сбой, поздний — теряет оперативность заявки.
-  return Math.min(value * 2 ** (attempt - 1), RETRY_DELAY_CAP_MS);
-}
+// Расписание пауз и лимит попыток — общие в ./telegram (быстрое начало,
+// длинный хвост: волны флапа длятся от секунд до ~15 минут).
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -67,7 +65,11 @@ export async function dispatchPartnershipNotification(
     // chat not found) из ретраев исключены — повтор в них бессмыслен.
     const delivered = new Set(application.telegramDelivery.deliveredTo);
     const fatal = new Set(application.telegramDelivery.fatalTo ?? []);
-    for (let attempt = 1; attempt <= MAX_DELIVERY_ATTEMPTS; attempt++) {
+    for (
+      let attempt = 1;
+      attempt <= TELEGRAM_MAX_DELIVERY_ATTEMPTS;
+      attempt++
+    ) {
       const missing = chatIds.filter(
         (chatId) => !delivered.has(chatId) && !fatal.has(chatId),
       );
@@ -101,7 +103,8 @@ export async function dispatchPartnershipNotification(
         console.warn(
           `Partnership telegram delivery partial: ${application.publicId} ${delivered.size}/${chatIds.length}, повтор ${attempt}`,
         );
-      if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs(attempt));
+      if (attempt < TELEGRAM_MAX_DELIVERY_ATTEMPTS)
+        await delay(telegramRetryDelayMs(attempt));
     }
     if (delivered.size === 0) await fallbackToMoySkladTask(application, data);
     // Не добраны только фатальные чаты — причина уже в журнале выше.

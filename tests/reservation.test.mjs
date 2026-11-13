@@ -465,9 +465,9 @@ test("dispatch retries until every chat is covered, without duplicates", async (
     };
     // Доставка не бросает исключение даже при полном отказе Telegram…
     await dispatchReservationNotification(created);
-    assert.equal(calls, 10); // 5 попыток × 2 чата
+    assert.equal(calls, 16); // 8 попыток × 2 чата
     const stored = await findReservationByPublicId(created.publicId);
-    assert.equal(stored.telegramDelivery.attempts, 5);
+    assert.equal(stored.telegramDelivery.attempts, 8);
     assert.deepEqual(stored.telegramDelivery.deliveredTo, []);
     assert.equal(stored.status, "PENDING"); // запрос не потерян и не изменён
     // …и добирает недоставленный чат: частичный успех — не остановка.
@@ -490,7 +490,7 @@ test("dispatch retries until every chat is covered, without duplicates", async (
     assert.equal(calls, 3);
     assert.deepEqual(sentTo, ["111", "222", "222"]);
     const after = await findReservationByPublicId(created.publicId);
-    assert.equal(after.telegramDelivery.attempts, 7);
+    assert.equal(after.telegramDelivery.attempts, 10);
     assert.deepEqual(after.telegramDelivery.deliveredTo, ["111", "222"]);
   } finally {
     process.env.TELEGRAM_BOT_TOKEN = originalToken;
@@ -532,9 +532,9 @@ test("dispatch keeps retrying through network-level errors (flap)", async () => 
     await dispatchReservationNotification(created);
     // Раньше сетевая ошибка обрывала ретраи — при флапе туннеля это
     // теряло уведомление; теперь проходятся все попытки.
-    assert.equal(calls, 10);
+    assert.equal(calls, 16);
     const stored = await findReservationByPublicId(created.publicId);
-    assert.equal(stored.telegramDelivery.attempts, 5);
+    assert.equal(stored.telegramDelivery.attempts, 8);
     assert.deepEqual(stored.telegramDelivery.deliveredTo, []);
   } finally {
     process.env.TELEGRAM_BOT_TOKEN = originalToken;

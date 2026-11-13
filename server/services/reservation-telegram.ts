@@ -9,6 +9,8 @@ import { telegramSilenced } from "../utils/telegram-silence";
 import {
   isFatalTelegramChatError,
   logFatalChats,
+  telegramRetryDelayMs,
+  TELEGRAM_MAX_DELIVERY_ATTEMPTS,
   type TelegramSendError,
 } from "./telegram";
 
@@ -32,8 +34,8 @@ const SEND_TIMEOUT_MS = 10000;
 // Флап egress myserver → api.telegram.org (с 30.10.2026): каждый запрос
 // доходит с шансом ~50–60%, поэтому «хотя бы один чат получил» — не успех.
 // Успех = все чаты allowlist; ретраи добирают только недоставленные.
-const MAX_DELIVERY_ATTEMPTS = 5;
-const RETRY_DELAY_CAP_MS = 300_000;
+// Расписание пауз и лимит попыток — общие в ./telegram (быстрое начало,
+// длинный хвост: волны флапа длятся от секунд до ~15 минут).
 
 export function parseReservationChatIds(raw: string | undefined): string[] {
   return [
@@ -194,14 +196,6 @@ export async function deliverReservationMessage(
   return { deliveredTo, fatalTo };
 }
 
-function retryDelayMs(attempt: number): number {
-  const base = Number(process.env.TELEGRAM_RETRY_DELAY_MS);
-  const value = Number.isFinite(base) && base >= 0 ? base : 60_000;
-  // Экспоненциальная пауза: всплески флапа длятся минуты, ранний повтор
-  // чаще попадает в тот же сбой, поздний — теряет оперативность заявки.
-  return Math.min(value * 2 ** (attempt - 1), RETRY_DELAY_CAP_MS);
-}
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);
@@ -249,7 +243,11 @@ export async function dispatchReservationNotification(
     // chat not found) из ретраев исключены — повтор в них бессмыслен.
     const delivered = new Set(reservation.telegramDelivery.deliveredTo);
     const fatal = new Set(reservation.telegramDelivery.fatalTo ?? []);
-    for (let attempt = 1; attempt <= MAX_DELIVERY_ATTEMPTS; attempt++) {
+    for (
+      let attempt = 1;
+      attempt <= TELEGRAM_MAX_DELIVERY_ATTEMPTS;
+      attempt++
+    ) {
       const missing = chatIds.filter(
         (chatId) => !delivered.has(chatId) && !fatal.has(chatId),
       );
@@ -282,7 +280,8 @@ export async function dispatchReservationNotification(
         console.warn(
           `Reservation telegram delivery partial: ${reservation.publicId} ${delivered.size}/${chatIds.length}, повтор ${attempt}`,
         );
-      if (attempt < MAX_DELIVERY_ATTEMPTS) await delay(retryDelayMs(attempt));
+      if (attempt < TELEGRAM_MAX_DELIVERY_ATTEMPTS)
+        await delay(telegramRetryDelayMs(attempt));
     }
     if (delivered.size === 0)
       await fallbackToMoySkladTask(reservation, dailyIndex);
