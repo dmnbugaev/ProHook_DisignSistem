@@ -502,6 +502,17 @@ export async function fetchStock(snapshot: CatalogSnapshot): Promise<{
 
 const imageLists = new Map<string, { expires: number; urls: string[] }>();
 
+/**
+ * Шторм-защита картинок (диагностика 14.11.2026): при недоступном API
+ * (401/403, анти-абуз 1061) каждый запрос картинки порождал обращение к
+ * entity/product/{id}/images — поток неудач подпитывал блокировку
+ * МойСклад. После отказа авторизации списки изображений не запрашиваются
+ * это время; пользователь видит тот же 502, только мгновенно и без
+ * запроса в API.
+ */
+const IMAGE_AUTH_BACKOFF_MS = 10 * 60 * 1000;
+let imageAuthBlockedUntil = 0;
+
 export async function fetchProductImage(
   productId: string,
   index: number,
@@ -513,11 +524,17 @@ export async function fetchProductImage(
     index > 4
   )
     throw new Error("Invalid image request");
+  if (Date.now() < imageAuthBlockedUntil)
+    throw new Error("Moysklad image API paused after auth failure");
   let cached = imageLists.get(productId);
   if (!cached || cached.expires < Date.now()) {
     const response = await moyskladFetch(
       `entity/product/${productId}/images?limit=5`,
     );
+    if (response.status === 401 || response.status === 403) {
+      imageAuthBlockedUntil = Date.now() + IMAGE_AUTH_BACKOFF_MS;
+      throw new Error(`Moysklad image list rejected: HTTP ${response.status}`);
+    }
     const collection = (await response.json()) as MsCollection<{
       meta: MsMeta & { downloadHref?: string };
     }>;

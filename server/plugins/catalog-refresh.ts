@@ -1,4 +1,8 @@
-import { refreshCatalog, refreshStock } from "../services/catalog-cache";
+import {
+  refreshCatalog,
+  refreshPaused,
+  refreshStock,
+} from "../services/catalog-cache";
 
 /**
  * Проактивное обновление каталога МойСклад по таймеру.
@@ -10,6 +14,10 @@ import { refreshCatalog, refreshStock } from "../services/catalog-cache";
  *
  * Отключён в e2e-режиме (MOYSKLAD_SNAPSHOT_PATH) и без токена МойСклад —
  * там работает только ленивая загрузка фикстуры.
+ *
+ * Во время паузы после сбоев (шторм-защита 1061, catalog-cache.ts)
+ * таймеры пропускают такт — непрерывный поток неудачных запросов
+ * подпитывал анти-абуз-блокировку МойСклад.
  */
 
 const FIXTURE_MODE = Boolean(process.env.MOYSKLAD_SNAPSHOT_PATH);
@@ -40,11 +48,14 @@ function schedule(ms: number, task: () => Promise<unknown>, label: string) {
 
 export default defineNitroPlugin(() => {
   if (FIXTURE_MODE || !HAS_TOKEN) return;
-  schedule(STOCK_INTERVAL, refreshStock, "stock");
+  // Пауза после сбоев — такт пропускается, чтобы не кормить анти-абуз.
+  const guard = (task: () => Promise<unknown>) => () =>
+    refreshPaused() ? Promise.resolve() : task();
+  schedule(STOCK_INTERVAL, guard(refreshStock), "stock");
   // Полный цикл каталога завершается отчётом остатков — как в ленивом пути.
   schedule(
     CATALOG_INTERVAL,
-    () => refreshCatalog().then(() => refreshStock()),
+    guard(() => refreshCatalog().then(() => refreshStock())),
     "catalog",
   );
 });

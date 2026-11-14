@@ -69,7 +69,7 @@ function retainStock(next: CatalogSnapshot, previous?: CatalogSnapshot) {
 
 export async function refreshCatalog() {
   if (catalogRefresh) return catalogRefresh;
-  catalogRefresh = (async () => {
+  catalogRefresh = trackRefreshResult(async () => {
     await load();
     // Порядок важен: retainStock переносит доступность из прошлого снимка,
     // applyFirstPublished — даты первой публикации (новинки не зависят от
@@ -81,7 +81,7 @@ export async function refreshCatalog() {
     snapshot = next;
     await save(next);
     return next;
-  })();
+  });
   try {
     return await catalogRefresh;
   } finally {
@@ -91,7 +91,7 @@ export async function refreshCatalog() {
 
 export async function refreshStock() {
   if (stockRefresh) return stockRefresh;
-  stockRefresh = (async () => {
+  stockRefresh = trackRefreshResult(async () => {
     const current = await getCatalogSnapshot();
     const { products, stockDetail } = await fetchStock(current);
     // A newer catalog refresh may have completed during the stock report.
@@ -104,7 +104,7 @@ export async function refreshStock() {
       };
       await save(snapshot);
     }
-  })();
+  });
   try {
     await stockRefresh;
   } finally {
@@ -121,6 +121,44 @@ function background(task: Promise<unknown>) {
   });
 }
 
+/**
+ * Шторм-защита (диагностика 14.11.2026): код 1061 от МойСклад — в том
+ * числе анти-абуз-блокировка за поток неудачных запросов. Пока рефреш
+ * падает, снимок остаётся «просроченным» (updatedAt не двигается), и
+ * ленивый TTL-рефреш порождал новую попытку на КАЖДЫЙ запрос
+ * посетителя — до 854 попыток в час на проде, три дня подряд. Этот
+ * поток сам удерживал блокировку. Пауза после сбоев растёт
+ * экспоненциально и сбрасывается первым успехом.
+ */
+export const REFRESH_BACKOFF_CAP_MS = 60 * 60 * 1000;
+
+/** Пауза перед следующей попыткой рефреша после N сбоев подряд. */
+export function refreshBackoffMs(consecutiveFailures: number): number {
+  const safe = Math.max(1, Math.floor(consecutiveFailures));
+  return Math.min(TTL * 2 ** (safe - 1), REFRESH_BACKOFF_CAP_MS);
+}
+
+let refreshFailures = 0;
+let refreshBlockedUntil = 0;
+
+/** Идёт ли пауза после сбоев — таймеры плагина и ленивый путь ждут. */
+export function refreshPaused(now: number = Date.now()): boolean {
+  return now < refreshBlockedUntil;
+}
+
+async function trackRefreshResult<T>(task: () => Promise<T>): Promise<T> {
+  try {
+    const result = await task();
+    refreshFailures = 0;
+    refreshBlockedUntil = 0;
+    return result;
+  } catch (error) {
+    refreshFailures += 1;
+    refreshBlockedUntil = Date.now() + refreshBackoffMs(refreshFailures);
+    throw error;
+  }
+}
+
 export async function getCatalogSnapshot(): Promise<CatalogSnapshot> {
   await load();
   if (FIXTURE_FILE) {
@@ -129,14 +167,19 @@ export async function getCatalogSnapshot(): Promise<CatalogSnapshot> {
   }
   if (!snapshot) await refreshCatalog();
   const current = snapshot!;
-  if (Date.now() - current.updatedAt >= TTL)
-    background(refreshCatalog().then(() => refreshStock()));
-  else if (Date.now() - current.stockUpdatedAt >= TTL)
-    background(refreshStock());
+  // Во время паузы после сбоев не порождаем рефреши на каждый запрос.
+  if (!refreshPaused()) {
+    if (Date.now() - current.updatedAt >= TTL)
+      background(refreshCatalog().then(() => refreshStock()));
+    else if (Date.now() - current.stockUpdatedAt >= TTL)
+      background(refreshStock());
+  }
   return current;
 }
 
 export async function syncCatalogNow() {
+  // Явная команда оператора — паузу сбрасываем.
+  refreshBlockedUntil = 0;
   await refreshCatalog();
   await refreshStock();
   return snapshot!;
