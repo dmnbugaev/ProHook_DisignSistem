@@ -25,6 +25,8 @@ Production: `node .output/server/index.mjs`, Nitro node-server. На серве�
 
 Чек-лист окружения прода: переменная `MOYSKLAD_SNAPSHOT_PATH` (e2e-фикстура) на проде выставлена быть не должна — с ней автообновление каталога отключено; `NUXT_MOYSKLAD_TOKEN` обязателен. Для бота акций — `TELEGRAM_PROMO_BOT_TOKEN`, `TELEGRAM_PROMO_CHAT_IDS`, `TELEGRAM_PROMO_WEBHOOK_SECRET`, `TELEGRAM_PROMO_POLLING=0` (см. раздел «Промо-акции»); вебхук регистрируется один раз командой `npm run promo:webhook` с машины с доступом к api.telegram.org.
 
+Ручной сброс пароля пользователя (поддержка, на сервере): `sudo node scripts/reset-password.mjs <телефон>` — остановка `prohook.service` → бэкап `users.json` → новый Argon2id-хеш → запуск с health-check (подробности и флаги — в шапке скрипта).
+
 ## Страницы
 
 | Адрес | Содержание |
