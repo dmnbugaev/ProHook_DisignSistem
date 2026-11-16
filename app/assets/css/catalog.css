@@ -480,26 +480,45 @@ button.text-link {
   min-height: 36px;
   font-size: 20px;
 }
+/* Тулбар выдачи: счётчик и управление сортировкой. Намеренно без
+   липкости и фона: полоса не накрывает карточки при прокрутке. */
 .catalog-toolbar {
-  position: sticky;
-  /* Под липкой шапкой (top 8px + высота ~80px): сортировка и счётчик
-     остаются под рукой при прокрутке выдачи. */
-  top: 96px;
-  z-index: 10;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: var(--space-3) var(--space-4);
   margin-bottom: var(--space-6);
-  padding-block: var(--space-2);
-  background: var(--background);
 }
 .catalog-toolbar > p {
   align-self: center;
 }
+/* Сортировка — равноправный контрол рядом с кнопкой «Фильтры»:
+   рамка, высота и кегль как у .button--secondary. Подпись скрыта
+   визуально (приёмы .sr-only), имя для скринридеров сохраняется. */
 .catalog-toolbar .field {
-  min-width: 210px;
+  min-width: 230px;
+}
+.catalog-toolbar .field__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.catalog-toolbar .field select {
+  min-height: 48px;
+  border-width: 2px;
+  padding: 10px 40px 10px 22px;
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+}
+@media (hover: hover) and (pointer: fine) {
+  .catalog-toolbar .field select:hover {
+    background-color: var(--accent);
+  }
 }
 .mobile-filters-trigger {
   display: none;
@@ -1693,15 +1712,17 @@ button.text-link {
     left: var(--space-2);
     bottom: var(--space-2);
   }
-  .catalog-toolbar {
-    align-items: center;
-    gap: var(--space-3);
-  }
+  /* Счётчик — отдельной строкой, «Фильтры» и сортировка — в один ряд
+     одной высоты; на очень узких экранах сортировка переносится. */
   .catalog-toolbar > p {
-    flex: 1;
+    flex: 1 1 100%;
   }
   .catalog-toolbar .field {
-    width: 100%;
+    flex: 1;
+    min-width: 176px;
+  }
+  .catalog-toolbar .field select {
+    padding: 10px 36px 10px 14px;
   }
   .catalog-loading {
     grid-template-columns: 1fr 1fr;
