@@ -13,8 +13,7 @@ usePageSeo(
   <div>
     <UiContainer class="page-shell"
       ><UiBreadcrumbs
-        :items="[{ label: 'Главная', to: '/' }, { label: 'О проекте' }]"
-      />
+        :items="[{ label: 'Главная', to: '/' }, { label: 'О проекте' }]" />
       <div class="page-heading">
         <p class="eyebrow">ПроХук / О нас</p>
         <h1>ПроХук.<br />Больше, чем вейпшоп.</h1>
@@ -44,10 +43,9 @@ usePageSeo(
             старше 18 лет. Никотин вызывает зависимость и вредит здоровью.
           </p>
           <NuxtLink to="/stores" class="text-link"
-            >Посмотреть магазины ↗</NuxtLink
-          >
-        </div>
-      </div></UiContainer
+            >Посмотреть магазины <UiArrow
+          /></NuxtLink>
+        </div></div></UiContainer
     ><AboutSection /><ContactsSection />
   </div>
 </template>

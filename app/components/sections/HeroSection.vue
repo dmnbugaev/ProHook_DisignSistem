@@ -118,8 +118,8 @@ onMounted(() => {
         ассортимент и наличие.
       </p>
       <NuxtLink to="/catalog" class="button button--primary button--large"
-        >Открыть каталог <span aria-hidden="true">↗</span></NuxtLink
-      >
+        >Открыть каталог <UiArrow
+      /></NuxtLink>
     </div>
     <div v-if="stats.length" class="hero__stats">
       <div v-for="item in stats" :key="item.label" class="hero__stat">

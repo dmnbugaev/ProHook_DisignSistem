@@ -41,8 +41,7 @@
         /><span class="hero__corner" aria-hidden="true" />
       </div>
       <div class="hero__art-caption">
-        <span>Сильная форма. Чистое пространство.</span
-        ><span aria-hidden="true">↗</span>
+        <span>Сильная форма. Чистое пространство.</span><UiArrow />
       </div>
     </div>
     <div class="hero__bottom">

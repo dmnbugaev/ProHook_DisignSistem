@@ -20,6 +20,8 @@ useSeoMeta({
           : "Попробуйте вернуться на главную и повторить действие."
       }}
     </p>
-    <UiButton @click="clearError({ redirect: '/' })">На главную ↗</UiButton>
+    <UiButton @click="clearError({ redirect: '/' })"
+      >На главную <UiArrow
+    /></UiButton>
   </main>
 </template>

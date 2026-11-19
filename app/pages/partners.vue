@@ -18,7 +18,6 @@ const form = reactive({
   company: "",
   offer: "",
   consent: false,
-  consentTelegram: false,
   website: "",
 });
 const errors = ref<Record<string, string>>({});
@@ -51,7 +50,6 @@ async function submit() {
       company: "",
       offer: "",
       consent: false,
-      consentTelegram: false,
       website: "",
     });
     await nextTick();
@@ -174,11 +172,15 @@ async function submit() {
               /></label>
             </div>
             <div>
+              <!-- Согласие одно (решение заказчика 19.11.2026): текст прямо
+                   называет передачу заявки через Telegram с трансграничной
+                   передачей — отдельной галочки больше нет, раскрытие — в
+                   политике. -->
               <UiCheckbox
                 v-model="form.consent"
                 name="consent"
                 required
-                label="Согласен(на) на обработку моих персональных данных (ФИО, телефон, город/регион, компания, текст предложения) в целях рассмотрения заявки о сотрудничестве."
+                label="Согласен(на) на обработку моих персональных данных (ФИО, телефон, город/регион, компания, текст предложения) в целях рассмотрения заявки о сотрудничестве, включая передачу заявки продавцу через сервис Telegram (api.telegram.org) с трансграничной передачей указанных данных."
                 :aria-invalid="!!errors.consent"
                 :aria-describedby="errors.consent ? 'consent-error' : undefined"
               />
@@ -197,25 +199,6 @@ async function submit() {
                 class="field__help field__help--error"
               >
                 {{ errors.consent }}
-              </p>
-            </div>
-            <div>
-              <UiCheckbox
-                v-model="form.consentTelegram"
-                name="consentTelegram"
-                required
-                label="Согласен(на) на передачу заявки через сервис Telegram (api.telegram.org), включая трансграничную передачу указанных персональных данных."
-                :aria-invalid="!!errors.consentTelegram"
-                :aria-describedby="
-                  errors.consentTelegram ? 'consent-telegram-error' : undefined
-                "
-              />
-              <p
-                v-if="errors.consentTelegram"
-                id="consent-telegram-error"
-                class="field__help field__help--error"
-              >
-                {{ errors.consentTelegram }}
               </p>
             </div>
           </fieldset>
@@ -244,12 +227,13 @@ async function submit() {
 .partner-page {
   padding-bottom: var(--section-space);
 }
+/* Форма партнёрства: на мобильных — обычная светлая стилистика сайта
+   (правка заказчика 19.11.2026), чёрная подложка — только на десктопе,
+   где форма и жёлтая колонка стоят рядом одной плашкой. */
 .partner-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   margin-top: 32px;
-  background: var(--ink);
-  color: var(--background);
 }
 .partner-content {
   padding: clamp(24px, 4vw, 64px);
@@ -259,15 +243,11 @@ async function submit() {
 }
 .partner-intro {
   margin: 24px 0 32px;
-  color: #d9d9d9;
   max-width: 34ch;
 }
 .partner-form {
   display: grid;
   gap: 24px;
-}
-.partner-form > .caption {
-  color: #b8b8b8;
 }
 .partner-form fieldset {
   display: grid;
@@ -276,26 +256,37 @@ async function submit() {
   border: 0;
   margin: 0;
 }
-.partner-form :deep(.field__label) {
-  color: white;
-}
-.partner-form :deep(input:not([type="checkbox"])),
-.partner-form :deep(textarea) {
-  background: black;
-  color: white;
-  border: 1px solid white;
-  border-radius: var(--radius-control);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
-}
-.partner-form :deep(input::placeholder),
-.partner-form :deep(textarea::placeholder) {
-  color: #929292;
+@media (min-width: 900px) {
+  .partner-layout {
+    background: var(--ink);
+    color: var(--background);
+  }
+  .partner-intro {
+    color: #d9d9d9;
+  }
+  .partner-form > .caption {
+    color: #b8b8b8;
+  }
+  .partner-form :deep(.field__label) {
+    color: white;
+  }
+  .partner-form :deep(input:not([type="checkbox"])),
+  .partner-form :deep(textarea) {
+    background: black;
+    color: white;
+    border: 1px solid white;
+    border-radius: var(--radius-control);
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+  .partner-form :deep(input::placeholder),
+  .partner-form :deep(textarea::placeholder) {
+    color: #929292;
+  }
 }
 .partner-form :deep(.choice) {
   align-items: flex-start;
-  color: #d9d9d9;
   font-size: 13px;
   line-height: 1.6;
 }
@@ -303,20 +294,8 @@ async function submit() {
   flex-shrink: 0;
   margin-top: 3px;
 }
-.partner-form :deep(.field__help--error),
-.partner-error {
-  color: #ffb4a8;
-}
 .partner-form__consent-links {
   margin-top: 12px;
-  color: #929292;
-}
-.partner-form__consent-links a {
-  color: white;
-  text-decoration: underline;
-}
-.partner-form :deep([aria-invalid="true"]) {
-  border-color: #ffb4a8;
 }
 /* The global focus ring (white halo + far offset) reads as noise on black. */
 .partner-page :focus-visible {
@@ -324,19 +303,43 @@ async function submit() {
   outline-offset: 2px;
   box-shadow: none;
 }
-.partner-form :deep(input:not([type="checkbox"]):focus-visible),
-.partner-form :deep(textarea:focus-visible) {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow:
-    0 0 0 4px rgba(255, 254, 0, 0.28),
-    0 0 22px rgba(255, 254, 0, 0.14);
-}
-.partner-form :deep([aria-invalid="true"]:focus-visible) {
-  border-color: #ffb4a8;
-  box-shadow:
-    0 0 0 4px rgba(255, 180, 168, 0.28),
-    0 0 22px rgba(255, 180, 168, 0.14);
+@media (min-width: 900px) {
+  .partner-form :deep(.choice) {
+    color: #d9d9d9;
+  }
+  .partner-form :deep(.field__help--error),
+  .partner-error {
+    color: #ffb4a8;
+  }
+  .partner-form__consent-links {
+    color: #929292;
+  }
+  .partner-form__consent-links a {
+    color: white;
+    text-decoration: underline;
+  }
+  .partner-form :deep([aria-invalid="true"]) {
+    border-color: #ffb4a8;
+  }
+  .partner-form :deep(input:not([type="checkbox"]):focus-visible),
+  .partner-form :deep(textarea:focus-visible) {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow:
+      0 0 0 4px rgba(255, 254, 0, 0.28),
+      0 0 22px rgba(255, 254, 0, 0.14);
+  }
+  .partner-form :deep([aria-invalid="true"]:focus-visible) {
+    border-color: #ffb4a8;
+    box-shadow:
+      0 0 0 4px rgba(255, 180, 168, 0.28),
+      0 0 22px rgba(255, 180, 168, 0.14);
+  }
+  .partner-success .button {
+    background: white;
+    color: black;
+    justify-self: start;
+  }
 }
 .partner-form > .button {
   color: var(--ink);
@@ -382,11 +385,6 @@ async function submit() {
   display: grid;
   gap: 24px;
   padding: 32px 0;
-}
-.partner-success .button {
-  background: white;
-  color: black;
-  justify-self: start;
 }
 .partner-check {
   color: var(--accent);

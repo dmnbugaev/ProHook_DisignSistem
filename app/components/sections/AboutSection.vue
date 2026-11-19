@@ -11,7 +11,7 @@
           устройства, расходные материалы, аксессуары, напитки и снеки. Сведения
           о наличии доступны по выбранной точке.
         </p>
-        <NuxtLink to="/about" class="text-link">О ПроХук ↗</NuxtLink>
+        <NuxtLink to="/about" class="text-link">О ПроХук <UiArrow /></NuxtLink>
       </div>
     </div>
     <div class="advantages">

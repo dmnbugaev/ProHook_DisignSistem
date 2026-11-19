@@ -86,7 +86,6 @@ const form = reactive({
   phone: "",
   comment: "",
   consent: false,
-  consentTelegram: false,
   website: "",
 });
 const errors = ref<Record<string, string>>({});
@@ -110,13 +109,6 @@ watch(
 
 const { public: config } = useRuntimeConfig();
 const captchaEnabled = Boolean(config.smartCaptchaClientKey);
-// Согласие на передачу через Telegram — только при настроенной доставке;
-// тот же признак использует серверная валидация, расхождения быть не может
-// (по образцу сайта Бункера, /api/integration-flags).
-const { data: integrationFlags } = await useFetch<{
-  telegramNotify: boolean;
-}>("/api/integration-flags");
-const telegramEnabled = integrationFlags.value?.telegramNotify === true;
 const captchaToken = ref("");
 const captchaReset = ref(0);
 const idempotencyKey = ref("");
@@ -131,14 +123,11 @@ onMounted(newIdempotencyKey);
 async function submit() {
   if (pending.value) return;
   failure.value = "";
-  const validation = validateReservation(
-    {
-      ...form,
-      storeId: store.value?.id ?? "",
-      items: entries.value,
-    },
-    { requireTelegramConsent: telegramEnabled },
-  );
+  const validation = validateReservation({
+    ...form,
+    storeId: store.value?.id ?? "",
+    items: entries.value,
+  });
   errors.value = { ...validation.errors };
   if (captchaEnabled && !captchaToken.value)
     errors.value.captcha = "Пройдите проверку «Я не робот».";
@@ -159,7 +148,6 @@ async function submit() {
         phone: form.phone,
         comment: form.comment,
         consent: form.consent,
-        consentTelegram: form.consentTelegram,
         storeId: store.value?.id,
         items: entries.value,
         website: form.website,
@@ -175,7 +163,6 @@ async function submit() {
       phone: "",
       comment: "",
       consent: false,
-      consentTelegram: false,
       website: "",
     });
     newIdempotencyKey();
@@ -479,11 +466,15 @@ async function submit() {
               </p>
               <div class="reserve-consents">
                 <div>
+                  <!-- Согласие одно (решение заказчика 19.11.2026): текст
+                       прямо называет передачу запроса продавцу через
+                       Telegram с трансграничной передачей — отдельной
+                       галочки больше нет, раскрытие — в политике. -->
                   <UiCheckbox
                     v-model="form.consent"
                     name="consent"
                     required
-                    label="Согласен(на) на обработку моих персональных данных (имя, телефон, комментарий, перечень выбранных товаров и магазин) в целях обработки запроса на резерв."
+                    label="Согласен(на) на обработку моих персональных данных (имя, телефон, комментарий, перечень выбранных товаров и магазин) в целях обработки запроса на резерв, включая передачу запроса продавцу через сервис Telegram (api.telegram.org) с трансграничной передачей указанных данных."
                     :aria-invalid="!!errors.consent"
                   />
                   <p
@@ -491,24 +482,6 @@ async function submit() {
                     class="field__help field__help--error"
                   >
                     {{ errors.consent }}
-                  </p>
-                </div>
-                <!-- Чекбокс показывается только при настроенной доставке
-                     в Telegram: без неё заявка уходит задачей в МойСклад и
-                     трансграничная передача не происходит. -->
-                <div v-if="telegramEnabled">
-                  <UiCheckbox
-                    v-model="form.consentTelegram"
-                    name="consentTelegram"
-                    required
-                    label="Согласен(на) на передачу запроса через сервис Telegram (api.telegram.org), включая трансграничную передачу указанных персональных данных."
-                    :aria-invalid="!!errors.consentTelegram"
-                  />
-                  <p
-                    v-if="errors.consentTelegram"
-                    class="field__help field__help--error"
-                  >
-                    {{ errors.consentTelegram }}
                   </p>
                 </div>
                 <p class="field__help">

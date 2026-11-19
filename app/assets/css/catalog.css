@@ -736,12 +736,26 @@ button.text-link {
   border-color: var(--ink);
 }
 /* Кнопка «+ В список» в карточке товара: запрос на резерв, не покупка. */
+/* Кнопка «+ В список»: аккуратная пилюля с обводкой — ровня «В списке»
+   (жёлтый чип), вместо подчёркнутой ссылки (правка заказчика 19.11.2026). */
 .product-card__select {
   justify-self: start;
+  display: inline-flex;
+  align-items: center;
   min-height: 36px;
+  padding-inline: 12px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
   font-size: 13px;
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-semibold);
   text-decoration: none;
+  transition:
+    box-shadow var(--duration-fast),
+    transform var(--duration-fast);
+}
+.product-card__select:hover {
+  box-shadow: var(--shadow-button-hover);
+  transform: translate(-1px, -1px);
 }
 .product-card__select--active {
   display: inline-flex;
@@ -1262,18 +1276,22 @@ button.text-link {
   font-weight: var(--weight-medium);
 }
 /* Соцсети на контактах: заметные кнопки-строки с иконкой в плашке. */
+/* Ссылки соцсетей: компактные ряды, ровная сетка на всех разрешениях —
+   список не растягивается на всю колонку, на узких экранах компактнее
+   (правка заказчика 19.11.2026). */
 .contact-links {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
+  max-width: 30rem;
 }
 .contact-links a {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 64px;
+  min-height: 56px;
   padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
   border: 1px solid var(--ink);
   border-radius: var(--radius-control);
@@ -1294,8 +1312,8 @@ button.text-link {
 .contact-links__icon {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   flex: none;
   background: var(--surface-subtle);
   border-radius: var(--radius-control);
@@ -1305,9 +1323,18 @@ button.text-link {
 .contact-links a:hover .contact-links__icon {
   background: var(--accent);
 }
-.contact-links a > span:last-child {
+.contact-links a > :last-child {
   margin-left: auto;
   color: var(--text-secondary);
+}
+@media (min-width: 900px) {
+  .contact-links a {
+    min-height: 64px;
+  }
+  .contact-links__icon {
+    width: 48px;
+    height: 48px;
+  }
 }
 .contact-stores {
   padding: var(--space-8);

@@ -11,8 +11,8 @@ const { data, error, status, refresh } = await useProducts(() => ({
     ><div class="section-heading">
       <h2>Новинки.</h2>
       <NuxtLink to="/catalog" class="text-link section-heading__link"
-        >Весь каталог ↗</NuxtLink
-      >
+        >Весь каталог <UiArrow
+      /></NuxtLink>
     </div>
     <UiSkeleton v-if="status === 'pending'" />
     <UiEmptyState v-else-if="error" title="Коллекция временно недоступна"

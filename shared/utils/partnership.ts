@@ -4,10 +4,12 @@ export type Partnership = {
   city: string;
   company: string;
   offer: string;
-  /** Отдельное согласие на обработку персональных данных (152-ФЗ ст. 9). */
+  /**
+   * Единое согласие на обработку персональных данных (152-ФЗ ст. 9): его
+   * текст прямо называет передачу заявки через Telegram с трансграничной
+   * передачей — второй отдельной галочки нет (решение заказчика 19.11.2026).
+   */
   consent: boolean;
-  /** Отдельное согласие на передачу данных через Telegram (трансграничная). */
-  consentTelegram: boolean;
 };
 
 export function validatePartnership(input: unknown) {
@@ -23,7 +25,6 @@ export function validatePartnership(input: unknown) {
     company: "",
     offer: "",
     consent: raw.consent === true,
-    consentTelegram: raw.consentTelegram === true,
   };
   for (const key of ["name", "phone", "city", "company"] as const) {
     const value = raw[key];
@@ -61,8 +62,5 @@ export function validatePartnership(input: unknown) {
   }
   if (!data.consent)
     errors.consent = "Подтвердите согласие на обработку персональных данных.";
-  if (!data.consentTelegram)
-    errors.consentTelegram =
-      "Подтвердите согласие на передачу заявки через Telegram.";
   return { data, errors, valid: Object.keys(errors).length === 0 };
 }

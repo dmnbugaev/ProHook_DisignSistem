@@ -11,11 +11,9 @@ const visible = ref(true);
     <div class="legal-notice__content">
       <span class="legal-notice__symbol" aria-hidden="true">!</span>
       <p>
-        Информация на сайте носит ознакомительный характер и не является
-        публичной офертой. Продажа и оплата товаров через сайт не
-        осуществляются. Сайт предназначен для лиц старше 18 лет. Никотин
-        вызывает зависимость и вредит здоровью. Подробнее —
-        <NuxtLink to="/information">в информации о сайте</NuxtLink>.
+        Не публичная оферта. Продажа и оплата — только в магазинах сети, 18+.
+        Никотин вызывает зависимость и вредит здоровью.
+        <NuxtLink to="/information">Подробнее</NuxtLink>.
       </p>
       <button
         type="button"
@@ -23,7 +21,7 @@ const visible = ref(true);
         aria-label="Закрыть юридическую информацию"
         @click="visible = false"
       >
-        Закрыть
+        <span aria-hidden="true">×</span>
       </button>
     </div>
   </aside>

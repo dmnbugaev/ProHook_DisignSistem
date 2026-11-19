@@ -15,8 +15,7 @@ defineProps<{ categories: Category[] }>();
         :to="`/catalog/${category.slug}`"
         data-reveal
         :style="{ '--reveal-step': index % 3 }"
-        >{{ category.name }}<span aria-hidden="true">↗</span></NuxtLink
-      >
-    </div></UiContainer
-  >
+        >{{ category.name }}<UiArrow
+      /></NuxtLink></div
+  ></UiContainer>
 </template>

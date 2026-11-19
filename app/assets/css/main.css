@@ -22,6 +22,13 @@ html {
 body {
   margin: 0;
 }
+/* Фотографии сцены героя выходят за контейнер и не обрезаются по его краю
+   (правка заказчика 19.11.2026); защита от горизонтального скролла при
+   burst-анимации перенесена сюда с .hero--floating. */
+html,
+body {
+  overflow-x: clip;
+}
 button,
 input,
 select,
@@ -191,49 +198,53 @@ legend {
   color: #fff;
   border-bottom: 2px solid var(--accent);
 }
+/* Юридическая плашка: одна строка «значок — текст — крестик», всё
+   отцентровано по вертикали; крестик — прозрачная кнопка 44×44 (touch)
+   с компактным глифом (правки заказчика 19.11.2026). */
 .legal-notice__content {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
   width: calc(100% - var(--gutter) * 2);
   max-width: var(--container);
   margin-inline: auto;
-  padding-block: 12px;
+  padding-block: 6px;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 .legal-notice__symbol {
   display: grid;
   place-items: center;
-  flex: 0 0 18px;
   width: 18px;
   height: 18px;
   border-radius: 50%;
   background: var(--accent);
   color: var(--ink);
+  font-size: 12px;
   font-weight: var(--weight-bold);
 }
 .legal-notice p {
-  max-width: none;
-  flex: 1;
+  max-width: 92ch;
 }
 .legal-notice a {
   color: var(--accent);
 }
 .legal-notice__close {
-  flex: 0 0 auto;
-  min-height: 32px;
-  margin-left: auto;
-  padding: 4px 12px;
-  border: 1px solid #858585;
-  border-radius: var(--radius-control);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
   background: transparent;
   color: #fff;
-  font-size: 12px;
-  font-weight: var(--weight-semibold);
+  font-size: 20px;
+  line-height: 1;
 }
 .legal-notice__close:hover {
-  border-color: var(--accent);
   color: var(--accent);
 }
 .age-marquee {
@@ -388,25 +399,26 @@ legend {
 /* Первый экран (только главная): герой тянется до нижней кромки окна.
    Точную высоту — окно минус плашка и шапка над героем — ставит
    HeroSection в --hero-min; до гидрации и без JS учитываем высоту плашки,
-   шапки и строки 18+ (203px на широком экране). Основной ряд центрируется,
+   шапки и строки 18+ (200px на широком экране; плашку сократили
+   19.11.2026). Основной ряд центрируется,
    статистика прижата к низу экрана. Нижняя линия — граница героя
    (раньше её держала бегущая строка). */
 .hero--screen {
-  min-height: calc(100vh - 203px);
-  min-height: calc(100dvh - 203px);
-  min-height: var(--hero-min, calc(100dvh - 203px));
+  min-height: calc(100vh - 200px);
+  min-height: calc(100dvh - 200px);
+  min-height: var(--hero-min, calc(100dvh - 200px));
   grid-template-rows: 1fr auto;
   align-items: center;
   border-bottom: 1px solid var(--ink);
 }
 .hero--floating {
   isolation: isolate;
-  /* В установившемся состоянии предметы сцены не выходят за hero, но в
-     первые ~2 секунды burst-анимация заносит их за правый край (стартовые
-     точки за границей сцены + поворот) — документ получал горизонтальный
-     скролл на мобильных. Клип по hero глушит только этот вылет; сама сцена
-     остаётся overflow: visible (инвариант теста hero.spec). */
-  overflow-x: clip;
+  /* Предметы сцены выходят за контейнер героя и продолжаются на всю
+     ширину окна — по краям блока они больше не срезаются (правка
+     заказчика 19.11.2026). Горизонтального скролла не возникает:
+     overflow-x: clip стоит на html/body, сцена остаётся
+     overflow: visible (инвариант теста hero.spec). */
+  overflow: visible;
 }
 .hero--floating > .floating-scene {
   grid-column: 1/-1;
@@ -921,6 +933,12 @@ html.js-reveal [data-reveal].reveal-in {
   min-height: 44px;
   font-size: 15px;
   font-weight: var(--weight-medium);
+}
+/* Стрелка UiArrow повторяет направление ссылки: лёгкий сдвиг при наведении
+   на родителя (единая замена текстовых «↗», правка 19.11.2026). */
+a:hover .ui-arrow,
+.button:hover .ui-arrow {
+  transform: translate(1px, -1px);
 }
 /* Баннер согласия на использование файлов cookie (152-ФЗ). */
 .cookie-consent {
@@ -1574,23 +1592,8 @@ html.js-reveal [data-reveal].reveal-in {
   .app-shell .hero {
     padding-top: 48px;
   }
-  .legal-notice__content {
-    display: grid;
-    grid-template-columns: 18px minmax(0, 1fr) auto;
-    gap: 8px;
-    padding-block: 10px;
-  }
-  .legal-notice p {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .legal-notice__close {
-    min-height: 44px;
-    grid-column: 3;
-    grid-row: 1;
-    align-self: start;
-    padding-inline: 8px;
-  }
+  /* Плашка на мобильных: та же базовая сетка — значок, короткий текст и
+     крестик центрированы, отдельных переопределений не нужно. */
   /* Логотип — тоже touch-target: невидимый запас до 44px вокруг метки */
   .brand-link {
     min-width: 44px;

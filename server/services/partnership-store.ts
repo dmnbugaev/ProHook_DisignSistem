@@ -119,7 +119,8 @@ export async function createPartnership(
     offer: data.offer,
     consent: {
       personalData: data.consent,
-      telegram: data.consentTelegram,
+      // Согласие одно и покрывает передачу через Telegram (19.11.2026).
+      telegram: data.consent,
       capturedAt: new Date(now).toISOString(),
     },
     createdAt: new Date(now).toISOString(),

@@ -41,11 +41,11 @@ const steps = [
     </ol>
     <div class="inline-actions how-it-works__actions">
       <NuxtLink to="/catalog" class="button button--primary"
-        >Перейти в каталог <span aria-hidden="true">↗</span></NuxtLink
-      >
+        >Перейти в каталог <UiArrow
+      /></NuxtLink>
       <NuxtLink to="/stores" class="button button--secondary"
-        >Выбрать магазин <span aria-hidden="true">↗</span></NuxtLink
-      >
+        >Выбрать магазин <UiArrow
+      /></NuxtLink>
     </div>
   </UiContainer>
 </template>

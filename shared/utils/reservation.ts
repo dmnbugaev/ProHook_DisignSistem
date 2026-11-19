@@ -55,16 +55,12 @@ export function normalizeSelectionItems(
  * подсказки), и на сервере (источник истины). Из входного объекта берутся
  * только известные поля — mass assignment исключён конструкцией данных.
  *
- * Согласие на передачу через Telegram обязательно только когда доставка
- * реально настроена (options.requireTelegramConsent, флаг
- * /api/integration-flags): без Telegram заявка уходит задачей в МойСклад
- * и трансграничная передача не происходит. Форма и сервер обязаны
- * руководствоваться одним условием — по образцу сайта Бункера.
+ * Согласие одно: его текст прямо называет передачу запроса продавцу через
+ * сервис Telegram (api.telegram.org) с трансграничной передачей (решение
+ * заказчика 19.11.2026 — вместо второй отдельной галочки; раскрыто в
+ * политике обработки персональных данных).
  */
-export function validateReservation(
-  input: unknown,
-  options?: { requireTelegramConsent?: boolean },
-): {
+export function validateReservation(input: unknown): {
   data: ReservationData;
   errors: Record<string, string>;
   valid: boolean;
@@ -119,9 +115,6 @@ export function validateReservation(
 
   if (raw.consent !== true)
     errors.consent = "Подтвердите согласие на обработку персональных данных.";
-  if (options?.requireTelegramConsent !== false && raw.consentTelegram !== true)
-    errors.consentTelegram =
-      "Подтвердите согласие на передачу запроса через Telegram.";
 
   return {
     data: {
@@ -130,7 +123,6 @@ export function validateReservation(
       storeId,
       comment,
       consent: raw.consent === true,
-      consentTelegram: raw.consentTelegram === true,
       items: items ?? [],
     },
     errors,

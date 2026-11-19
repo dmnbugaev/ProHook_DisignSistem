@@ -135,6 +135,16 @@ test("unregulated assortment is reachable before age confirmation; regulated sta
 
   // Страница каталога рендерится без модального гейта: карточки
   // общедоступных товаров видны, регулируемые не показываются.
+  // Окно 18+ при входе (19.11.2026) помечаем «уже предлагали», чтобы
+  // оно не мешало проверке страницы до подтверждения.
+  await page.context().addCookies([
+    {
+      name: "prohook-age-gate-shown",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
   await page.goto("/catalog");
   await expect(
     page.getByRole("dialog", { name: "Вам уже исполнилось 18 лет?" }),
@@ -185,9 +195,9 @@ test("unregulated assortment is reachable before age confirmation; regulated sta
 
 test("reserve UI stays out of anonymous HTML", async ({ request }) => {
   // Требование модераторов рекламных карточек (19.11.2026): аноним не
-  // видит бронирование — ни форму на /reserve, ни секцию «Резерв — просто»
-  // на главной, даже с подтверждённым 18+ (гейт по сессии, не по cookie
-  // возраста). Список выбранных («+ В список») остаётся публичным.
+  // видит бронирования — ни формы на /reserve, ни секции «Резерв — просто»
+  // на главной, ни кнопок «+ В список» в каталоге, даже с подтверждённым
+  // 18+ (гейт по сессии, не по cookie возраста).
   const cookieHeader = { cookie: "prohook-age-confirmed=true" };
   const home = await (await request.get("/", { headers: cookieHeader })).text();
   expect(home).not.toContain("Резерв — просто");
@@ -198,13 +208,24 @@ test("reserve UI stays out of anonymous HTML", async ({ request }) => {
   const catalog = await (
     await request.get("/catalog", { headers: cookieHeader })
   ).text();
-  expect(catalog).toContain("В список");
+  expect(catalog).not.toContain("В список");
+  expect(catalog).not.toContain("selection-link");
 });
 
 test("legal pages are reachable without the age gate", async ({ page }) => {
   // 09.10.2026: информационные страницы (/, /about, /stores, /partners)
   // открыты без гейта — как юридические; каталогозависимые секции
   // главной при этом скрыты до подтверждения 18+ (см. seo.spec).
+  // Окно 18+ при входе (19.11.2026) не тестируем здесь — помечаем
+  // «уже предлагали».
+  await page.context().addCookies([
+    {
+      name: "prohook-age-gate-shown",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
   for (const path of [
     "/privacy",
     "/personal-data",

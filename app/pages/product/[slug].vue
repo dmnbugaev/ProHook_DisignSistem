@@ -36,6 +36,9 @@ if (error.value?.statusCode === 404)
     message: "Товар не найден",
   });
 const ageConfirmed = useAgeConfirmed();
+// Блок списка выбранных — часть сценария резерва: анонимам не показывается
+// (модерация рекламных карточек, решение 19.11.2026).
+const { loggedIn } = useSessionUser();
 // Регулируемый товар до подтверждения 18+: API отвечает 403, карточку
 // заменяет блок подтверждения (общедоступные товары открываются всем).
 const gated = computed(
@@ -146,7 +149,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
               {{ store ? "Изменить магазин" : "Выбрать магазин" }}
             </button>
           </div>
-          <div class="product-select">
+          <div v-if="loggedIn" class="product-select">
             <template v-if="inList">
               <UiButton
                 variant="secondary"
@@ -154,8 +157,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
                 >Убрать из списка</UiButton
               >
               <NuxtLink to="/reserve" class="text-link"
-                >К списку выбранных ↗</NuxtLink
-              >
+                >К списку выбранных <UiArrow
+              /></NuxtLink>
             </template>
             <UiButton
               v-else
@@ -282,8 +285,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
           <NuxtLink
             :to="`/catalog/${category?.slug ?? ''}`"
             class="text-link section-heading__link"
-            >Вся категория ↗</NuxtLink
-          >
+            >Вся категория <UiArrow
+          /></NuxtLink>
         </div>
         <ProductGrid :products="related.items" />
       </section>

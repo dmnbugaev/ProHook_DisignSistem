@@ -3,6 +3,9 @@ import type { Product } from "~~/shared/types/product";
 const props = defineProps<{ product: Product }>();
 const { add, quantityOf } = useSelectionList();
 const { store } = useStoreSelection();
+// Список выбранных — часть сценария резерва: анонимам кнопка не
+// показывается (модерация рекламных карточек, решение 19.11.2026).
+const { loggedIn } = useSessionUser();
 const inList = computed(() => quantityOf(props.product.id) > 0);
 const quantity = computed(() => quantityOf(props.product.id));
 /**
@@ -48,16 +51,16 @@ const soldOut = computed(() => {
       <ProductAvailability :product="product" />
       <ProductPrice :product="product" />
       <NuxtLink
-        v-if="inList"
+        v-if="loggedIn && inList"
         to="/reserve"
         class="product-card__select product-card__select--active"
       >
         В списке<template v-if="quantity > 1"> · {{ quantity }}</template>
       </NuxtLink>
       <button
-        v-else
+        v-else-if="loggedIn"
         type="button"
-        class="product-card__select text-link"
+        class="product-card__select"
         @click="add(product.id)"
       >
         + В список

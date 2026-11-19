@@ -45,7 +45,7 @@ function footerPhoneClick() {
           :key="category.id"
           :to="`/catalog/${category.slug}`"
           >{{ category.name }}</NuxtLink
-        ><NuxtLink to="/catalog">Все категории ↗</NuxtLink
+        ><NuxtLink to="/catalog">Все категории</NuxtLink
         ><NuxtLink to="/search">Поиск</NuxtLink>
       </nav>
       <div class="footer-note">
@@ -63,22 +63,22 @@ function footerPhoneClick() {
             class="text-link"
             target="_blank"
             rel="noopener noreferrer"
-            >ВКонтакте ↗</a
-          >
+            >ВКонтакте <UiArrow
+          /></a>
           <a
             :href="prohookContacts.telegram"
             class="text-link"
             target="_blank"
             rel="noopener noreferrer"
-            >Telegram ↗</a
-          >
+            >Telegram <UiArrow
+          /></a>
           <a
             :href="prohookContacts.instagram"
             class="text-link"
             target="_blank"
             rel="noopener noreferrer"
-            >Instagram ↗</a
-          >
+            >Instagram <UiArrow
+          /></a>
         </nav>
         <p class="caption footer-disclaimer">
           Instagram принадлежит компании Meta, признанной экстремистской

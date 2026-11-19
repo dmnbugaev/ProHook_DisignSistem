@@ -41,25 +41,21 @@ test("partnership form validates, preserves errors and confirms delivery", async
   await page
     .getByLabel("Партнёрское предложение")
     .fill("Хотим закупать продукцию оптом для своей сети.");
-  // Оба согласия пустые по умолчанию и обязательны по отдельности.
+  // Согласие одно, пустое по умолчанию и обязательно: передача через
+  // Telegram названа прямо в его тексте (решение заказчика 19.11.2026).
   const consents = page.getByRole("checkbox");
+  await expect(consents).toHaveCount(1);
   await expect(consents.nth(0)).not.toBeChecked();
-  await expect(consents.nth(1)).not.toBeChecked();
   await page.getByRole("button", { name: "Отправить заявку" }).click();
   await expect(
     page.getByText("Подтвердите согласие на обработку"),
   ).toBeVisible();
-  await expect(
-    page.getByText("Подтвердите согласие на передачу заявки через Telegram"),
-  ).toBeVisible();
   await consents.nth(0).check();
-  await consents.nth(1).check();
   let succeeds = false;
   await page.route("**/api/partnership", async (route) => {
     expect(route.request().postDataJSON()).toMatchObject({
       name: "Иван Иванов",
       consent: true,
-      consentTelegram: true,
       offer: "Хотим закупать продукцию оптом для своей сети.",
     });
     await route.fulfill({

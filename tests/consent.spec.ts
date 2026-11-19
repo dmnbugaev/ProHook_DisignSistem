@@ -42,6 +42,17 @@ test.beforeEach(async ({ context }) => {
   // согласия (чтобы баннер не перекрывал контент в чужих спецификациях) —
   // здесь он не нужен: баннер проверяется на «нового» посетителя.
   await context.clearCookies();
+  // Окно подтверждения возраста при входе (19.11.2026) здесь не тестируем —
+  // помечаем «уже предлагали», чтобы оно не перекрывало баннер; само окно
+  // и связка с баннером — в отдельном тесте ниже.
+  await context.addCookies([
+    {
+      name: "prohook-age-gate-shown",
+      value: "true",
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
   await context.route("**://mc.yandex.ru/**", async (route) => {
     await route.fulfill({
       status: 200,
@@ -141,26 +152,26 @@ test("футер открывает баннер повторно; отзыв с
   await expect(page.getByRole("region", { name: REGION })).toBeHidden();
 });
 
-test("до подтверждения 18+ баннер ждёт гейта на закрытых страницах, в каталоге — показывается", async ({
+test("окно 18+ спрашивает возраст при входе; баннер согласия ждёт его", async ({
   page,
 }) => {
-  // Каталог рендерится и до подтверждения (общедоступный ассортимент,
-  // решение владельца 13.10.2026): баннер согласия показывается сразу,
-  // модального гейта нет.
+  // Решение заказчика 19.11.2026: окно подтверждения возраста открывается
+  // при входе на сайт для всех, кто не вошёл в аккаунт, — на любой первой
+  // странице сессии. Баннер согласия не наслаивается поверх него.
+  await page.context().clearCookies(); // в том числе метку «окно показывали»
   await page.goto("/catalog");
-  await expect(
-    page.getByRole("dialog", { name: "Вам уже исполнилось 18 лет?" }),
-  ).not.toBeVisible();
-  await expect(page.getByRole("region", { name: REGION })).toBeVisible();
-  // Закрытые маршруты (например, /reserve) до подтверждения показывают
-  // модальный гейт — баннер не наслаивается поверх него; после
-  // подтверждения баннер появляется.
-  await page.goto("/reserve");
   const gate = page.getByRole("dialog", {
     name: "Вам уже исполнилось 18 лет?",
   });
   await expect(gate).toBeVisible();
   await expect(page.getByRole("region", { name: REGION })).toBeHidden();
+  await waitForHydration(page);
   await gate.getByRole("button", { name: "Мне 18 лет или больше" }).click();
+  await expect(gate).not.toBeVisible();
+  await expect(page.getByRole("region", { name: REGION })).toBeVisible();
+  // Окно спрашивает один раз за вход: повторная навигация не возвращает
+  // его ни в каталоге, ни на закрытых страницах.
+  await page.goto("/reserve");
+  await expect(gate).not.toBeVisible();
   await expect(page.getByRole("region", { name: REGION })).toBeVisible();
 });

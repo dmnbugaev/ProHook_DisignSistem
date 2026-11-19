@@ -17,8 +17,9 @@ const { store, city, pickerOpen } = useStoreSelection();
         <UiButton variant="secondary" @click="pickerOpen = true">{{
           store ? "Изменить магазин" : "Выбрать магазин"
         }}</UiButton
-        ><NuxtLink to="/stores" class="text-link">Все магазины ↗</NuxtLink>
-      </div>
-    </div></UiContainer
-  >
+        ><NuxtLink to="/stores" class="text-link"
+          >Все магазины <UiArrow
+        /></NuxtLink>
+      </div></div
+  ></UiContainer>
 </template>

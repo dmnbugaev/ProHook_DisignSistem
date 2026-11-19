@@ -30,8 +30,8 @@ export interface ReservationData {
   phone: string;
   storeId: string;
   comment: string;
+  /** Единое согласие: покрывает и трансграничную передачу через Telegram. */
   consent: boolean;
-  consentTelegram: boolean;
   items: ReservationItemInput[];
 }
 

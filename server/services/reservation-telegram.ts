@@ -52,24 +52,6 @@ export function reservationBotToken(): string {
   return process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
 }
 
-/**
- * Доставка заявок через Telegram настроена (токен + непустой allowlist
- * чатов). Только в этом случае форме нужно обязательное согласие на
- * передачу запроса через Telegram; без Telegram заявка уходит задачей
- * в МойСклад и трансграничная передача не происходит. Тем же условием
- * руководствуется серверная валидация — расхождение исключено
- * (по образцу сайта Бункера, /api/integration-flags).
- */
-export function isTelegramDeliveryConfigured(): boolean {
-  return (
-    (process.env.TELEGRAM_BOT_TOKEN?.trim() ||
-      process.env.NUXT_TELEGRAM_BOT_TOKEN?.trim() ||
-      "") !== "" &&
-    parseReservationChatIds(process.env.TELEGRAM_RESERVATION_CHAT_IDS).length >
-      0
-  );
-}
-
 /** Одна строка без управляющих символов — защита от подделки строк. */
 function plain(value: string): string {
   const stripped = Array.from(value)

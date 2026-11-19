@@ -51,11 +51,19 @@ onBeforeUnmount(() => window.removeEventListener("scroll", onScroll));
         <span class="caption store-trigger__city">{{
           city?.name ?? "Ваш город"
         }}</span>
-        <span class="store-trigger__store"
-          >{{ store?.name ?? "Выбрать магазин" }}
-          <span aria-hidden="true">⌄</span></span
-        >
-        <span class="store-trigger__chevron" aria-hidden="true">⌄</span>
+        <span class="store-trigger__store">{{
+          store?.name ?? "Выбрать магазин"
+        }}</span>
+        <span class="store-trigger__chevron" aria-hidden="true"
+          ><svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M3.5 6 8 10.5 12.5 6"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg
+        ></span>
       </button>
       <NuxtLink to="/search" class="icon-button" aria-label="Поиск"
         ><svg
@@ -74,7 +82,10 @@ onBeforeUnmount(() => window.removeEventListener("scroll", onScroll));
           />
           <path d="m16 16 5 5" stroke="currentColor" stroke-width="2" /></svg
       ></NuxtLink>
+      <!-- Список выбранных — часть сценария резерва: анонимам (в том числе
+           модераторам рекламных карточек) не показывается, решение 19.11.2026. -->
       <NuxtLink
+        v-if="loggedIn"
         to="/reserve"
         class="icon-button selection-link"
         :aria-label="
@@ -155,6 +166,7 @@ onBeforeUnmount(() => window.removeEventListener("scroll", onScroll));
         >{{ accountLink.label }}</NuxtLink
       >
       <NuxtLink
+        v-if="loggedIn"
         to="/reserve"
         class="mobile-nav__account"
         @click="menuOpen = false"

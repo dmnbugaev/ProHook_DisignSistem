@@ -14,17 +14,13 @@ const cityId = ref("");
 const stores = computed(
   () => meta.value?.stores.filter((item) => item.cityId === cityId.value) ?? [],
 );
-const cityOptions = computed(() => [
-  { value: "", label: "Выберите город" },
-  ...(meta.value?.cities.map((city) => ({
-    value: city.id,
-    label: city.name,
-  })) ?? []),
-]);
+const cities = computed(() => meta.value?.cities ?? []);
+// Город предвыбран: текущий магазин, иначе первый город сети — одно
+// касание меньше (правка заказчика 19.11.2026: меню удобнее).
 watch(
   pickerOpen,
   (open) => {
-    if (open) cityId.value = store.value?.cityId ?? "";
+    if (open) cityId.value = store.value?.cityId ?? cities.value[0]?.id ?? "";
   },
   { immediate: true },
 );
@@ -94,7 +90,18 @@ const errorTexts: Record<GeoErrorCode, string> = {
       >
         {{ errorTexts[detectError] }}
       </p>
-      <UiSelect v-model="cityId" label="Город" :options="cityOptions" />
+      <div class="city-choice" role="group" aria-label="Город">
+        <button
+          v-for="city in cities"
+          :key="city.id"
+          type="button"
+          class="city-choice__option"
+          :aria-pressed="cityId === city.id"
+          @click="cityId = city.id"
+        >
+          {{ city.name }}
+        </button>
+      </div>
       <fieldset v-if="cityId" class="store-options">
         <legend>Магазин</legend>
         <label
@@ -125,3 +132,37 @@ const errorTexts: Record<GeoErrorCode, string> = {
     </div>
   </UiDialog>
 </template>
+<style scoped>
+/* Выбор города — сегмент из трёх кнопок вместо нативного select: виден
+   весь выбор сразу, активный город подсвечен фирменным жёлтым. */
+.city-choice {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+.city-choice__option {
+  min-height: 48px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-control);
+  background: var(--background);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  transition:
+    box-shadow var(--duration-fast),
+    transform var(--duration-fast),
+    background var(--duration-fast);
+}
+.city-choice__option:hover {
+  box-shadow: var(--shadow-button-hover);
+  transform: translate(-1px, -1px);
+}
+.city-choice__option[aria-pressed="true"] {
+  background: var(--accent);
+}
+@media (max-width: 479px) {
+  .city-choice__option {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+</style>

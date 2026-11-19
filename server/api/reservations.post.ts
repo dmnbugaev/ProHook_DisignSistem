@@ -8,10 +8,7 @@ import {
   createReservation,
   type StoredReservationItem,
 } from "../services/reservation-store";
-import {
-  dispatchReservationNotification,
-  isTelegramDeliveryConfigured,
-} from "../services/reservation-telegram";
+import { dispatchReservationNotification } from "../services/reservation-telegram";
 import {
   isSmartCaptchaConfigured,
   verifySmartCaptcha,
@@ -76,12 +73,9 @@ export default defineEventHandler(async (event) => {
       data: { message: "Запросы на резерв доступны только совершеннолетним." },
     });
 
-  // Согласие на передачу через Telegram обязательно только при настроенной
-  // доставке — тот же флаг, что показывает чекбокс в форме
-  // (/api/integration-flags), расхождение условий исключено.
-  const { data, errors, valid } = validateReservation(body, {
-    requireTelegramConsent: isTelegramDeliveryConfigured(),
-  });
+  // Согласие одно и покрывает трансграничную передачу через Telegram
+  // (решение заказчика 19.11.2026): отдельного чекбокса в форме больше нет.
+  const { data, errors, valid } = validateReservation(body);
   if (!valid)
     throw createError({
       statusCode: 422,
@@ -193,7 +187,7 @@ export default defineEventHandler(async (event) => {
     storeNameSnapshot: store.name,
     storeAddressSnapshot: store.address ?? "",
     comment: data.comment,
-    consent: { personalData: data.consent, telegram: data.consentTelegram },
+    consent: { personalData: data.consent, telegram: data.consent },
     captchaVerifiedAt,
     items,
     monitorProbe,

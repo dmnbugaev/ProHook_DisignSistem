@@ -56,7 +56,6 @@ function dataFromStored(application: StoredPartnership): Partnership {
     company: application.company,
     offer: application.offer,
     consent: application.consent.personalData,
-    consentTelegram: application.consent.telegram,
   };
 }
 

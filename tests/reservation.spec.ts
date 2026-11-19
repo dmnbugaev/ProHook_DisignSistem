@@ -80,8 +80,12 @@ async function addSessionCookie(page: Page, sessionToken: string) {
 
 test("selection list supports add, quantity, removal, clear and persistence", async ({
   page,
+  request,
 }) => {
   await page.context().addCookies([AGE_COOKIE, STORE_COOKIE]);
+  // «+ В список» показывается только вошедшим (модерация карточек,
+  // 19.11.2026) — сценарии списка идут с сессией.
+  await addSessionCookie(page, await registerAdultSession(request));
   await openGated(page, "/product/stands-01");
   await page.getByRole("button", { name: "Добавить в список" }).click();
   await expect(
@@ -125,8 +129,12 @@ test("selection list supports add, quantity, removal, clear and persistence", as
   await expect(page.getByText("Список пуст")).toBeVisible();
 });
 
-test("catalog cards add to the list and link to /reserve", async ({ page }) => {
+test("catalog cards add to the list and link to /reserve", async ({
+  page,
+  request,
+}) => {
   await page.context().addCookies([AGE_COOKIE, STORE_COOKIE]);
+  await addSessionCookie(page, await registerAdultSession(request));
   await openGated(page, "/catalog");
   await page.getByRole("button", { name: "+ В список" }).first().click();
   const active = page.getByRole("link", { name: /В списке/ }).first();
@@ -139,8 +147,15 @@ test("catalog cards add to the list and link to /reserve", async ({ page }) => {
 
 test("reserve form is gated for anonymous visitors", async ({ page }) => {
   await page.context().addCookies([AGE_COOKIE, STORE_COOKIE]);
-  await openGated(page, "/product/stands-01");
-  await page.getByRole("button", { name: "Добавить в список" }).click();
+  // Аноним не видит кнопок добавления — позицию кладём cookie напрямую.
+  await page.context().addCookies([
+    {
+      name: "prohook-selection",
+      value: JSON.stringify([{ productId: "p1", quantity: 1 }]),
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
   await openGated(page, "/reserve");
   // Список выбранных остаётся публичным, отправка — только после входа:
   // модераторы рекламных карточек видят каталог без бронирования.
@@ -175,9 +190,7 @@ test("reserve form requires contacts, store and consent", async ({
   // чтобы проверить валидацию на по-настоящему пустой форме.
   await page.getByLabel("Имя *", { exact: true }).fill("");
   await page.getByLabel("Телефон *").fill("");
-  // Telegram-доставка в e2e не настроена (ключи затёрты): согласие на
-  // передачу через Telegram скрыто вместе с чекбоксом — остаётся только
-  // согласие на обработку персональных данных (флаг /api/integration-flags).
+  // Согласие одно и покрывает передачу через Telegram (19.11.2026).
   await expect(page.getByRole("checkbox")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Отправить запрос на резерв" })
@@ -233,7 +246,6 @@ test("anonymous visitors cannot submit reservation requests", async ({
       storeId: "store-2",
       comment: "",
       consent: true,
-      consentTelegram: true,
       items: [{ productId: "p1", quantity: 1 }],
     },
   });
@@ -250,7 +262,6 @@ test("server re-validates store, products, stock and consents", async ({
     storeId: "store-2",
     comment: "",
     consent: true,
-    consentTelegram: true,
     items: [{ productId: "p1", quantity: 1 }],
   };
   const post = (data: unknown, headers: Record<string, string> = {}) =>
@@ -337,7 +348,6 @@ test("idempotency: the same key returns the same request without duplicates", as
     storeId: "store-2",
     comment: "",
     consent: true,
-    consentTelegram: true,
     items: [{ productId: "p1", quantity: 1 }],
   };
   const key = `e2e-key-${Date.now()}`;
@@ -403,7 +413,6 @@ test("authenticated minors cannot submit reservation requests", async ({
       storeId: "store-2",
       comment: "",
       consent: true,
-      consentTelegram: true,
       items: [{ productId: "p1", quantity: 1 }],
     },
     headers: { cookie: `prohook-session=${sessionToken}` },

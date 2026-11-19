@@ -290,17 +290,15 @@ onBeforeUnmount(() => {
                 v-if="slide.promo.ctaHref && isInternal(slide.promo.ctaHref)"
                 :to="slide.promo.ctaHref"
                 class="promo-card__cta"
-                >{{ slide.promo.ctaLabel ?? "Открыть" }}
-                <span aria-hidden="true">↗</span></NuxtLink
-              >
+                >{{ slide.promo.ctaLabel ?? "Открыть" }} <UiArrow
+              /></NuxtLink>
               <a
                 v-else-if="slide.promo.ctaHref"
                 :href="slide.promo.ctaHref"
                 rel="noopener"
                 class="promo-card__cta"
-                >{{ slide.promo.ctaLabel ?? "Открыть" }}
-                <span aria-hidden="true">↗</span></a
-              >
+                >{{ slide.promo.ctaLabel ?? "Открыть" }} <UiArrow
+              /></a>
             </div>
           </article>
         </div>

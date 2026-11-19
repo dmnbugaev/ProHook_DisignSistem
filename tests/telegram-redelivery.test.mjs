@@ -45,7 +45,6 @@ const validPartnership = {
   company: "Компания",
   offer: "Хотим поставлять продукцию в вашу розничную сеть.",
   consent: true,
-  consentTelegram: true,
 };
 
 function reservationInput(customerName) {

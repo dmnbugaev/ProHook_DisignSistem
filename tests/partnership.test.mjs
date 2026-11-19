@@ -41,7 +41,6 @@ const valid = {
   company: "Компания",
   offer: "Хотим поставлять продукцию в вашу розничную сеть.",
   consent: true,
-  consentTelegram: true,
 };
 
 test("validates and trims input without trusting types, consents or offers", () => {
@@ -55,8 +54,6 @@ test("validates and trims input without trusting types, consents or offers", () 
     [],
     {},
     { ...valid, consent: "true" },
-    { ...valid, consentTelegram: "true" },
-    { ...valid, consentTelegram: false },
     { ...valid, phone: "abc1234567890" },
     { ...valid, offer: "Коротко" },
     { ...valid, offer: "с".repeat(501) },

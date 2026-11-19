@@ -38,12 +38,24 @@ test.beforeEach(async ({ context }) => {
   ]);
 });
 
-test("first visit chooses a real city and store", async ({ page, context }) => {
+test("first visit asks age, then chooses a real city and store", async ({
+  page,
+  context,
+}) => {
   await context.clearCookies();
-  await open(page, "/");
+  await page.goto("/");
+  // Вход на сайт без аккаунта: сначала окно подтверждения возраста
+  // (решение заказчика 19.11.2026), после него — выбор города и магазина.
+  const gate = page.getByRole("dialog", {
+    name: "Вам уже исполнилось 18 лет?",
+  });
+  await expect(gate).toBeVisible();
+  await waitForHydration(page);
+  await gate.getByRole("button", { name: "Мне 18 лет или больше" }).click();
   const picker = page.getByRole("dialog", { name: "Ваш город и магазин" });
   await expect(picker).toBeVisible();
-  await picker.getByLabel("Город", { exact: true }).selectOption("moscow");
+  // Города — сегмент-кнопки (правка 19.11.2026), не нативный select.
+  await picker.getByRole("button", { name: "Москва" }).click();
   // Магазин применяется сразу при выборе — отдельной кнопки больше нет.
   await picker.getByRole("radio", { name: /МСК\. Боброво/ }).check();
   await expect(picker).not.toBeVisible();
@@ -100,7 +112,7 @@ test("store changes availability and city price without losing the product", asy
   // 12 шт. в Студии · Север — бакет «Много в наличии» (порог 4+).
   await expect(info.locator(".availability")).toHaveText("Много в наличии");
   await info.getByRole("button", { name: "Изменить магазин" }).click();
-  await picker.getByLabel("Город", { exact: true }).selectOption("moscow");
+  await picker.getByRole("button", { name: "Москва" }).click();
   await picker.getByRole("radio", { name: /МСК\. Боброво/ }).check();
   await expect(info.locator(".product-price strong")).toContainText(/1\s?350/);
   await expect(info.locator(".availability")).toHaveText("Мало в наличии");

@@ -291,7 +291,6 @@ test("exact stock beats availability bucket on the server", async ({
     storeId: "store-2",
     comment: "",
     consent: true,
-    consentTelegram: true,
   };
   const post = (data: unknown, headers: Record<string, string> = {}) =>
     request.post("/api/reservations", {
@@ -347,7 +346,6 @@ test("API rejects malformed bodies, sizes and wrong methods", async ({
     storeId: "store-2",
     comment: "",
     consent: true,
-    consentTelegram: true,
     items: [{ productId: "p1", quantity: 1 }],
   };
   const post = (data: unknown, headers: Record<string, string> = {}) =>

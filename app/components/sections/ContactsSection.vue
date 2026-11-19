@@ -12,32 +12,33 @@ import { prohookContacts } from "~~/shared/content/prohook";
         </p>
         <div class="contact-section__links">
           <NuxtLink to="/partners" class="text-link"
-            >Стать партнёром ↗</NuxtLink
-          >
-          <NuxtLink to="/contacts" class="text-link">Контакты ↗</NuxtLink>
+            >Стать партнёром <UiArrow
+          /></NuxtLink>
+          <NuxtLink to="/contacts" class="text-link"
+            >Контакты <UiArrow
+          /></NuxtLink>
           <a
             :href="prohookContacts.vk"
             class="text-link"
             target="_blank"
             rel="noopener noreferrer"
-            >ВКонтакте ↗</a
-          >
+            >ВКонтакте <UiArrow
+          /></a>
           <a
             :href="prohookContacts.telegram"
             class="text-link"
             target="_blank"
             rel="noopener noreferrer"
-            >Telegram ↗</a
-          >
+            >Telegram <UiArrow
+          /></a>
           <a
             :href="prohookContacts.instagram"
             class="text-link"
             target="_blank"
             rel="noopener noreferrer"
-            >Instagram ↗</a
-          >
+            >Instagram <UiArrow
+          /></a>
         </div>
-      </div>
-    </div></UiContainer
-  >
+      </div></div
+  ></UiContainer>
 </template>

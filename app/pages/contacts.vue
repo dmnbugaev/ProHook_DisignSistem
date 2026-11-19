@@ -73,7 +73,7 @@ const socials = [
                       ><SocialIcon :network="social.network" :size="26"
                     /></span>
                     <span>{{ social.label }}</span>
-                    <span aria-hidden="true">↗</span>
+                    <UiArrow />
                   </a>
                 </li>
               </ul>
@@ -88,8 +88,8 @@ const socials = [
           товаров. Перед визитом можно уточнить режим работы по телефону.
         </p>
         <NuxtLink to="/stores" class="button button--secondary"
-          >Смотреть магазины <span aria-hidden="true">↗</span></NuxtLink
-        >
+          >Смотреть магазины <UiArrow
+        /></NuxtLink>
       </section>
     </div>
     <StoresMapSection

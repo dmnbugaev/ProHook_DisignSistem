@@ -61,7 +61,6 @@ const valid = {
   storeId: "store-2",
   comment: "",
   consent: true,
-  consentTelegram: true,
   items: validItems,
 };
 
@@ -136,7 +135,6 @@ test("rejects invalid names, phones, stores, consents and control characters", (
     { ...valid, storeId: "../etc/passwd" },
     { ...valid, comment: "невидимый\u0001символ" },
     { ...valid, consent: "true" },
-    { ...valid, consentTelegram: false },
     { ...valid, items: [] },
     { ...valid, items: [{ productId: "bad id!", quantity: 1 }] },
     { ...valid, items: [{ productId: "stands-01", quantity: 0 }] },

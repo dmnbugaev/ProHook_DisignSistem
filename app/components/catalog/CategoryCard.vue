@@ -15,7 +15,7 @@ defineProps<{ category: Category; index: number }>();
     />
     <div>
       <h3>{{ category.name }}</h3>
-      <span aria-hidden="true">↗</span>
+      <UiArrow />
     </div>
     <p class="caption">{{ category.description }}</p>
   </NuxtLink>

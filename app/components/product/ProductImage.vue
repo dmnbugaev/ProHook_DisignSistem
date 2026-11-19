@@ -41,7 +41,7 @@ watch(
       role="img"
       aria-label="Изображение отсутствует"
     >
-      <span aria-hidden="true">↗</span><span>Изображение появится позже</span>
+      <UiArrow /><span>Изображение появится позже</span>
     </div>
   </div>
 </template>
