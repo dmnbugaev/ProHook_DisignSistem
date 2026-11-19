@@ -12,8 +12,11 @@ import type { Product } from "~~/shared/types/product";
 
 /**
  * Список выбранных товаров и форма запроса на резерв. Страница не продаёт:
- * отправка формы — это запрос магазику, а не покупка; оплата и передача
- * товара происходятся только в самом магазине после проверки возраста.
+ * отправка формы — это запрос магазину, а не покупка; оплата и передача
+ * товара происходят только в самом магазине после проверки возраста.
+ * Отправка доступна только вошедшим совершеннолетним (требование
+ * модераторов рекламных карточек компаний, 19.11.2026): анонимам вместо
+ * формы — приглашение войти; сервер на POST отвечает 401.
  */
 usePageSeo(
   "Список выбранных товаров",
@@ -22,7 +25,7 @@ usePageSeo(
 const { store, city, pickerOpen } = useStoreSelection();
 const { entries, count, totalQuantity, setQuantity, remove, clear } =
   useSelectionList();
-const { user } = useSessionUser();
+const { user, loggedIn } = useSessionUser();
 await useCatalogMeta();
 
 // "__empty__" не существует в каталоге: пустой список не тянет страницу
@@ -107,6 +110,13 @@ watch(
 
 const { public: config } = useRuntimeConfig();
 const captchaEnabled = Boolean(config.smartCaptchaClientKey);
+// Согласие на передачу через Telegram — только при настроенной доставке;
+// тот же признак использует серверная валидация, расхождения быть не может
+// (по образцу сайта Бункера, /api/integration-flags).
+const { data: integrationFlags } = await useFetch<{
+  telegramNotify: boolean;
+}>("/api/integration-flags");
+const telegramEnabled = integrationFlags.value?.telegramNotify === true;
 const captchaToken = ref("");
 const captchaReset = ref(0);
 const idempotencyKey = ref("");
@@ -121,11 +131,14 @@ onMounted(newIdempotencyKey);
 async function submit() {
   if (pending.value) return;
   failure.value = "";
-  const validation = validateReservation({
-    ...form,
-    storeId: store.value?.id ?? "",
-    items: entries.value,
-  });
+  const validation = validateReservation(
+    {
+      ...form,
+      storeId: store.value?.id ?? "",
+      items: entries.value,
+    },
+    { requireTelegramConsent: telegramEnabled },
+  );
   errors.value = { ...validation.errors };
   if (captchaEnabled && !captchaToken.value)
     errors.value.captcha = "Пройдите проверку «Я не робот».";
@@ -223,7 +236,9 @@ async function submit() {
       </p>
       <p>
         Сотрудник выбранного магазина получит список и свяжется с вами, если
-        позициям потребуется уточнение. Запрос действует 24 часа. Это не
+        позициям потребуется уточнение. Запрос действует 12 часов: в это время
+        выбранные товары не продаются другим покупателям и ждут вас в магазине.
+        Резерв бесплатен — если вы не придёте, ничего не спишется. Это не
         покупка: приобретение, проверка возраста и оплата происходят только в
         магазине, онлайн-оплаты и доставки на сайте нет.
       </p>
@@ -236,6 +251,31 @@ async function submit() {
     </div>
 
     <template v-else>
+      <!-- Резерв доступен после входа (модерация рекламных карточек,
+           19.11.2026): гейт показывается и при пустом списке. -->
+      <div v-if="!loggedIn" class="reserve-gate">
+        <p>Отправка запроса на резерв доступна после входа.</p>
+        <p class="caption">
+          Список выбранных товаров сохранится. После отправки магазин держит
+          выбранные товары 12 часов только для вас; покупка — в магазине после
+          проверки возраста.
+        </p>
+        <div class="reserve-gate__actions">
+          <NuxtLink to="/login?redirect=/reserve" class="button button--large"
+            >Войти</NuxtLink
+          >
+          <NuxtLink
+            to="/register?redirect=/reserve"
+            class="button button--secondary button--large"
+            >Зарегистрироваться</NuxtLink
+          >
+        </div>
+      </div>
+      <p v-else-if="user && !user.isAdult" class="reserve-gate" role="note">
+        Запросы на резерв доступны только совершеннолетним: возраст проверяется
+        по дате рождения из личного кабинета.
+      </p>
+
       <UiEmptyState v-if="count === 0" title="Список пуст" aria-live="polite">
         Выберите товары в каталоге — они появятся здесь, и вы сможете отправить
         запрос на резерв в удобный магазин.
@@ -360,11 +400,15 @@ async function submit() {
             <p class="reserve-legal-note">
               Отправляя форму, вы просите магазин отложить товары к вашему
               визиту. Это не покупка и не заказ с оплатой: сайт не принимает
-              оплату и не доставляет товары. Продажа, проверка возраста и выдача
-              товара происходят только в выбранном магазине; магазин вправе
-              отказать в продаже в предусмотренных законом случаях.
+              оплату и не доставляет товары. В течение 12 часов после запроса
+              магазин не продаёт выбранные товары другим покупателям — они ждут
+              владельца запроса по номеру телефона из заявки. Резерв бесплатен:
+              если вы не придёте, ничего не спишется. Продажа, проверка возраста
+              и выдача товара происходят только в выбранном магазине; магазин
+              вправе отказать в продаже в предусмотренных законом случаях.
             </p>
             <form
+              v-if="user && user.isAdult"
               ref="formElement"
               class="reserve-form"
               novalidate
@@ -449,7 +493,10 @@ async function submit() {
                     {{ errors.consent }}
                   </p>
                 </div>
-                <div>
+                <!-- Чекбокс показывается только при настроенной доставке
+                     в Telegram: без неё заявка уходит задачей в МойСклад и
+                     трансграничная передача не происходит. -->
+                <div v-if="telegramEnabled">
                   <UiCheckbox
                     v-model="form.consentTelegram"
                     name="consentTelegram"
@@ -509,7 +556,10 @@ async function submit() {
               Вы отправляете список товаров и контакты — это запрос, а не
               покупка и не заказ с оплатой.
             </li>
-            <li>Сотрудник магазина получает запрос и проверяет наличие.</li>
+            <li>
+              Сотрудник магазина получает запрос, проверяет наличие и держит
+              товары 12 часов за вами.
+            </li>
             <li>
               Вы приходите в выбранный магазин; сотрудник при необходимости
               проверит совершеннолетие по документу.
@@ -665,6 +715,25 @@ async function submit() {
   color: var(--text-secondary);
   border-left: 3px solid var(--ink);
   padding-left: 16px;
+}
+/* Гейт отправки для не вошедших и уведомление несовершеннолетним — по
+   образцу account-gate (личный кабинет). Живёт на уровне страницы,
+   выше пустого состояния и списка. */
+.reserve-gate {
+  margin: 16px 0 32px;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  max-width: 60ch;
+}
+.reserve-gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
 }
 .reserve-aside {
   border: 1px solid var(--separator);

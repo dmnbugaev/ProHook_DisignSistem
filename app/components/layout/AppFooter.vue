@@ -55,7 +55,6 @@ function footerPhoneClick() {
             prohookContacts.phone
           }}</a
           ><br />
-          {{ prohookContacts.hours }}<br />
           Информация на сайте предназначена для лиц старше 18 лет.
         </p>
         <nav class="footer-socials" aria-label="Социальные сети ПроХук">

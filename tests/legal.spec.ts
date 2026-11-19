@@ -183,6 +183,24 @@ test("unregulated assortment is reachable before age confirmation; regulated sta
   await expect(page.locator(".product-card")).toHaveCount(0);
 });
 
+test("reserve UI stays out of anonymous HTML", async ({ request }) => {
+  // Требование модераторов рекламных карточек (19.11.2026): аноним не
+  // видит бронирование — ни форму на /reserve, ни секцию «Резерв — просто»
+  // на главной, даже с подтверждённым 18+ (гейт по сессии, не по cookie
+  // возраста). Список выбранных («+ В список») остаётся публичным.
+  const cookieHeader = { cookie: "prohook-age-confirmed=true" };
+  const home = await (await request.get("/", { headers: cookieHeader })).text();
+  expect(home).not.toContain("Резерв — просто");
+  const reserve = await (
+    await request.get("/reserve", { headers: cookieHeader })
+  ).text();
+  expect(reserve).not.toContain("Отправить запрос на резерв");
+  const catalog = await (
+    await request.get("/catalog", { headers: cookieHeader })
+  ).text();
+  expect(catalog).toContain("В список");
+});
+
 test("legal pages are reachable without the age gate", async ({ page }) => {
   // 09.10.2026: информационные страницы (/, /about, /stores, /partners)
   // открыты без гейта — как юридические; каталогозависимые секции

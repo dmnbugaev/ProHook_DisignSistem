@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { StoreLocation } from "~~/shared/types/store";
-import { prohookContacts } from "~~/shared/content/prohook";
 import { storeCities } from "~~/shared/content/stores";
 
 // Минимальные типы JS API Яндекс.Карт 2.1: описана только используемая
@@ -145,7 +144,7 @@ const buildPopupHtml = (store: StoreLocation) => {
     ...(store.district
       ? [`<span class="caption">${escapeHtml(store.district)}</span>`]
       : []),
-    `<span class="caption">Режим: ${escapeHtml(store.hours ?? prohookContacts.hours)}</span>`,
+    `<span class="caption">Режим: ${escapeHtml(store.hours ?? "уточняйте по телефону")}</span>`,
   ];
   return `<div class="store-popup-card">${rows.join("")}</div>`;
 };

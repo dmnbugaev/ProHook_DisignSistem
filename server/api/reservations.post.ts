@@ -8,13 +8,16 @@ import {
   createReservation,
   type StoredReservationItem,
 } from "../services/reservation-store";
-import { dispatchReservationNotification } from "../services/reservation-telegram";
+import {
+  dispatchReservationNotification,
+  isTelegramDeliveryConfigured,
+} from "../services/reservation-telegram";
 import {
   isSmartCaptchaConfigured,
   verifySmartCaptcha,
 } from "../services/smartcaptcha";
 import { enforceRegionalRestrictions } from "../../shared/legal/catalog-policy";
-import { getSessionUser } from "../utils/session";
+import { requireSessionUser } from "../utils/session";
 import { guardJsonRequest } from "../utils/request-guard";
 import { isMonitorProbe } from "../utils/monitor-probe";
 import { allowReservation } from "../utils/reservation-rate-limit";
@@ -59,7 +62,26 @@ export default defineEventHandler(async (event) => {
       };
   }
 
-  const { data, errors, valid } = validateReservation(body);
+  // Резерв доступен только вошедшим совершеннолетним пользователям
+  // (требование модераторов рекламных карточек компаний, 19.11.2026):
+  // анонимам форма не показывается, API отвечает 401. Пробы монитор-бота
+  // идут с секретом x-monitor-secret и без сессии — полная цепочка
+  // проверок остаётся рабочей.
+  const monitorProbe = isMonitorProbe(event);
+  const user = monitorProbe ? null : await requireSessionUser(event);
+  if (user && !user.isAdult)
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Forbidden",
+      data: { message: "Запросы на резерв доступны только совершеннолетним." },
+    });
+
+  // Согласие на передачу через Telegram обязательно только при настроенной
+  // доставке — тот же флаг, что показывает чекбокс в форме
+  // (/api/integration-flags), расхождение условий исключено.
+  const { data, errors, valid } = validateReservation(body, {
+    requireTelegramConsent: isTelegramDeliveryConfigured(),
+  });
   if (!valid)
     throw createError({
       statusCode: 422,
@@ -93,16 +115,6 @@ export default defineEventHandler(async (event) => {
       });
     captchaVerifiedAt = new Date().toISOString();
   }
-
-  // Авторизованным несовершеннолетним аккаунтам функционал закрыт по
-  // данным аккаунта; для остальных проверка возраста остаётся в магазине.
-  const user = await getSessionUser(event);
-  if (user && !user.isAdult)
-    throw createError({
-      statusCode: 403,
-      statusMessage: "Forbidden",
-      data: { message: "Запросы на резерв доступны только совершеннолетним." },
-    });
 
   // Магазин и товары перепроверяются по свежему серверному снимку.
   const snapshot = await getCatalogSnapshot();
@@ -172,10 +184,7 @@ export default defineEventHandler(async (event) => {
       },
     });
 
-  // Тестовые заявки монитор-бота: конвейер проверяется целиком, чаты не
-  // шумят (мандат владельца 05.11.2026). Пометка пишется в запись — пробы
-  // не участвуют в нумерации заявок за день.
-  const monitorProbe = isMonitorProbe(event);
+  // Пометка проб монитор-бота определена рядом с проверкой сессии выше.
   const reservation = await createReservation({
     userId: user?.id ?? null,
     customerName: data.name,

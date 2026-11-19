@@ -5,6 +5,7 @@ import type { Product } from "../../shared/types/product";
 import { applyLegalPolicy } from "../../shared/legal/catalog-policy";
 import { fetchCatalog, fetchStock, type CatalogSnapshot } from "./moysklad";
 import { applyFirstPublished } from "./first-published";
+import { storeHours } from "../data/store-hours";
 
 const FIXTURE_FILE = process.env.MOYSKLAD_SNAPSHOT_PATH;
 const CACHE_FILE = resolve(
@@ -25,6 +26,26 @@ async function save(value: CatalogSnapshot) {
   await rename(temp, CACHE_FILE);
 }
 
+/**
+ * Часы точек — курируемые данные владельца (server/data/store-hours.ts),
+ * а не данные МойСклад: применяем к загруженному снимку, чтобы свежесть
+ * часов не зависела от возраста снимка и доступности API МойСклад.
+ * Идемпотентно, по стабильному ID склада (тот же ключ, что и в fetchCatalog).
+ */
+function applyStoreHours(value: CatalogSnapshot): CatalogSnapshot {
+  return {
+    ...value,
+    meta: {
+      ...value.meta,
+      stores: value.meta.stores.map((store) =>
+        storeHours[store.id]
+          ? { ...store, hours: storeHours[store.id] }
+          : store,
+      ),
+    },
+  };
+}
+
 async function load() {
   if (loaded) return;
   loaded = true;
@@ -33,9 +54,9 @@ async function load() {
       await readFile(CACHE_FILE, "utf8"),
     ) as CatalogSnapshot;
     if (Array.isArray(value.products) && value.meta?.stores)
-      // Снимок мог быть записан до смены юридической политики — применяем её
-      // повторно (идемпотентно: фильтрация запрещённых классов, legalClass).
-      snapshot = applyLegalPolicy(value);
+      // Снимок мог быть записан до смены юридической политики или правки
+      // часов точек — применяем их повторно (идемпотентно).
+      snapshot = applyStoreHours(applyLegalPolicy(value));
   } catch {
     // The first run has no private snapshot yet.
   }

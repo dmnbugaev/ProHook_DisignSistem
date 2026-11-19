@@ -20,6 +20,16 @@ const errors = ref<Record<string, string>>({});
 const failure = ref("");
 const pending = ref(false);
 const formElement = ref<HTMLFormElement>();
+const route = useRoute();
+// Возврат на исходную страницу после регистрации (например, /reserve);
+// допускаются только same-origin пути — как в login.vue.
+const target = computed(() => {
+  const redirect =
+    typeof route.query.redirect === "string" ? route.query.redirect : "";
+  return redirect.startsWith("/") && !redirect.startsWith("//")
+    ? redirect
+    : "/account";
+});
 // Дата рождения печатается подряд в одном поле: 15062008 → 15.06.2008.
 // Точки вставляются автоматически, переключаться между сегментами не нужно.
 const birthDate = ref("");
@@ -58,7 +68,7 @@ async function submit() {
     // Только технический факт успешной регистрации: персональные данные
     // (ФИО, телефон, дата рождения) в аналитику не передаются.
     trackEvent("account_registration_success");
-    await navigateTo("/account");
+    await navigateTo(target.value);
   } catch (error) {
     const response = error as {
       statusCode?: number;

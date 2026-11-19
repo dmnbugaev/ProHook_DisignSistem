@@ -7,7 +7,7 @@ const { data: meta, error, refresh } = await useCatalogMeta();
 const { store, select, pickerOpen } = useStoreSelection();
 usePageSeo(
   "Магазины",
-  "Адреса магазинов ПроХук в Саратове, Энгельсе и Москве: 25 точек в Саратове, 2 в Энгельсе и 3 в Москве, режим работы и телефоны сети.",
+  "Адреса магазинов ПроХук в Саратове, Энгельсе и Москве: 25 точек в Саратове, 2 в Энгельсе и 3 в Москве, часы работы и телефоны сети.",
   undefined,
   {
     index: true,
@@ -119,7 +119,7 @@ onMounted(() => {
             <p>{{ item.description }}</p>
             <p class="caption">
               <template v-if="item.address">{{ item.address }}<br /></template>
-              {{ item.hours ?? `Общий режим сети: ${prohookContacts.hours}` }}
+              {{ item.hours ?? "Часы работы уточняйте по телефону" }}
               <template v-if="item.license"
                 ><br />
                 Лицензия № {{ item.license.number }} (до

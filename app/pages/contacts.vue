@@ -60,10 +60,6 @@ const socials = [
             </dd>
           </div>
           <div>
-            <dt>Режим работы</dt>
-            <dd>{{ prohookContacts.hours }}</dd>
-          </div>
-          <div>
             <dt>Соцсети</dt>
             <dd>
               <ul class="contact-links">

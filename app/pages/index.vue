@@ -3,6 +3,10 @@ import { websiteSchema } from "~~/shared/seo/schema";
 
 const { data: meta, error, refresh } = await useCatalogMeta();
 const ageConfirmed = useAgeConfirmed();
+// Секция «Резерв — просто» объясняет отправку запроса на резерв —
+// анонимам (в том числе модераторам рекламных карточек, решение
+// 19.11.2026) и краулерам она не показывается, SSR-HTML тоже чист.
+const { loggedIn } = useSessionUser();
 const rootCategories = computed(
   () => meta.value?.categories.filter((item) => !item.parentId) ?? [],
 );
@@ -61,7 +65,7 @@ useHead({
       ></UiContainer
     ><PopularProductsSection v-if="catalogVisible" /><PromosSection
       v-if="catalogVisible"
-    /><BrandsSection
+    /><HowItWorksSection v-if="loggedIn" /><BrandsSection
       v-if="catalogVisible && meta"
       :categories="categories"
     /><AboutSection /><StoresSection /><ContactsSection />

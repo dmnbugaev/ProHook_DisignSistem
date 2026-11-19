@@ -1,9 +1,16 @@
-import { test, expect, type Page } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Page,
+  type APIRequestContext,
+} from "@playwright/test";
 
 // Запрос на резерв: список выбранных товаров, форма, серверная валидация,
 // идемпотентность и отсутствие утечек Telegram-секретов. Капча и Telegram
 // отключены в e2e (нет ключей, см. playwright.config.ts); их логика покрыта
-// tests/reservation.test.mjs.
+// tests/reservation.test.mjs. С 19.11.2026 отправка резерва доступна только
+// вошедшим совершеннолетним: тесты формы ходят с сессией, аноним получает
+// гейт в UI и 401 от API.
 
 const AGE_COOKIE = {
   name: "prohook-age-confirmed",
@@ -29,6 +36,46 @@ async function openGated(page: Page, path: string) {
     undefined,
     { timeout: 15000 },
   );
+}
+
+/**
+ * Регистрирует совершеннолетний аккаунт и возвращает токен сессии:
+ * без него форма резерва скрыта гейтом, API отвечает 401.
+ */
+async function registerAdultSession(
+  request: APIRequestContext,
+): Promise<string> {
+  const digits = String(Math.floor(Math.random() * 1e7)).padStart(7, "0");
+  const phone = `+7 (999) ${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+  const birthYear = new Date().getFullYear() - 30;
+  const registration = await request.post("/api/auth/register", {
+    data: {
+      lastName: "Резерров",
+      firstName: "Иван",
+      middleName: "Иванович",
+      dateOfBirth: `01.01.${birthYear}`,
+      phone,
+      password: "secret123",
+      passwordConfirm: "secret123",
+      consent: true,
+    },
+  });
+  expect(registration.status()).toBe(200);
+  const setCookie = registration.headers()["set-cookie"] ?? "";
+  const sessionToken = /prohook-session=([^;]+)/.exec(setCookie)?.[1];
+  expect(sessionToken).toBeTruthy();
+  return sessionToken as string;
+}
+
+async function addSessionCookie(page: Page, sessionToken: string) {
+  await page.context().addCookies([
+    {
+      name: "prohook-session",
+      value: sessionToken,
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
 }
 
 test("selection list supports add, quantity, removal, clear and persistence", async ({
@@ -90,13 +137,48 @@ test("catalog cards add to the list and link to /reserve", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("reserve form requires contacts, store and both consents", async ({
-  page,
-}) => {
+test("reserve form is gated for anonymous visitors", async ({ page }) => {
   await page.context().addCookies([AGE_COOKIE, STORE_COOKIE]);
   await openGated(page, "/product/stands-01");
   await page.getByRole("button", { name: "Добавить в список" }).click();
   await openGated(page, "/reserve");
+  // Список выбранных остаётся публичным, отправка — только после входа:
+  // модераторы рекламных карточек видят каталог без бронирования.
+  await expect(page.getByRole("link", { name: "Подставка 01" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Отправить запрос на резерв" }),
+  ).toHaveCount(0);
+  const gate = page.locator(".reserve-gate");
+  await expect(gate).toBeVisible();
+  await expect(
+    gate.getByRole("link", { name: "Войти", exact: true }),
+  ).toHaveAttribute("href", "/login?redirect=/reserve");
+  await expect(
+    gate.getByRole("link", { name: "Зарегистрироваться" }),
+  ).toHaveAttribute("href", "/register?redirect=/reserve");
+  // Аннотация о смысле резерва доступна до входа.
+  await expect(
+    page.getByText("держит выбранные товары 12 часов"),
+  ).toBeVisible();
+});
+
+test("reserve form requires contacts, store and consent", async ({
+  page,
+  request,
+}) => {
+  await page.context().addCookies([AGE_COOKIE, STORE_COOKIE]);
+  await addSessionCookie(page, await registerAdultSession(request));
+  await openGated(page, "/product/stands-01");
+  await page.getByRole("button", { name: "Добавить в список" }).click();
+  await openGated(page, "/reserve");
+  // Авторизованному имя и телефон подставляются из аккаунта — очищаем,
+  // чтобы проверить валидацию на по-настоящему пустой форме.
+  await page.getByLabel("Имя *", { exact: true }).fill("");
+  await page.getByLabel("Телефон *").fill("");
+  // Telegram-доставка в e2e не настроена (ключи затёрты): согласие на
+  // передачу через Telegram скрыто вместе с чекбоксом — остаётся только
+  // согласие на обработку персональных данных (флаг /api/integration-flags).
+  await expect(page.getByRole("checkbox")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Отправить запрос на резерв" })
     .click();
@@ -109,15 +191,14 @@ test("reserve form requires contacts, store and both consents", async ({
   await expect(
     page.getByText("Подтвердите согласие на обработку персональных данных."),
   ).toBeVisible();
-  await expect(
-    page.getByText("Подтвердите согласие на передачу запроса через Telegram."),
-  ).toBeVisible();
 });
 
 test("reserve form submits and shows the public request id", async ({
   page,
+  request,
 }) => {
   await page.context().addCookies([AGE_COOKIE, STORE_COOKIE]);
+  await addSessionCookie(page, await registerAdultSession(request));
   await openGated(page, "/product/stands-01");
   await page.getByRole("button", { name: "Добавить в список" }).click();
   await openGated(page, "/reserve");
@@ -126,7 +207,6 @@ test("reserve form submits and shows the public request id", async ({
   await page.getByLabel("Комментарий (необязательно)").fill("Приду вечером");
   const consents = page.getByRole("checkbox");
   await consents.nth(0).check();
-  await consents.nth(1).check();
   await page
     .getByRole("button", { name: "Отправить запрос на резерв" })
     .click();
@@ -134,15 +214,36 @@ test("reserve form submits and shows the public request id", async ({
     page.getByRole("heading", { name: "Запрос на резерв отправлен" }),
   ).toBeVisible();
   await expect(page.getByText(/R-[A-HJ-NP-Z2-9]{6}/).first()).toBeVisible();
+  // Удержание товара — 12 часов (решение владельца 19.11.2026).
+  await expect(page.getByText("Запрос действует 12 часов")).toBeVisible();
   // Список очищен после успешной отправки.
   await expect(
     page.getByRole("link", { name: "Список выбранных товаров, позиций:" }),
   ).toHaveCount(0);
 });
 
+test("anonymous visitors cannot submit reservation requests", async ({
+  request,
+}) => {
+  // Сервер — источник истины: без сессии 401, независимо от тела.
+  const response = await request.post("/api/reservations", {
+    data: {
+      name: "Иван Анонимов",
+      phone: "+7 999 123-45-67",
+      storeId: "store-2",
+      comment: "",
+      consent: true,
+      consentTelegram: true,
+      items: [{ productId: "p1", quantity: 1 }],
+    },
+  });
+  expect(response.status()).toBe(401);
+});
+
 test("server re-validates store, products, stock and consents", async ({
   request,
 }) => {
+  const sessionToken = await registerAdultSession(request);
   const payload = {
     name: "Иван Резерров",
     phone: "+7 999 123-45-67",
@@ -153,7 +254,10 @@ test("server re-validates store, products, stock and consents", async ({
     items: [{ productId: "p1", quantity: 1 }],
   };
   const post = (data: unknown, headers: Record<string, string> = {}) =>
-    request.post("/api/reservations", { data, headers });
+    request.post("/api/reservations", {
+      data,
+      headers: { cookie: `prohook-session=${sessionToken}`, ...headers },
+    });
 
   // Несуществующий магазин.
   const unknownStore = await post({ ...payload, storeId: "store-99" });
@@ -226,6 +330,7 @@ test("server re-validates store, products, stock and consents", async ({
 test("idempotency: the same key returns the same request without duplicates", async ({
   request,
 }) => {
+  const sessionToken = await registerAdultSession(request);
   const payload = {
     name: "Иван Резерров",
     phone: "+7 999 123-45-67",
@@ -236,9 +341,13 @@ test("idempotency: the same key returns the same request without duplicates", as
     items: [{ productId: "p1", quantity: 1 }],
   };
   const key = `e2e-key-${Date.now()}`;
+  const headers = {
+    "Idempotency-Key": key,
+    cookie: `prohook-session=${sessionToken}`,
+  };
   const first = await request.post("/api/reservations", {
     data: payload,
-    headers: { "Idempotency-Key": key },
+    headers,
   });
   expect(first.status()).toBe(200);
   const firstBody = await first.json();
@@ -247,7 +356,7 @@ test("idempotency: the same key returns the same request without duplicates", as
   // double-submit/retry: тот же ключ — тот же запрос.
   const second = await request.post("/api/reservations", {
     data: payload,
-    headers: { "Idempotency-Key": key },
+    headers,
   });
   expect(second.status()).toBe(200);
   expect(await second.json()).toMatchObject({
@@ -258,12 +367,13 @@ test("idempotency: the same key returns the same request without duplicates", as
   // Другой ключ — другой запрос.
   const third = await request.post("/api/reservations", {
     data: payload,
-    headers: { "Idempotency-Key": `${key}-next` },
+    headers: { ...headers, "Idempotency-Key": `${key}-next` },
   });
   expect((await third.json()).publicId).not.toBe(firstBody.publicId);
 });
 
 test("authenticated minors cannot submit reservation requests", async ({
+  page,
   request,
 }) => {
   const suffix = String(Date.now()).slice(-7);
@@ -299,6 +409,50 @@ test("authenticated minors cannot submit reservation requests", async ({
     headers: { cookie: `prohook-session=${sessionToken}` },
   });
   expect(response.status()).toBe(403);
+  // В UI несовершеннолетним вместо формы — уведомление (не декорация:
+  // сервер всё равно ответит 403). Секция формы показывается при
+  // непустом списке — кладём позицию в cookie.
+  await page.context().addCookies([
+    AGE_COOKIE,
+    STORE_COOKIE,
+    {
+      name: "prohook-session",
+      value: sessionToken as string,
+      domain: "127.0.0.1",
+      path: "/",
+    },
+    {
+      name: "prohook-selection",
+      value: JSON.stringify([{ productId: "p1", quantity: 1 }]),
+      domain: "127.0.0.1",
+      path: "/",
+    },
+  ]);
+  await openGated(page, "/reserve");
+  await expect(
+    page.getByRole("button", { name: "Отправить запрос на резерв" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Запросы на резерв доступны только совершеннолетним"),
+  ).toBeVisible();
+});
+
+test("homepage shows the reserve section only to signed-in visitors", async ({
+  page,
+  request,
+}) => {
+  await page.context().addCookies([AGE_COOKIE]);
+  await openGated(page, "/");
+  // Аноним — в том числе модератор рекламной карточки — не видит секцию
+  // «Резерв — просто» даже после подтверждения 18+.
+  await expect(
+    page.getByRole("heading", { name: "Резерв — просто." }),
+  ).toHaveCount(0);
+  await addSessionCookie(page, await registerAdultSession(request));
+  await openGated(page, "/");
+  await expect(
+    page.getByRole("heading", { name: "Резерв — просто." }),
+  ).toBeVisible();
 });
 
 test("no telegram secrets or chat ids reach the browser", async ({

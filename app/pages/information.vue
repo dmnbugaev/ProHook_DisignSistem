@@ -67,8 +67,9 @@ const licensedStores = computed(
           prohookContacts.email
         }}</a
         >.<br />
-        Режим работы торговых точек уточняйте по телефону; для сети указан общий
-        режим {{ prohookContacts.hours.toLowerCase() }}.
+        Режим работы каждой точки — на странице
+        <NuxtLink to="/stores">«Магазины»</NuxtLink>; при необходимости
+        уточняйте его по телефону.
       </p>
       <h2>Лицензирование розничной продажи</h2>
       <p v-if="licensedStores.length">

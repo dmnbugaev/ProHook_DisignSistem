@@ -1,8 +1,16 @@
-import { test, expect, type Page } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Page,
+  type APIRequestContext,
+} from "@playwright/test";
 
 // Устойчивость списка выбранных товаров и API запроса на резерв к битым
 // данным и злоупотреблениям. Фикстура содержит stockDetail, поэтому эти
 // тесты проверяют путь ТОЧНЫХ остатков (а не только бакетов наличия).
+// Сценарии с отправкой формы/запроса идут с сессией совершеннолетнего:
+// анонимам API отвечает 401 (решение о резерве после авторизации,
+// 19.11.2026).
 
 const AGE_COOKIE = {
   name: "prohook-age-confirmed",
@@ -21,6 +29,33 @@ function selectionCookie(entries: unknown) {
   return {
     name: "prohook-selection",
     value: JSON.stringify(entries),
+    domain: "127.0.0.1",
+    path: "/",
+  };
+}
+
+/** Регистрирует совершеннолетний аккаунт; cookie для контекста страницы. */
+async function adultSessionCookie(request: APIRequestContext) {
+  const digits = String(Math.floor(Math.random() * 1e7)).padStart(7, "0");
+  const registration = await request.post("/api/auth/register", {
+    data: {
+      lastName: "Устойчивый",
+      firstName: "Иван",
+      middleName: "Иванович",
+      dateOfBirth: `01.01.${new Date().getFullYear() - 30}`,
+      phone: `+7 (999) ${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`,
+      password: "secret123",
+      passwordConfirm: "secret123",
+      consent: true,
+    },
+  });
+  expect(registration.status()).toBe(200);
+  const setCookie = registration.headers()["set-cookie"] ?? "";
+  const sessionToken = /prohook-session=([^;]+)/.exec(setCookie)?.[1];
+  expect(sessionToken).toBeTruthy();
+  return {
+    name: "prohook-session",
+    value: sessionToken as string,
     domain: "127.0.0.1",
     path: "/",
   };
@@ -64,10 +99,12 @@ test("corrupted selection cookie never breaks the page", async ({ page }) => {
 
 test("hostile selection cookie is sanitized to valid entries", async ({
   page,
+  request,
 }) => {
   await page.context().addCookies([
     AGE_COOKIE,
     STORE_COOKIE,
+    await adultSessionCookie(request),
     selectionCookie([
       { productId: "p1", quantity: 7 },
       { productId: "p1", quantity: 2 }, // дубль — игнорируется
@@ -86,9 +123,9 @@ test("hostile selection cookie is sanitized to valid entries", async ({
   // Список кликабелен и отправляется после санитизации.
   await page.getByLabel("Имя *", { exact: true }).fill("Иван Санитизин");
   await page.getByLabel("Телефон *").fill("+7 999 000-00-00");
+  // Telegram-доставка в e2e не настроена — один чекбокс (ПДн).
   const consents = page.getByRole("checkbox");
   await consents.nth(0).check();
-  await consents.nth(1).check();
   await page
     .getByRole("button", { name: "Отправить запрос на резерв" })
     .click();
@@ -121,12 +158,14 @@ test("oversized cookie (30 items) is capped to the first 20", async ({
 
 test("stale product in the list blocks submit and can be removed", async ({
   page,
+  request,
 }) => {
   await page
     .context()
     .addCookies([
       AGE_COOKIE,
       STORE_COOKIE,
+      await adultSessionCookie(request),
       selectionCookie([{ productId: "ghost-01", quantity: 2 }]),
     ]);
   await openGated(page, "/reserve");
@@ -192,12 +231,16 @@ async function selectionHelper(
     ]);
 }
 
-test("double-click submit sends exactly one request", async ({ page }) => {
+test("double-click submit sends exactly one request", async ({
+  page,
+  request,
+}) => {
   await page
     .context()
     .addCookies([
       AGE_COOKIE,
       STORE_COOKIE,
+      await adultSessionCookie(request),
       selectionCookie([{ productId: "p1", quantity: 1 }]),
     ]);
   await openGated(page, "/reserve");
@@ -205,7 +248,6 @@ test("double-click submit sends exactly one request", async ({ page }) => {
   await page.getByLabel("Телефон *").fill("+7 999 111-11-11");
   const consents = page.getByRole("checkbox");
   await consents.nth(0).check();
-  await consents.nth(1).check();
   let posts = 0;
   page.on("request", (request) => {
     if (
@@ -241,6 +283,8 @@ test("double-click submit sends exactly one request", async ({ page }) => {
 test("exact stock beats availability bucket on the server", async ({
   request,
 }) => {
+  const session = await adultSessionCookie(request);
+  const cookie = `${session.name}=${session.value}`;
   const payload = {
     name: "Иван Точный",
     phone: "+7 999 222-22-22",
@@ -249,33 +293,42 @@ test("exact stock beats availability bucket on the server", async ({
     consent: true,
     consentTelegram: true,
   };
+  const post = (data: unknown, headers: Record<string, string> = {}) =>
+    request.post("/api/reservations", {
+      data,
+      headers: { cookie, ...headers },
+    });
   // p2 в store-2: бакет «В наличии» разрешил бы 10 шт., точный остаток 2 →
   // сервер обязан отказать в 3 шт. (точные данные бьют бакет).
-  const over = await request.post("/api/reservations", {
-    data: { ...payload, items: [{ productId: "p2", quantity: 3 }] },
+  const over = await post({
+    ...payload,
+    items: [{ productId: "p2", quantity: 3 }],
   });
   expect(over.status()).toBe(422);
   expect(((await over.json()).data?.errors ?? {}).items).toContain(
     "доступно к резерву 2 шт.",
   );
-  const exact = await request.post("/api/reservations", {
-    data: { ...payload, items: [{ productId: "p2", quantity: 2 }] },
+  const exact = await post({
+    ...payload,
+    items: [{ productId: "p2", quantity: 2 }],
   });
   expect(exact.status()).toBe(200);
   // Точный остаток в пределах лимита позиции не мешает (p4: 6 шт.).
-  const fine = await request.post("/api/reservations", {
-    data: { ...payload, items: [{ productId: "p4", quantity: 3 }] },
+  const fine = await post({
+    ...payload,
+    items: [{ productId: "p4", quantity: 3 }],
   });
   expect(fine.status()).toBe(200);
   // Точный остаток выше лимита позиции (12 > 10) ограничивается лимитом.
-  const clamped = await request.post("/api/reservations", {
-    data: { ...payload, items: [{ productId: "p1", quantity: 10 }] },
-    headers: { "Idempotency-Key": `robust-${Date.now()}` },
-  });
+  const clamped = await post(
+    { ...payload, items: [{ productId: "p1", quantity: 10 }] },
+    { "Idempotency-Key": `robust-${Date.now()}` },
+  );
   expect(clamped.status()).toBe(200);
   // Товар без оффера в выбранном магазине (p5 продаётся только в store-3).
-  const noOffer = await request.post("/api/reservations", {
-    data: { ...payload, items: [{ productId: "p5", quantity: 1 }] },
+  const noOffer = await post({
+    ...payload,
+    items: [{ productId: "p5", quantity: 1 }],
   });
   expect(noOffer.status()).toBe(422);
   expect(((await noOffer.json()).data?.errors ?? {}).items).toContain(
@@ -286,6 +339,8 @@ test("exact stock beats availability bucket on the server", async ({
 test("API rejects malformed bodies, sizes and wrong methods", async ({
   request,
 }) => {
+  const session = await adultSessionCookie(request);
+  const cookie = `${session.name}=${session.value}`;
   const payload = {
     name: "Иван Точный",
     phone: "+7 999 222-22-22",
@@ -295,31 +350,29 @@ test("API rejects malformed bodies, sizes and wrong methods", async ({
     consentTelegram: true,
     items: [{ productId: "p1", quantity: 1 }],
   };
+  const post = (data: unknown, headers: Record<string, string> = {}) =>
+    request.post("/api/reservations", {
+      data,
+      headers: { cookie, ...headers },
+    });
   // GET не поддерживается (только POST-эндпоинт; Nitro отвечает 404/405).
   expect([404, 405]).toContain(
     (await request.get("/api/reservations")).status(),
   );
   // Тело больше 8 КБ отбрасывается до валидации.
-  const huge = await request.post("/api/reservations", {
-    data: { ...payload, comment: "x".repeat(9000) },
-  });
+  const huge = await post({ ...payload, comment: "x".repeat(9000) });
   expect(huge.status()).toBe(413);
   // Не-объектные JSON-тела (null без тела уходит в 415 «JSON required»).
   for (const data of [null, [], "строка", 42, true]) {
-    const response = await request.post("/api/reservations", { data });
+    const response = await post(data);
     expect([415, 422]).toContain(response.status());
   }
   // Некорректный Idempotency-Key игнорируется — запрос создаётся обычным
   // путём (ключ слишком короткий).
-  const badKey = await request.post("/api/reservations", {
-    data: payload,
-    headers: { "Idempotency-Key": "short" },
-  });
+  const badKey = await post(payload, { "Idempotency-Key": "short" });
   expect(badKey.status()).toBe(200);
   expect((await badKey.json()).replayed).toBeUndefined();
   // Поле captchaToken без настроенной капчи не влияет на результат.
-  const withToken = await request.post("/api/reservations", {
-    data: { ...payload, captchaToken: "leftover-token" },
-  });
+  const withToken = await post({ ...payload, captchaToken: "leftover-token" });
   expect(withToken.status()).toBe(200);
 });

@@ -9,6 +9,7 @@ const { storeLocations, storeCities } = await jiti.import(
 const { storeAddresses } = await jiti.import(
   "../server/data/store-addresses.ts",
 );
+const { storeHours } = await jiti.import("../server/data/store-hours.ts");
 const coordinates = await jiti.import(
   "../shared/content/store-coordinates.json",
 );
@@ -64,6 +65,43 @@ test("адреса согласованы с учётным списком store
     assert.ok(
       matched,
       `адрес из учёта не найден в публичном списке: ${address}`,
+    );
+  }
+});
+
+test("часы работы: заданы у всех точек и согласованы с учётным списком", () => {
+  // С 19.11.2026 общего режима сети нет: часы каждой точки лежат в
+  // server/data/store-hours.ts (ключ — ID склада) и дублируются в
+  // публичном справочнике; расхождение источников — ошибка данных.
+  assert.equal(
+    Object.keys(storeHours).length,
+    30,
+    "ожидаем запись часов для каждой из 30 точек",
+  );
+  for (const store of storeLocations) {
+    assert.ok(store.hours, `нет часов у ${store.id}`);
+    // Формат должен разбираться parseOpeningHours (Schema.org openingHours).
+    assert.match(
+      store.hours,
+      /^Ежедневно, \d{1,2}:\d{2}–\d{1,2}:\d{2}$/,
+      `неожиданный формат часов у ${store.id}: ${store.hours}`,
+    );
+    const entry = Object.entries(storeAddresses).find(([, address]) => {
+      // Московские строки в учёте содержат суффикс «— Название, район».
+      const street = address.split(" — ")[0].trim();
+      return (
+        store.address === street ||
+        store.address.includes(street) ||
+        street.includes(store.address)
+      );
+    });
+    assert.ok(entry, `адрес не найден в учёте: ${store.address}`);
+    const hours = storeHours[entry[0]];
+    assert.ok(hours, `нет записи часов в учёте для ${store.address}`);
+    assert.equal(
+      hours,
+      store.hours,
+      `часы расходятся для ${store.address}: учёт «${hours}», сайт «${store.hours}»`,
     );
   }
 });
