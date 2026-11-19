@@ -54,8 +54,17 @@ export function normalizeSelectionItems(
  * Валидация формы запроса на резерв. Используется и на клиенте (мгновенные
  * подсказки), и на сервере (источник истины). Из входного объекта берутся
  * только известные поля — mass assignment исключён конструкцией данных.
+ *
+ * Согласие на передачу через Telegram обязательно только когда доставка
+ * реально настроена (options.requireTelegramConsent, флаг
+ * /api/integration-flags): без Telegram заявка уходит задачей в МойСклад
+ * и трансграничная передача не происходит. Форма и сервер обязаны
+ * руководствоваться одним условием — по образцу сайта Бункера.
  */
-export function validateReservation(input: unknown): {
+export function validateReservation(
+  input: unknown,
+  options?: { requireTelegramConsent?: boolean },
+): {
   data: ReservationData;
   errors: Record<string, string>;
   valid: boolean;
@@ -110,7 +119,7 @@ export function validateReservation(input: unknown): {
 
   if (raw.consent !== true)
     errors.consent = "Подтвердите согласие на обработку персональных данных.";
-  if (raw.consentTelegram !== true)
+  if (options?.requireTelegramConsent !== false && raw.consentTelegram !== true)
     errors.consentTelegram =
       "Подтвердите согласие на передачу запроса через Telegram.";
 
