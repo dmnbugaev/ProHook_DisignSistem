@@ -4,7 +4,6 @@ import {
   reservationDailyIndex,
   type StoredReservation,
 } from "./reservation-store";
-import { notifyStaffViaMoySklad } from "./moysklad-notify";
 import { telegramSilenced } from "../utils/telegram-silence";
 import {
   isFatalTelegramChatError,
@@ -225,11 +224,13 @@ export async function dispatchReservationNotification(
   const chatIds = parseReservationChatIds(
     process.env.TELEGRAM_RESERVATION_CHAT_IDS,
   );
-  // Без конфигурации бот молча пропускается (dev/тесты); запрос сохранён.
+  // Без конфигурации бот молча пропускается (dev/тесты); запрос сохранён
+  // и виден сотрудникам в инбоксе. Задачу в МойСклад не создаём — решение
+  // владельца 19.11.2026: задачи в МойСклад из заявок не создаются никогда.
   if (!token || chatIds.length === 0) {
-    await fallbackToMoySkladTask(
-      reservation,
-      await reservationDailyIndex(reservation),
+    console.warn(
+      "Reservation telegram not configured — заявка только в инбоксе:",
+      reservation.publicId,
     );
     return;
   }
@@ -283,9 +284,10 @@ export async function dispatchReservationNotification(
       if (attempt < TELEGRAM_MAX_DELIVERY_ATTEMPTS)
         await delay(telegramRetryDelayMs(attempt));
     }
-    if (delivered.size === 0)
-      await fallbackToMoySkladTask(reservation, dailyIndex);
-    // Не добраны только фатальные чаты — причина уже в журнале выше.
+    // Недоставленное остаётся в хранилище и инбоксе /api/staff/inbox,
+    // добирает свипер telegram-redelivery. Задачу в МойСклад не создаём —
+    // решение владельца 19.11.2026: задачи в МойСклад из заявок не
+    // создаются никогда.
     const pending = chatIds.filter(
       (chatId) => !delivered.has(chatId) && !fatal.has(chatId),
     );
@@ -302,32 +304,4 @@ export async function dispatchReservationNotification(
 /** Доставка ещё идёт? — свипер до-доставки пропускает такие записи. */
 export function reservationDeliveryInFlight(id: string): boolean {
   return inFlight.has(id);
-}
-
-/**
- * Резервный канал: хостинг продакшена блокирует api.telegram.org, поэтому
- * недоставленное уведомление становится задачей в МойСклад (API доступен).
- * Задача создаётся при полной недоставке (0 чатов); частичную добирает
- * свипер telegram-redelivery. Без токена МойСклад (dev/e2e) — логируется.
- */
-async function fallbackToMoySkladTask(
-  reservation: StoredReservation,
-  dailyIndex: number,
-) {
-  const created = await notifyStaffViaMoySklad(
-    `ПроХук · резерв ${reservation.publicId}`,
-    buildReservationMessage(reservation, dailyIndex),
-  );
-  if (!created) {
-    // Раньше молчали: провал обоих каналов не должен быть невидимым.
-    console.error(
-      "Reservation MoySklad fallback failed:",
-      reservation.publicId,
-    );
-    return;
-  }
-  console.info(
-    "Reservation notification routed to MoySklad task:",
-    reservation.publicId,
-  );
 }

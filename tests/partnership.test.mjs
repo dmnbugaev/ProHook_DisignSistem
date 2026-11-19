@@ -16,7 +16,6 @@ process.env.TELEGRAM_RETRY_DELAY_MS = "1";
 // быть экспортированы боевые токены).
 process.env.NUXT_MOYSKLAD_TOKEN = "";
 process.env.MOYSKLAD_TOKEN = "";
-process.env.MOYSKLAD_NOTIFY_EMPLOYEE_ID = "";
 
 const jiti = createJiti(import.meta.url);
 const { validatePartnership } = await jiti.import(

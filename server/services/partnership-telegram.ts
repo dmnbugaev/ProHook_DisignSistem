@@ -1,7 +1,6 @@
 import type { Partnership } from "../../shared/utils/partnership";
 import {
   logFatalChats,
-  partnershipMessage,
   sendPartnership,
   telegramRetryDelayMs,
   TELEGRAM_MAX_DELIVERY_ATTEMPTS,
@@ -10,7 +9,6 @@ import {
   recordPartnershipAttempt,
   type StoredPartnership,
 } from "./partnership-store";
-import { notifyStaffViaMoySklad } from "./moysklad-notify";
 import { telegramSilenced } from "../utils/telegram-silence";
 
 /**
@@ -53,8 +51,14 @@ export async function dispatchPartnershipNotification(
     );
     return;
   }
+  // Без конфигурации бот молча пропускается (dev/тесты); заявка сохранена
+  // и видна сотрудникам в инбоксе. Задачу в МойСклад не создаём — решение
+  // владельца 19.11.2026: задачи в МойСклад из заявок не создаются никогда.
   if (!botToken || chatIds.length === 0) {
-    await fallbackToMoySkladTask(application, data);
+    console.warn(
+      "Partnership telegram not configured — заявка только в инбоксе:",
+      application.publicId,
+    );
     return;
   }
   if (inFlight.has(application.id)) return;
@@ -106,8 +110,10 @@ export async function dispatchPartnershipNotification(
       if (attempt < TELEGRAM_MAX_DELIVERY_ATTEMPTS)
         await delay(telegramRetryDelayMs(attempt));
     }
-    if (delivered.size === 0) await fallbackToMoySkladTask(application, data);
-    // Не добраны только фатальные чаты — причина уже в журнале выше.
+    // Недоставленное остаётся в хранилище и инбоксе /api/staff/inbox,
+    // добирает свипер telegram-redelivery. Задачу в МойСклад не создаём —
+    // решение владельца 19.11.2026: задачи в МойСклад из заявок не
+    // создаются никогда.
     const pending = chatIds.filter(
       (chatId) => !delivered.has(chatId) && !fatal.has(chatId),
     );
@@ -124,32 +130,4 @@ export async function dispatchPartnershipNotification(
 /** Доставка ещё идёт? — свипер до-доставки пропускает такие записи. */
 export function partnershipDeliveryInFlight(id: string): boolean {
   return inFlight.has(id);
-}
-
-/**
- * Резервный канал: хостинг продакшена блокирует api.telegram.org, поэтому
- * недоставленное уведомление становится задачей сотруднику в МойСклад.
- * Задача создаётся при полной недоставке (0 чатов); частичную добирает
- * свипер telegram-redelivery.
- */
-async function fallbackToMoySkladTask(
-  application: StoredPartnership,
-  data: Partnership,
-) {
-  const created = await notifyStaffViaMoySklad(
-    `ПроХук · партнёрство ${application.publicId}`,
-    partnershipMessage(data, application.publicId),
-  );
-  if (!created) {
-    // Раньше молчали: провал обоих каналов не должен быть невидимым.
-    console.error(
-      "Partnership MoySklad fallback failed:",
-      application.publicId,
-    );
-    return;
-  }
-  console.info(
-    "Partnership notification routed to MoySklad task:",
-    application.publicId,
-  );
 }

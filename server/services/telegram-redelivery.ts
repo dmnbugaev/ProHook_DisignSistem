@@ -29,6 +29,12 @@ import { partnershipDeliveryInFlight } from "./partnership-telegram";
  * Пробы монитор-бота не рассылаются никогда (мандат владельца 05.11.2026):
  * у них dispatch не запускается, telegramDelivery.attempts остаётся 0 —
  * свипер обрабатывает только записи с attempts > 0.
+ *
+ * Задач в МойСклад свипер не создаёт никогда (решение владельца
+ * 19.11.2026): недоставленное навсегда остаётся в хранилище и инбоксе
+ * /api/staff/inbox. Раньше резервным каналом была задача в МойСклад —
+ * при флапе туннеля свипер позже доставлял заявку в Telegram, и она
+ * оказывалась в обоих каналах (диагностика 19.11.2026).
  */
 
 /** Окно до-доставки: резерв актуален сутки (RESERVATION_TTL_MS). */
@@ -75,7 +81,8 @@ async function redeliverPartnerships(
   for (const application of await listPartnerships(100)) {
     const { attempts, deliveredTo, fatalTo } = application.telegramDelivery;
     const fatal = new Set(fatalTo ?? []);
-    // attempts === 0 — рассылка намеренно пропущена (пробы монитор-бота).
+    // attempts === 0 — рассылка намеренно пропущена (пробы монитор-бота);
+    // потолок попыток исчерпан — недоставленное остаётся только в инбоксе.
     if (attempts === 0 || attempts >= REDELIVERY_MAX_ATTEMPTS) continue;
     if (partnershipDeliveryInFlight(application.id)) continue;
     if (!withinWindow(application.createdAt, now)) continue;
@@ -122,7 +129,8 @@ async function redeliverReservations(
   for (const reservation of await listReservations(100)) {
     const { attempts, deliveredTo, fatalTo } = reservation.telegramDelivery;
     const fatal = new Set(fatalTo ?? []);
-    // attempts === 0 — рассылка намеренно пропущена (пробы монитор-бота).
+    // attempts === 0 — рассылка намеренно пропущена (пробы монитор-бота);
+    // потолок попыток исчерпан — недоставленное остаётся только в инбоксе.
     if (attempts === 0 || attempts >= REDELIVERY_MAX_ATTEMPTS) continue;
     if (reservationDeliveryInFlight(reservation.id)) continue;
     if (!withinWindow(reservation.createdAt, now)) continue;

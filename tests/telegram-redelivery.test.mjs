@@ -8,15 +8,12 @@ import process from "node:process";
 import { createJiti } from "jiti";
 
 // Свежие каталоги обоих сторов до импорта модулей: сторы читают env при
-// импорте. Быстрые повторы и отключённый МойСклад — как в соседних тестах.
+// импорте. Быстрые повторы — как в соседних тестах.
 const partnershipDir = mkdtempSync(join(tmpdir(), "prohook-partnership-rd-"));
 const reservationDir = mkdtempSync(join(tmpdir(), "prohook-reservations-rd-"));
 process.env.PARTNERSHIP_DATA_DIR = partnershipDir;
 process.env.RESERVATION_DATA_DIR = reservationDir;
 process.env.TELEGRAM_RETRY_DELAY_MS = "1";
-process.env.NUXT_MOYSKLAD_TOKEN = "";
-process.env.MOYSKLAD_TOKEN = "";
-process.env.MOYSKLAD_NOTIFY_EMPLOYEE_ID = "";
 
 const jiti = createJiti(import.meta.url);
 const { redeliverIncompleteTelegram } = await jiti.import(
@@ -180,13 +177,7 @@ test("ignores entries older than the redelivery window", async () => {
     reservationInput("Старый резерв"),
   );
   await recordTelegramAttempt(reservation.id, ["111"]);
-  // Состариваем запись прямой правкой файла стора и сбрасываем кэш.
-  const file = join(reservationDir, "reservations.json");
-  const data = JSON.parse(readFileSync(file, "utf8"));
-  const entry = data.requests.find((item) => item.id === reservation.id);
-  entry.createdAt = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
-  writeFileSync(file, JSON.stringify(data));
-  resetReservationStoreForTests();
+  ageReservation(reservation.id, 25 * 60 * 60 * 1000);
 
   const sentTo = [];
   await redeliverIncompleteTelegram(channels, async (url, options) => {
@@ -196,3 +187,13 @@ test("ignores entries older than the redelivery window", async () => {
   // Свежих недоставленных нет, состаревшая отфильтрована окном 24 ч.
   assert.deepEqual(sentTo, []);
 });
+
+/** Состаривание записи прямой правкой файла стора + сброс кэша. */
+function ageReservation(id, ms) {
+  const file = join(reservationDir, "reservations.json");
+  const data = JSON.parse(readFileSync(file, "utf8"));
+  const entry = data.requests.find((item) => item.id === id);
+  entry.createdAt = new Date(Date.now() - ms).toISOString();
+  writeFileSync(file, JSON.stringify(data));
+  resetReservationStoreForTests();
+}
