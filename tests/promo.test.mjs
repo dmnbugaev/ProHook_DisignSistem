@@ -294,6 +294,39 @@ test("апдейты: фото с подписью скачивается, /del 
   );
 });
 
+test("апдейты: сбой скачивания фото не теряет карточку (инцидент 11.11)", async () => {
+  // Туннель к Telegram лежит: getFile падает по сети. Карточка обязана
+  // деградировать до «без фото», а не исчезнуть вместе с апдейтом —
+  // подтверждённый offset'ом повтор уже не приходит.
+  const healthyFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    if (String(input).includes("getFile")) throw new Error("fetch failed");
+    return healthyFetch(input);
+  };
+  try {
+    await handlePromoUpdateOnce({
+      update_id: 35,
+      message: {
+        message_id: 35,
+        chat: { id: 6939112736 },
+        caption: "Акция с фото\nТекст",
+        photo: [{ file_id: "photo-file-id" }],
+      },
+    });
+  } finally {
+    globalThis.fetch = healthyFetch;
+  }
+  const [promo] = await listPromos();
+  assert.ok(promo, "карточка создана, несмотря на сбой скачивания");
+  assert.equal(promo.title, "Акция с фото");
+  assert.equal(promo.mediaFile ?? null, null, "фото не прикреплено");
+  assert.match(
+    sentMessages.at(-1)?.text ?? "",
+    /добавлена без фото/,
+    "оператор получил ответ о деградации, а не молчание",
+  );
+});
+
 test("апдейты: фото без подписи получает подсказку, карточки нет", async () => {
   await handlePromoUpdateOnce({
     update_id: 30,

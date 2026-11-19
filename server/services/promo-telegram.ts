@@ -297,29 +297,43 @@ const HELP_TEXT = [
   "/pin N — закрепить в начале",
 ].join("\n");
 
-/** Скачивание медиа карточки (фото или стикер) во внутренний каталог хранилища. */
+/**
+ * Скачивание медиа карточки (фото или стикер) во внутренний каталог хранилища.
+ * Сетевой сбой (туннель к Telegram флапит) не бросается наружу: карточка
+ * деградирует до «без фото», а стикер — до просьбы повторить, вместо полной
+ * потери апдейта (инцидент 11.11: фото-карточки исчезали вместе с сообщением,
+ * апдейт уже подтверждён offset'ом и повторно не приходит).
+ */
 async function downloadPromoMedia(fileId: string): Promise<string | null> {
   const token = promoBotToken();
   if (!token) return null;
-  const info = (await telegramApi("getFile", { file_id: fileId })) as {
-    result?: { file_path?: string };
-  };
-  const filePath = info.result?.file_path;
-  if (!filePath) return null;
-  const extension = filePath.split(".").at(-1)?.toLocaleLowerCase("ru");
-  if (!["jpg", "jpeg", "png", "webp", "webm"].includes(extension ?? ""))
+  try {
+    const info = (await telegramApi("getFile", { file_id: fileId })) as {
+      result?: { file_path?: string };
+    };
+    const filePath = info.result?.file_path;
+    if (!filePath) return null;
+    const extension = filePath.split(".").at(-1)?.toLocaleLowerCase("ru");
+    if (!["jpg", "jpeg", "png", "webp", "webm"].includes(extension ?? ""))
+      return null;
+    const response = await fetch(
+      `https://api.telegram.org/file/bot${token}/${filePath}`,
+      { signal: AbortSignal.timeout(API_TIMEOUT_MS) },
+    );
+    if (!response.ok) return null;
+    const name = `${randomUUID()}.${extension}`;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.byteLength > 5 * 1024 * 1024) return null;
+    await mkdir(PROMO_MEDIA_DIR, { recursive: true, mode: 0o700 });
+    await writeFile(`${PROMO_MEDIA_DIR}/${name}`, bytes, { mode: 0o600 });
+    return name;
+  } catch (error) {
+    console.error(
+      "Promo media download failed:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
     return null;
-  const response = await fetch(
-    `https://api.telegram.org/file/bot${token}/${filePath}`,
-    { signal: AbortSignal.timeout(API_TIMEOUT_MS) },
-  );
-  if (!response.ok) return null;
-  const name = `${randomUUID()}.${extension}`;
-  const bytes = Buffer.from(await response.arrayBuffer());
-  if (bytes.byteLength > 5 * 1024 * 1024) return null;
-  await mkdir(PROMO_MEDIA_DIR, { recursive: true, mode: 0o700 });
-  await writeFile(`${PROMO_MEDIA_DIR}/${name}`, bytes, { mode: 0o600 });
-  return name;
+  }
 }
 
 /**
