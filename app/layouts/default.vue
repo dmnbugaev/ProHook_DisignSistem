@@ -77,7 +77,8 @@ const showAgeGate = computed(
     !ageConfirmed.value &&
     !loggedIn.value &&
     !gateSuppressed.value &&
-    !showcase.value &&
+    // /design-system не исключаем: гейт там — живая часть демо
+    // (инвариант tests/design-system.spec.ts).
     !AGE_MODAL_EXEMPT.includes(route.path),
 );
 watch(showAgeGate, (shown) => {
